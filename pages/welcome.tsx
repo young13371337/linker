@@ -1,4 +1,3 @@
-import React from "react";
 import { FaLock, FaUserSecret, FaBolt } from "react-icons/fa";
 import { motion } from "framer-motion";
 
@@ -90,6 +89,6 @@ export default function Welcome() {
           </div>
         </motion.div>
       </div>
-  </motion.div>
+      </motion.div>
   );
 }

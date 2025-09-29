@@ -1,4 +1,4 @@
-// ...existing code...
+import type { Friend } from '@prisma/client';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import prisma from '../../lib/prisma';
 import { getSession } from 'next-auth/react';
