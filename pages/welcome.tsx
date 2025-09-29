@@ -15,7 +15,7 @@ export default function Welcome() {
           Linker <span style={{ background: "linear-gradient(90deg, #00bfff, #0077ff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", fontWeight: "bold" }}>Social</span>
         </h1>
         <p style={{ fontSize: "1.2em", marginBottom: 40, color: "#cccccc" }}>
-          Beta версия Linker с полной анонимизацией<br />
+          Linker - полная анонимизация<br />
           Перед использованием рекомендуется прочесть
           <motion.a
             href="https://telegra.ph/Politika-konfidencialnosti-i-ispolzovaniya-servisa-Linker-09-27"
