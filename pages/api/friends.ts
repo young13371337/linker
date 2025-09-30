@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Получаем связи друзей
   const friends = await prisma.friend.findMany({ where: { userId } });
-  const friendIds = friends.map(f => f.friendId);
+  const friendIds = friends.map((f: { friendId: string }) => f.friendId);
   // Получаем пользователей-друзей
   const friendUsers = await prisma.user.findMany({ where: { id: { in: friendIds } } });
   const result = friendUsers.map(u => ({ id: u.id, name: u.login }));
