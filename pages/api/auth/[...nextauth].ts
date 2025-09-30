@@ -42,6 +42,23 @@ export default NextAuth({
             return null;
           }
         }
+        // Получить user-agent из заголовка
+        let deviceName = 'Unknown device';
+        if (typeof window === 'undefined' && credentials) {
+          // next-auth передаёт req в authorize через this (context)
+          // @ts-ignore
+          const req = this && this.req;
+          if (req && req.headers && req.headers['user-agent']) {
+            deviceName = req.headers['user-agent'];
+          }
+        }
+        await prisma.session.create({
+          data: {
+            userId: user.id,
+            deviceName,
+            isActive: true
+          }
+        });
         // Если у пользователя нет 2FA, игнорируем credentials.twoFactorToken
         return { id: user.id, name: user.login };
       }
