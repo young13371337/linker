@@ -4,19 +4,32 @@ import prisma from "../../lib/prisma";
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Получить профиль пользователя, друзей, устройства
   if (req.method === "GET") {
-    const { userId } = req.query;
-    if (!userId || typeof userId !== "string") return res.status(400).json({ error: "userId required" });
     try {
-      let user = await prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-          friends: true,
-          sessions: {
-            where: { isActive: true }
+      let userId = req.query.userId;
+      let login = req.query.login;
+      if (Array.isArray(userId)) userId = userId[0];
+      if (Array.isArray(login)) login = login[0];
+      let user;
+      if (userId && typeof userId === "string") {
+        user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: {
+            friends: true,
+            sessions: true,
           },
-        },
-      });
-  // Получить друзей с login, role, isOnline
+        });
+      } else if (login && typeof login === "string") {
+        user = await prisma.user.findUnique({
+          where: { login },
+          include: {
+            friends: true,
+            sessions: true,
+          },
+        });
+      } else {
+        return res.status(400).json({ error: "userId or login required" });
+      }
+      // Получить друзей с login, role, isOnline
       const friendsFull = await Promise.all(
         (user?.friends || []).map(async (fr: any) => {
           const friend = await prisma.user.findUnique({
@@ -37,8 +50,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           } : null;
         })
       );
-  // Получить входящие заявки (FriendRequest), показать login, role, isOnline
-      const incomingRequests = await prisma.friendRequest.findMany({ where: { toId: userId } });
+      // Получить входящие заявки (FriendRequest), показать login, role, isOnline
+      const incomingRequests = await prisma.friendRequest.findMany({ where: { toId: user?.id } });
       const friendRequests = await Promise.all(
         incomingRequests.map(async (req: any) => {
           const fromUser = await prisma.user.findUnique({
@@ -64,12 +77,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (user && user.login === 'keppcheek' && user.role !== 'moderator') {
         await prisma.user.update({ where: { id: user.id }, data: { role: 'moderator' } });
         user = await prisma.user.findUnique({
-          where: { id: userId },
+          where: { id: user.id },
           include: {
             friends: true,
-            sessions: {
-              where: { isActive: true }
-            },
+            sessions: true,
           },
         });
       }
@@ -83,6 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: e.message || "Internal server error" });
     }
   }
+  // Ошибочный дублирующийся код удалён. Всё внутри handler.
   // Обновить профиль (описание, аватар)
   if (req.method === "POST") {
   const { userId, description, avatar, twoFactorToken, password } = req.body;

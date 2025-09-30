@@ -44,14 +44,20 @@ const ChatPage: React.FC = () => {
               >
                 <img src={friend.avatar || '/window.svg'} alt="avatar" style={{width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', background: '#444'}} />
                 <div style={{display:'flex',flexDirection:'column',flex:1}}>
-                  <span style={{fontWeight: 600, fontSize: 20, color: '#e3e8f0'}}>{friend.login}</span>
+                  <span style={{fontWeight: 600, fontSize: 20, color: '#e3e8f0', display:'flex',alignItems:'center',gap:8}}>
+                    {friend.login}
+                    {friend.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" style={{width:20, height:20, marginLeft:4}} />}
+                    {friend.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" style={{width:20, height:20, marginLeft:4}} />}
+                    {friend.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" style={{width:20, height:20, marginLeft:4}} />}
+                  </span>
                   <span style={{fontSize: 14, color: '#aaa', display: 'flex', alignItems: 'center', gap: 6}}>
-                    {friend.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" style={{width:18, height:18, verticalAlign:'middle'}} />}
-                    {friend.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" style={{width:18, height:18, verticalAlign:'middle'}} />}
-                    {friend.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" style={{width:18, height:18, verticalAlign:'middle'}} />}
                     {friend.isOnline ? <span style={{marginLeft:4}}>• онлайн</span> : null}
                   </span>
-                  <span style={{fontSize: 13, color: '#bbb', marginTop: 2}}>Последнее сообщение: <i>нет сообщений</i></span>
+                  {/* Здесь предполагается, что lastMessage будет приходить с backend, пока заглушка: */}
+                  {false
+                    ? <span style={{fontSize: 13, color: '#bbb', marginTop: 2}}>{/* lastMessage */}</span>
+                    : <span style={{fontSize: 13, color: '#bbb', marginTop: 2}}><i>Начните общаться!</i></span>
+                  }
                 </div>
               </a>
             ))}

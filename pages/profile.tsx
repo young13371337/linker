@@ -31,7 +31,7 @@ export default function ProfilePage() {
         setDesc(data.user.description || "");
         setAvatar(data.user.avatar || "");
         setFriends(data.user.friends || []);
-        setSessions(data.user.sessions || []);
+        setSessions((data.user.sessions || []).filter((s: any) => s.isActive));
       })
       .catch(() => {
         setHas2FA(false);
@@ -214,31 +214,40 @@ export default function ProfilePage() {
         <div style={{ flex: 1, background: "#23242a", borderRadius: 14, padding: 16, boxShadow: "0 1px 8px #0003" }}>
           <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>Список друзей</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {friends.length === 0 ? (
-              <div style={{ color: "#bbb", fontSize: 16 }}>Нет :(</div>
-            ) : friends.map(f => (
-              <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "#23242a", borderRadius: 14, padding: "12px 16px", boxShadow: "0 2px 12px #0006", transition: "background 0.2s, box-shadow 0.2s", position: "relative" }} onMouseOver={e => {e.currentTarget.style.background="#292a2e";e.currentTarget.style.boxShadow="0 2px 16px #229ED944"}} onMouseOut={e => {e.currentTarget.style.background="#23242a";e.currentTarget.style.boxShadow="0 2px 12px #0006"}}>
-                <div style={{ position: "relative", width: 44, height: 44, borderRadius: "50%", background: "#444", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} onClick={() => window.location.href = `/profile/${f.id}`}> 
-                  <img src={f.avatar || "https://ui-avatars.com/api/?name=" + (f.login || f.friendId)} alt="avatar" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", background: "#444" }} />
-                  <span style={{ position: "absolute", left: 32, top: 32, width: 12, height: 12, borderRadius: "50%", background: f.isOnline ? "#1ed760" : "#888", border: "2px solid #23242a" }} />
-                </div>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ fontSize: 17, fontWeight: 600, cursor: "pointer", color: "#fff" }} onClick={() => window.location.href = `/profile/${f.id}`}>{f.login || f.friendId}</span>
-                  {f.role === "admin" && (
-                    <img src="/role-icons/admin.svg" alt="admin" style={{width:24, height:24, marginLeft:4, verticalAlign:'middle'}} />
-                  )}
-                  {f.role === "moderator" && (
-                    <img src="/role-icons/moderator.svg" alt="moderator" style={{width:24, height:24, marginLeft:4, verticalAlign:'middle'}} />
-                  )}
-                  {f.role === "verif" && (
-                    <img src="/role-icons/verif.svg" alt="verif" style={{width:24, height:24, marginLeft:4, verticalAlign:'middle'}} />
-                  )}
-                </span>
-                <button onClick={() => setRemoveFriendId(f.id)} style={{ position: "absolute", right: -10, top: 10, background: "transparent", color: "#fff", border: "none", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, cursor: "pointer", opacity: 0.5, transition: "opacity 0.2s", zIndex: 2 }} title="Удалить друга" onMouseOver={e => e.currentTarget.style.opacity = "0.8"} onMouseOut={e => e.currentTarget.style.opacity = "0.5"}>
-                  ×
-                </button>
+            <div style={{maxHeight:220,overflowY:'auto',paddingRight:4,scrollbarWidth:'thin',scrollbarColor:'#bbb2 #23242a'}}>
+              <style>{`
+                .custom-scrollbar::-webkit-scrollbar {width:8px;background:#23242a;}
+                .custom-scrollbar::-webkit-scrollbar-thumb {background:#bbb2;border-radius:8px;opacity:0.5;}
+                .custom-scrollbar {scrollbar-width:thin;scrollbar-color:#bbb2 #23242a;overflow-x:hidden;}
+              `}</style>
+              <div className="custom-scrollbar" style={{overflowX:'hidden'}}>
+                {friends.length === 0 ? (
+                  <div style={{ color: "#bbb", fontSize: 16 }}>Нет :(</div>
+                ) : friends.map(f => (
+                  <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "#23242a", borderRadius: 14, padding: "12px 16px", boxShadow: "0 2px 12px #0006", transition: "background 0.2s, box-shadow 0.2s", position: "relative" }} onMouseOver={e => {e.currentTarget.style.background="#292a2e";e.currentTarget.style.boxShadow="0 2px 16px #229ED944"}} onMouseOut={e => {e.currentTarget.style.background="#23242a";e.currentTarget.style.boxShadow="0 2px 12px #0006"}}>
+                    <div style={{ position: "relative", width: 44, height: 44, borderRadius: "50%", background: "#444", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: 'none' }} onClick={() => window.location.href = `/profile/${f.id}`}> 
+                      <img src={f.avatar || "https://ui-avatars.com/api/?name=" + (f.login || f.friendId)} alt="avatar" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", background: "#444", boxShadow: 'none' }} />
+                      <span style={{ position: "absolute", left: 32, top: 32, width: 12, height: 12, borderRadius: "50%", background: f.isOnline ? "#1ed760" : "#888", border: "2px solid #23242a" }} />
+                    </div>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ fontSize: 17, fontWeight: 600, cursor: "pointer", color: "#fff" }} onClick={() => window.location.href = `/profile/${f.id}`}>{f.login || f.friendId}</span>
+                      {f.role === "admin" && (
+                        <img src="/role-icons/admin.svg" alt="admin" style={{width:24, height:24, marginLeft:4, verticalAlign:'middle'}} />
+                      )}
+                      {f.role === "moderator" && (
+                        <img src="/role-icons/moderator.svg" alt="moderator" style={{width:24, height:24, marginLeft:4, verticalAlign:'middle'}} />
+                      )}
+                      {f.role === "verif" && (
+                        <img src="/role-icons/verif.svg" alt="verif" style={{width:24, height:24, marginLeft:4, verticalAlign:'middle'}} />
+                      )}
+                    </span>
+                    <button onClick={() => setRemoveFriendId(f.id)} style={{ position: "absolute", right: 8, top: 12, background: "transparent", color: "#fff", border: "none", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, cursor: "pointer", opacity: 0.5, transition: "opacity 0.2s", zIndex: 2, boxShadow: 'none' }} title="Удалить друга" onMouseOver={e => e.currentTarget.style.opacity = "0.8"} onMouseOut={e => e.currentTarget.style.opacity = "0.5"}>
+                      ×
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
             {removeFriendId && (
               <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <div style={{ background: "#23242a", borderRadius: 18, padding: 32, minWidth: 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", textAlign: "center" }}>
@@ -256,78 +265,101 @@ export default function ProfilePage() {
         <div style={{ flex: 1, background: "#23242a", borderRadius: 14, padding: 16, boxShadow: "0 1px 8px #0003" }}>
           <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>Ваши устройства</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {sessions.length === 0 ? (
-              <div style={{ color: "#bbb", fontSize: 16 }}>Нет устройств</div>
-            ) : (
-              <>
-                {/* Текущая сессия */}
-                {sessions.filter(s => s.isActive).map(current => (
-                  <div key={current.id} style={{ background: "#18191c", borderRadius: 10, padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                    <span style={{ color: "#fff", fontWeight: 600 }}>
-                      {current.deviceName} <span style={{ color: "#1ed760", fontSize: 13, marginLeft: 6 }}>(текущий)</span>
-                    </span>
-                    <button
-                      onClick={async () => {
-                        if (!user) return;
-                        await fetch("/api/session-end", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ userId: user.id, sessionId: current.id })
-                        });
-                        localStorage.removeItem("user");
-                        window.location.href = "/auth/login";
-                      }}
-                      style={{
-                        background: 'transparent',
-                        color: '#e74c3c',
-                        border: 'none',
-                        borderRadius: 7,
-                        padding: '4px 10px',
-                        fontSize: 13,
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        transition: 'background 0.18s, color 0.18s',
-                      }}
-                      onMouseOver={e => {
-                        e.currentTarget.style.background = '#e74c3c';
-                        e.currentTarget.style.color = '#fff';
-                      }}
-                      onMouseOut={e => {
-                        e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.color = '#e74c3c';
-                      }}
-                    >Завершить</button>
-                  </div>
-                ))}
-                {/* Остальные сессии */}
-                {sessions.filter(s => !s.isActive).length > 0 && (
-                  <div style={{ marginTop: 6 }}>
-                    {sessions.filter(s => !s.isActive).map(s => (
-                      <div key={s.id} style={{ background: "#18191c", borderRadius: 10, padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                        <span style={{ color: "#bbb", fontWeight: 400 }}>{s.deviceName}</span>
+            <div style={{maxHeight:220,overflowY:'auto',paddingRight:4,scrollbarWidth:'thin',scrollbarColor:'#bbb2 #23242a'}}>
+              <style>{`
+                .custom-scrollbar::-webkit-scrollbar {width:8px;background:#23242a;}
+                .custom-scrollbar::-webkit-scrollbar-thumb {background:#bbb2;border-radius:8px;opacity:0.5;}
+                .custom-scrollbar {scrollbar-width:thin;scrollbar-color:#bbb2 #23242a;}
+              `}</style>
+              <div className="custom-scrollbar">
+                {sessions.length === 0 ? (
+                  <div style={{ color: "#bbb", fontSize: 16 }}>Нет устройств</div>
+                ) : (
+                  <>
+                    {/* Текущая сессия */}
+                    {sessions.filter(s => s.isActive).map(current => (
+                      <div key={current.id} style={{ background: "#18191c", borderRadius: 10, padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                        <span style={{ color: "#fff", fontWeight: 600 }}>
+                          {current.deviceName} <span style={{ color: "#1ed760", fontSize: 13, marginLeft: 6 }}>(текущий)</span>
+                        </span>
                         <button
                           onClick={async () => {
                             if (!user) return;
                             await fetch("/api/session-end", {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ userId: user.id, sessionId: s.id })
+                              body: JSON.stringify({ userId: user.id, sessionId: current.id })
                             });
                             // Обновить список сессий после завершения
                             fetch(`/api/profile?userId=${user.id}`)
                               .then(r => r.json())
                               .then(data => {
-                                setSessions(data.user.sessions || []);
+                                setSessions((data.user.sessions || []).filter((s: any) => s.isActive));
                               });
+                            localStorage.removeItem("user");
+                            window.location.href = "/auth/login";
                           }}
-                          style={{ background: "#e74c3c", color: "#fff", border: "none", borderRadius: 7, padding: "6px 14px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}
+                          style={{
+                            background: 'transparent',
+                            color: '#e74c3c',
+                            border: 'none',
+                            borderRadius: 7,
+                            padding: '4px 10px',
+                            fontSize: 13,
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'background 0.18s, color 0.18s',
+                          }}
+                          onMouseOver={e => {
+                            e.currentTarget.style.background = '#e74c3c';
+                            e.currentTarget.style.color = '#fff';
+                          }}
+                          onMouseOut={e => {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = '#e74c3c';
+                          }}
                         >Завершить</button>
                       </div>
                     ))}
-                  </div>
+                    {/* Остальные сессии */}
+                    {sessions.filter(s => !s.isActive).length > 0 && (
+                      <div style={{ marginTop: 6 }}>
+                        {sessions.filter(s => !s.isActive).map(s => (
+                          <div key={s.id} style={{ background: "#18191c", borderRadius: 10, padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                            <span style={{ color: "#bbb", fontWeight: 400 }}>{s.deviceName}</span>
+                            <button
+                              onClick={async () => {
+                                if (!user) return;
+                                await fetch("/api/session-end", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ userId: user.id, sessionId: s.id })
+                                });
+                                // Обновить список сессий после завершения
+                                fetch(`/api/profile?userId=${user.id}`)
+                                  .then(r => r.json())
+                                  .then(data => {
+                                    setSessions(data.user.sessions || []);
+                                  });
+                              }}
+                              style={{ background: 'transparent', color: '#e74c3c', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 14, fontWeight: 500, cursor: 'pointer', transition: 'background 0.18s, color 0.18s' }}
+                              onMouseOver={e => {
+                                e.currentTarget.style.background = '#e74c3c';
+                                e.currentTarget.style.color = '#fff';
+                              }}
+                              onMouseOut={e => {
+                                e.currentTarget.style.background = 'transparent';
+                                e.currentTarget.style.color = '#e74c3c';
+                              }}
+                            >Завершить</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
-              </>
-            )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -464,6 +496,6 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
+        </div>
+      )}
+

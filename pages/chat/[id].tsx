@@ -19,7 +19,7 @@ const ChatWithFriend: React.FC = () => {
 
   useEffect(() => {
     if (!id) return;
-    // Получить данные друга (можно заменить на реальный API)
+    // Получить данные друга
     fetch('/api/friends', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
@@ -27,26 +27,53 @@ const ChatWithFriend: React.FC = () => {
         const f = friends.find((fr: any) => fr.id === id);
         setFriend(f || null);
       });
-    // Получить сообщения (заглушка)
-    setMessages([
-      { id: '1', sender: 'me', text: 'Привет!', createdAt: new Date().toISOString() },
-      { id: '2', sender: String(id), text: 'Привет, как дела?', createdAt: new Date().toISOString() }
-    ]);
+    // Получить реальные сообщения
+    fetch(`/api/messages?chatId=${id}`, { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data.messages)) {
+          setMessages(data.messages.map((msg: any) => ({
+            id: msg.id,
+            sender: msg.senderId,
+            text: msg.text,
+            createdAt: msg.createdAt
+          })));
+        } else {
+          setMessages([]);
+        }
+      });
   }, [id]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
-    setMessages([...messages, {
-      id: Math.random().toString(36).slice(2),
-      sender: session?.user?.name || 'me',
-      text: newMessage,
-      createdAt: new Date().toISOString()
-    }]);
-    setNewMessage('');
+    fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ chatId: id, text: newMessage })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.message) {
+          setMessages([...messages, {
+            id: data.message.id,
+            sender: data.message.senderId,
+            text: data.message.text,
+            createdAt: data.message.createdAt
+          }]);
+        }
+        setNewMessage('');
+      });
   };
 
-  if (!friend) return <div style={{color:'#fff',padding:40}}>Загрузка...</div>;
+  if (!friend) return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'flex-start',justifyContent:'center',background:'#111'}}>
+      <div style={{marginTop:80,color:'#bbb',fontSize:22,fontWeight:500}}>
+        Загрузка чата...
+      </div>
+    </div>
+  );
 
   return (
     <div style={{minHeight:'100vh',background:'#111',color:'#e3e8f0',fontFamily:'Segoe UI,Arial,sans-serif'}}>

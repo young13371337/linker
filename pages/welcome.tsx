@@ -1,5 +1,6 @@
 import { FaLock, FaUserSecret, FaBolt } from "react-icons/fa";
 import { motion } from "framer-motion";
+import Link from "next/link";
 
 export default function Welcome() {
   return (
@@ -35,15 +36,16 @@ export default function Welcome() {
           >
             условия и положения мессенджера</motion.a>
         </p>
-        <motion.a
-          href="/auth/register"
-          className="btn"
-          style={{ display: "inline-block", padding: "15px 40px", borderRadius: 35, fontSize: "1.2em", fontWeight: "bold", background: "linear-gradient(90deg, #00bfff, #0077ff)", color: "white", textDecoration: "none", transition: "0.3s", boxShadow: "0 5px 20px rgba(0, 191, 255, 0.4)" }}
-          whileHover={{ scale: 1.07, boxShadow: "0 8px 25px rgba(0,191,255,0.6)" }}
-          transition={{ type: "spring", stiffness: 300 }}
-        >
-          Зарегистрироваться
-        </motion.a>
+        <Link href="/auth/register" passHref legacyBehavior>
+          <motion.a
+            className="btn"
+            style={{ display: "inline-block", padding: "15px 40px", borderRadius: 35, fontSize: "1.2em", fontWeight: "bold", background: "linear-gradient(90deg, #00bfff, #0077ff)", color: "white", textDecoration: "none", transition: "0.3s", boxShadow: "0 5px 20px rgba(0, 191, 255, 0.4)" }}
+            whileHover={{ scale: 1.07, boxShadow: "0 8px 25px rgba(0,191,255,0.6)" }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            Зарегистрироваться
+          </motion.a>
+        </Link>
       </div>
       <div className="features" style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 420 }}>
         <motion.div

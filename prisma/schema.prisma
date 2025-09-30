@@ -47,3 +47,11 @@ model FriendRequest {
   toId      String
   createdAt DateTime @default(now())
 }
+
+model Message {
+  id        String   @id @default(uuid())
+  chatId    String
+  senderId  String
+  text      String
+  createdAt DateTime @default(now())
+}
