@@ -1,3 +1,4 @@
+import ToastNotification from "../chat/ToastNotification";
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { signIn } from "next-auth/react";
@@ -5,6 +6,7 @@ import { saveUser } from "../../lib/session";
 
 
 export default function LoginPage() {
+  const [toast, setToast] = useState<{type: 'error'|'success', message: string}|null>(null);
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -16,7 +18,8 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+  setError("");
+  setToast(null);
     const signInData: any = {
       redirect: false,
       login,
@@ -29,9 +32,9 @@ export default function LoginPage() {
     const res = await signIn("credentials", signInData);
     if (res?.error) {
       if (res.error === "CredentialsSignin") {
-        setError("Ошибка входа, проверьте данные");
+        setToast({ type: 'error', message: "Ошибка входа, проверьте данные" });
       } else {
-        setError(res.error);
+        setToast({ type: 'error', message: res.error });
       }
     } else {
       // Получить id пользователя и сохранить в localStorage
@@ -127,7 +130,15 @@ export default function LoginPage() {
             cursor: "pointer",
             transition: "background .2s"
           }}>Войти</button>
-          {error && <div style={{ color: "#ff5252", marginTop: 4, textAlign: "center" }}>{error}</div>}
+          {/* Уведомление справа снизу */}
+          {toast && (
+            <ToastNotification
+              type={toast.type}
+              message={toast.message}
+              onClose={()=>setToast(null)}
+              duration={4000}
+            />
+          )}
         </form>
         <div style={{ marginTop: 24, textAlign: "center", fontSize: 15 }}>
           Нет аккаунта? <a href="/auth/register" style={{ color: "#4fc3f7" }}>Зарегистрироваться</a>

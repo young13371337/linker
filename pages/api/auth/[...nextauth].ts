@@ -27,7 +27,10 @@ export default NextAuth({
           console.error('User not found:', credentials.login);
           return null;
         }
-        if (user.password !== credentials.password) {
+        // Сравниваем хэш пароля
+        const bcrypt = require('bcryptjs');
+        const valid = await bcrypt.compare(credentials.password, user.password);
+        if (!valid) {
           console.error('Invalid password for user:', credentials.login);
           return null;
         }

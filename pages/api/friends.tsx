@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { getUser } from "../lib/session";
 import { FiSearch, FiUserPlus, FiCheck, FiX } from "react-icons/fi";
 
 export default function FriendsPage() {
@@ -28,20 +27,7 @@ export default function FriendsPage() {
       });
     return () => { active = false; };
   }, [search]);
-  useEffect(() => {
-    const u = getUser();
-    setUser(u);
-    if (!u) {
-      window.location.href = "/auth/login";
-      return;
-    }
-    fetch(`/api/profile?userId=${u.id}`)
-      .then(r => r.json())
-      .then(data => {
-        setFriends(data.user.friends || []);
-        setRequests(data.user.friendRequests || []);
-      });
-  }, []);
+  // ...existing code...
 
   // ...existing code...
 
@@ -77,8 +63,8 @@ export default function FriendsPage() {
     <div style={{ maxWidth: 700, margin: "40px auto", padding: 32, background: "#23242a", borderRadius: 24, boxShadow: "0 6px 32px #0008", color: "#fff", fontFamily: "Segoe UI, Verdana, Arial, sans-serif" }}>
       <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 32, textAlign: "center", letterSpacing: 1, color: "#fff", textShadow: "none" }}>Друзья и заявки</h2>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 32, alignItems: "flex-start", justifyContent: "space-between" }}>
-    {/* Поиск друзей */}
-  <div style={{ flex: 1, minWidth: 280, background: "#23242a", borderRadius: 16, padding: "18px 22px", boxShadow: "0 2px 12px #0004" }}>
+        {/* Поиск друзей */}
+        <div style={{ flex: 1, minWidth: 280, background: "#23242a", borderRadius: 16, padding: "18px 22px", boxShadow: "0 2px 12px #0004" }}>
           <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 18, color: "#fff", display: "flex", alignItems: "center", gap: 8 }}>
             <FiSearch style={{ fontSize: 22, color: "#229ED9" }} /> Поиск друзей
           </div>
@@ -87,7 +73,6 @@ export default function FriendsPage() {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Поиск по логину..."
               style={{
                 padding: "12px 16px",
                 borderRadius: "10px",
@@ -99,9 +84,11 @@ export default function FriendsPage() {
                 outline: "none",
                 boxShadow: "none",
                 fontWeight: 500,
+                margin: "0",
                 letterSpacing: "0.1px",
                 transition: "box-shadow 0.2s",
               }}
+              placeholder="Поиск по логину..."
             />
           </div>
           {loading && <div style={{ color: "#bbb", marginTop: 12, fontSize: 16 }}>Поиск...</div>}

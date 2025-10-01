@@ -4,7 +4,7 @@ model Session {
   deviceName String
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation("UserSessions", fields: [userId], references: [id], onDelete: Cascade)
 }
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
@@ -30,15 +30,17 @@ model User {
   description String? // описание профиля
   twoFactorToken String? // токен для 2FA
   role      String   @default("user") // роль пользователя: admin, moderator, user
-  friends   Friend[] // связи с друзьями
-  sessions  Session[] // активные сессии/устройства
+  friends   Friend[] @relation("UserFriends") // связи с друзьями
+  sessions  Session[] @relation("UserSessions") // активные сессии/устройства
+  sentMessages Message[] @relation("UserSentMessages")
+  chats Chat[] @relation("ChatUsers")
 }
 
 model Friend {
   id        String   @id @default(uuid())
   userId    String
   friendId  String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model FriendRequest {
@@ -48,10 +50,21 @@ model FriendRequest {
   createdAt DateTime @default(now())
 }
 
+
+model Chat {
+  id        String   @id @default(uuid())
+  name      String?
+  createdAt DateTime @default(now())
+  users     User[]   @relation("ChatUsers")
+  messages  Message[]
+}
+
 model Message {
   id        String   @id @default(uuid())
   chatId    String
   senderId  String
   text      String
   createdAt DateTime @default(now())
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender    User     @relation("UserSentMessages", fields: [senderId], references: [id], onDelete: Cascade)
 }
