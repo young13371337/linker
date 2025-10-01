@@ -7,9 +7,6 @@ export function middleware(request: import('next/server').NextRequest) {
     if (isAuth && path === '/welcome') {
       return NextResponse.redirect(new URL('/profile', request.url));
     }
-    if (!isAuth && path !== '/welcome' && path !== '/auth/register' && path !== '/auth/login') {
-      return NextResponse.redirect(new URL('/welcome', request.url));
-    }
     return NextResponse.next();
   } catch (e) {
     return NextResponse.next();

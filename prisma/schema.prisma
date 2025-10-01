@@ -30,6 +30,7 @@ model User {
   description String? // описание профиля
   twoFactorToken String? // токен для 2FA
   role      String   @default("user") // роль пользователя: admin, moderator, user
+  backgroundUrl String? // публичный фон профиля (URL)
   friends   Friend[] @relation("UserFriends") // связи с друзьями
   sessions  Session[] @relation("UserSessions") // активные сессии/устройства
   sentMessages Message[] @relation("UserSentMessages")

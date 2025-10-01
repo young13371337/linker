@@ -87,6 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!user) return res.status(404).json({ error: "User not found" });
       return res.status(200).json({ user: {
         ...user,
+        backgroundUrl: user.backgroundUrl || null,
         friends: friendsFull.filter(Boolean),
         friendRequests: friendRequests.filter(Boolean)
       }});
@@ -97,13 +98,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Ошибочный дублирующийся код удалён. Всё внутри handler.
   // Обновить профиль (описание, аватар)
   if (req.method === "POST") {
-  const { userId, description, avatar, twoFactorToken, password } = req.body;
+  const { userId, description, avatar, twoFactorToken, password, backgroundUrl } = req.body;
     if (!userId) return res.status(400).json({ error: "userId required" });
     try {
       const data: any = {};
-  if (typeof description !== "undefined") data.description = description;
+      if (typeof description !== "undefined") data.description = description;
       if (typeof avatar === "string") data.avatar = avatar;
       if (typeof twoFactorToken === "string" || twoFactorToken === null) data.twoFactorToken = twoFactorToken;
+      if (typeof backgroundUrl === "string" || backgroundUrl === null) data.backgroundUrl = backgroundUrl;
       if (typeof password === "string" && password.length > 0) {
         // hash password before saving
         const bcrypt = require('bcryptjs');

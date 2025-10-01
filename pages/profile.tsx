@@ -16,6 +16,7 @@ export default function ProfilePage() {
   const [desc, setDesc] = useState<string>("");
   const [avatar, setAvatar] = useState<string>("");
   const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [backgroundUrl, setBackgroundUrl] = useState<string>("");
   const [has2FA, setHas2FA] = useState<boolean>(false);
   const [token, setToken] = useState<string>("");
 
@@ -30,6 +31,7 @@ export default function ProfilePage() {
         setUserRole(data.user.role || "user");
         setDesc(data.user.description || "");
         setAvatar(data.user.avatar || "");
+        setBackgroundUrl(data.user.backgroundUrl || "");
         setFriends(data.user.friends || []);
         setSessions((data.user.sessions || []).filter((s: any) => s.isActive));
       })
@@ -39,6 +41,7 @@ export default function ProfilePage() {
         setUserRole("user");
         setDesc("");
         setAvatar("");
+        setBackgroundUrl("");
         setFriends([]);
         setSessions([]);
       });
@@ -97,7 +100,19 @@ export default function ProfilePage() {
   // ...existing code...
 
   return (
-    <div style={{ maxWidth: 600, margin: "40px auto", padding: 32, background: "#23242a", borderRadius: 18, boxShadow: "0 2px 24px #0006", color: "#fff", fontFamily: "Segoe UI, Verdana, Arial, sans-serif" }}>
+    <div style={{
+      maxWidth: 600,
+      margin: "40px auto",
+      padding: 32,
+      borderRadius: 18,
+      boxShadow: "0 2px 24px #0006",
+      color: "#fff",
+      fontFamily: "Segoe UI, Verdana, Arial, sans-serif",
+      position: 'relative',
+      background: backgroundUrl
+        ? `linear-gradient(rgba(30,32,42,0.82),rgba(30,32,42,0.92)), url('${backgroundUrl}') center/cover no-repeat`
+        : "#23242a"
+    }}>
       <div style={{ display: "flex", alignItems: "center", gap: 18, paddingBottom: 18, borderBottom: "1px solid #333" }}>
         <div style={{ position: "relative" }}>
           {avatar ? (
@@ -492,6 +507,27 @@ export default function ProfilePage() {
                     });
                 }}
               >Сохранить аватарку</button>
+            </div>
+            <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s" }}>
+              <label style={{ fontSize: 15, fontWeight: 500 }}>Фон панели (URL):</label><br />
+              <input type="text" value={backgroundUrl} onChange={e => setBackgroundUrl(e.target.value)} style={{ marginTop: 6, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #444", background: "#18191c", color: "#fff", fontSize: 15 }} placeholder="https://..." />
+              <button
+                style={{ marginTop: 10, background: "#18191c", color: "#fff", border: "1px solid #444", borderRadius: 8, padding: "8px 18px", fontSize: 15, cursor: "pointer", fontWeight: 500 }}
+                onClick={async () => {
+                  if (!user) return;
+                  await fetch('/api/profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user.id, backgroundUrl })
+                  });
+                  // Обновить профиль после сохранения
+                  fetch(`/api/profile?userId=${user.id}`)
+                    .then(r => r.json())
+                    .then(data => {
+                      setBackgroundUrl(data.user.backgroundUrl || "");
+                    });
+                }}
+              >Сохранить фон</button>
             </div>
           </div>
         </div>
