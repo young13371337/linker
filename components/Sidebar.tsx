@@ -5,6 +5,34 @@ import { getUser, clearUser } from "../lib/session";
 import { useRouter } from "next/router";
 import { FaComments, FaUser, FaSignOutAlt } from "react-icons/fa";
 
+function showTempToast(msg = "Временно недоступно") {
+  const id = "sidebar-temp-toast";
+  let toast = document.getElementById(id);
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = id;
+    toast.style.position = "fixed";
+    toast.style.right = "32px";
+    toast.style.bottom = "32px";
+    toast.style.zIndex = "9999";
+    toast.style.background = "#222d";
+    toast.style.color = "#fff";
+    toast.style.padding = "14px 28px";
+    toast.style.borderRadius = "14px";
+    toast.style.fontSize = "16px";
+    toast.style.fontFamily = "Segoe UI, Verdana, Arial, sans-serif";
+    toast.style.boxShadow = "0 4px 24px #0006";
+    toast.style.transition = "opacity .3s";
+    toast.style.opacity = "0";
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.opacity = "1";
+  setTimeout(() => {
+    if (toast) toast.style.opacity = "0";
+  }, 1800);
+}
+
 
 export default function Sidebar() {
   const [open, setOpen] = useState(true);
@@ -154,6 +182,36 @@ export default function Sidebar() {
               {!iconOnly && <span style={{ fontSize: 15, marginLeft: 2 }}>Друзья</span>}
             </div>
           </Link>
+          <a
+            href="#"
+            style={{ color: '#fff', textDecoration: 'none' }}
+            onClick={e => {
+              e.preventDefault();
+              showTempToast();
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 10px',
+              borderRadius: 14,
+              transition: 'background .12s',
+              cursor: 'pointer',
+              fontFamily: 'Segoe UI, Verdana, Arial, sans-serif',
+              fontWeight: 500,
+              fontSize: 15,
+            }}
+              onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.13)'}
+              onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <span style={{ width: 22, textAlign: 'center', color: '#fff', fontSize: 18 }}>
+                {/* Studio SVG icon for Posts */}
+                <img src="/studio.svg" alt="Посты" style={{ width: 18, height: 18, display: 'inline-block', verticalAlign: 'middle' }} />
+              </span>
+              {!iconOnly && <span style={{ fontSize: 15, marginLeft: 2 }}>Посты</span>}
+            </div>
+          </a>
           <Link href="/profile" style={{ color: '#fff', textDecoration: 'none' }}>
             <div style={{
               display: 'flex',
@@ -174,6 +232,7 @@ export default function Sidebar() {
               {!iconOnly && <span style={{ fontSize: 15, marginLeft: 2 }}>Профиль</span>}
             </div>
           </Link>
+
         </nav>
         <div style={{ padding: 18, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
           <button

@@ -12,15 +12,16 @@ interface Message {
 const ChatWithFriend: React.FC = () => {
   const router = useRouter();
   const { id } = router.query;
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [friend, setFriend] = useState<{id: string, name: string, avatar?: string | null, role?: string} | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
 
   useEffect(() => {
-  const userId = (session?.user && (session.user as any).id) ? (session.user as any).id : undefined;
-  if (!id || !userId) return;
+    if (status === "loading" || !session) return;
+    const userId = (session?.user && (session.user as any).id) ? (session.user as any).id : undefined;
+    if (!id || !userId) return;
     // Получить профиль друга
     fetch(`/api/profile?userId=${id}`, { credentials: 'include' })
       .then(res => res.json())
@@ -37,7 +38,7 @@ const ChatWithFriend: React.FC = () => {
         }
       });
     // Получить или создать чат между двумя пользователями
-  fetch(`/api/chats?userIds=${userId},${id}`)
+    fetch(`/api/chats?userIds=${userId},${id}`)
       .then(res => res.json())
       .then(data => {
         if (data && data.chat && data.chat.id) {
@@ -62,11 +63,17 @@ const ChatWithFriend: React.FC = () => {
           setMessages([]);
         }
       });
-  }, [id, session]);
+  }, [id, session, status]);
+
+  useEffect(() => {
+    if (session) {
+      console.log('session:', session);
+    }
+  }, [session]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !chatId) return;
+    if (!newMessage.trim() || !chatId || !session) return;
     fetch('/api/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -87,6 +94,24 @@ const ChatWithFriend: React.FC = () => {
       });
   };
 
+  if (status === "loading") {
+    return (
+      <div style={{minHeight:'100vh',display:'flex',alignItems:'flex-start',justifyContent:'center',background:'#111'}}>
+        <div style={{marginTop:80,color:'#bbb',fontSize:22,fontWeight:500}}>
+          Загрузка...
+        </div>
+      </div>
+    );
+  }
+  if (!session) {
+    return (
+      <div style={{minHeight:'100vh',display:'flex',alignItems:'flex-start',justifyContent:'center',background:'#111'}}>
+        <div style={{marginTop:80,color:'#bbb',fontSize:22,fontWeight:500}}>
+          Для общения в чате нужно авторизоваться.
+        </div>
+      </div>
+    );
+  }
   if (!friend) return (
     <div style={{minHeight:'100vh',display:'flex',alignItems:'flex-start',justifyContent:'center',background:'#111'}}>
       <div style={{marginTop:80,color:'#bbb',fontSize:22,fontWeight:500}}>
@@ -159,10 +184,11 @@ const ChatWithFriend: React.FC = () => {
           <img src={friend.avatar || '/window.svg'} alt="avatar" style={avatarStyle} />
           <span style={nameStyle}>
             {friend.name}
-            {/* Иконка роли */}
-            {friend.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" style={{ width: 16, height: 16, marginLeft: 2 }} />}
-            {friend.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" style={{ width: 16, height: 16, marginLeft: 2 }} />}
-            {friend.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" style={{ width: 16, height: 16, marginLeft: 2 }} />}
+              {/* Иконка роли */}
+              {friend.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" title="Админ" style={{ width: 16, height: 16, marginLeft: 2 }} />}
+              {friend.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" title="Модератор" style={{ width: 16, height: 16, marginLeft: 2 }} />}
+              {friend.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" title="Верифицирован" style={{ width: 16, height: 16, marginLeft: 2 }} />}
+              {friend.role === 'pepe' && <img src="/role-icons/pepe.svg" alt="pepe" title="Пепешка" style={{ width: 16, height: 16, marginLeft: 2 }} />}
           </span>
         </div>
         <div

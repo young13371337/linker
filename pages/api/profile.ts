@@ -98,7 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Ошибочный дублирующийся код удалён. Всё внутри handler.
   // Обновить профиль (описание, аватар)
   if (req.method === "POST") {
-  const { userId, description, avatar, twoFactorToken, password, backgroundUrl } = req.body;
+  const { userId, description, avatar, twoFactorToken, password, backgroundUrl, favoriteTrackUrl } = req.body;
     if (!userId) return res.status(400).json({ error: "userId required" });
     try {
       const data: any = {};
@@ -106,6 +106,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (typeof avatar === "string") data.avatar = avatar;
       if (typeof twoFactorToken === "string" || twoFactorToken === null) data.twoFactorToken = twoFactorToken;
       if (typeof backgroundUrl === "string" || backgroundUrl === null) data.backgroundUrl = backgroundUrl;
+      if (typeof favoriteTrackUrl === "string" || favoriteTrackUrl === null) data.favoriteTrackUrl = favoriteTrackUrl;
       if (typeof password === "string" && password.length > 0) {
         // hash password before saving
         const bcrypt = require('bcryptjs');

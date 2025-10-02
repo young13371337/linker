@@ -1,6 +1,40 @@
 import React, { useState, useEffect } from "react";
 import { getUser } from "../lib/session";
-import { FaUserCircle, FaCog, FaShieldAlt, FaPalette } from "react-icons/fa";
+import { FaUserCircle, FaCog, FaShieldAlt, FaPalette, FaLaptop, FaMobileAlt, FaDesktop, FaSignOutAlt } from "react-icons/fa";
+// Функция для определения типа устройства и возврата иконки и названия
+function getDeviceIconAndName(deviceName: string) {
+  const ua = (deviceName || "").toLowerCase();
+  if (ua.includes("android") || ua.includes("iphone") || ua.includes("mobile")) {
+    return React.createElement(React.Fragment, null,
+      React.createElement(FaMobileAlt, { style: { fontSize: 18 } }),
+      " Телефон"
+    );
+  }
+  if ((ua.includes("windows") && ua.includes("touch")) || ua.includes("notebook") || ua.includes("laptop")) {
+    return React.createElement(React.Fragment, null,
+      React.createElement(FaLaptop, { style: { fontSize: 18 } }),
+      " Ноутбук"
+    );
+  }
+  if (ua.includes("macintosh") || ua.includes("macbook")) {
+    return React.createElement(React.Fragment, null,
+      React.createElement(FaLaptop, { style: { fontSize: 18 } }),
+      " MacBook"
+    );
+  }
+  if (ua.includes("windows") || ua.includes("linux")) {
+    return React.createElement(React.Fragment, null,
+      React.createElement(FaDesktop, { style: { fontSize: 18 } }),
+      " ПК"
+    );
+  }
+  // Если не удалось определить, выводим user-agent
+  return React.createElement(React.Fragment, null,
+    React.createElement(FaDesktop, { style: { fontSize: 18 } }),
+    ` ${deviceName || 'Неизвестное устройство'}`
+  );
+}
+// ...existing imports...
 
 function generate2FAToken() {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789&?_+-";
@@ -91,13 +125,10 @@ export default function ProfilePage() {
       });
     setRemoveFriendId(null);
   };
-  // ...existing code...
   useEffect(() => {
     const u = getUser();
     setUser(u);
   }, []);
-
-  // ...existing code...
 
   return (
     <div style={{
@@ -214,19 +245,49 @@ export default function ProfilePage() {
                   <img src="/role-icons/verif.svg" alt="verif" style={{width:24, height:24, marginLeft:2, verticalAlign:'middle', cursor:'pointer'}} />
                 </span>
               )}
+              {userRole === "pepe" && (
+                <span style={{ position: 'relative', display: 'inline-block' }}
+                  onMouseEnter={e => {
+                    const tip = document.createElement('div');
+                    tip.innerText = 'пепешка дается только легендам, или же разработчикам - эта и тем, и другим';
+                    tip.style.position = 'absolute';
+                    tip.style.top = '40px';
+                    tip.style.left = '0';
+                    tip.style.background = '#23242a';
+                    tip.style.color = '#fff';
+                    tip.style.padding = '7px 16px';
+                    tip.style.borderRadius = '10px';
+                    tip.style.fontSize = '15px';
+                    tip.style.boxShadow = '0 2px 16px #229ED944';
+                    tip.style.zIndex = '1000';
+                    tip.style.whiteSpace = 'nowrap';
+                    tip.className = 'pepe-tooltip';
+                    if (e.currentTarget) e.currentTarget.appendChild(tip);
+                  }}
+                  onMouseLeave={e => {
+                    if (e.currentTarget) {
+                      const tips = e.currentTarget.querySelectorAll('.pepe-tooltip');
+                      tips.forEach(tip => tip.remove());
+                    }
+                  }}
+                >
+                  <img src="/role-icons/pepe.svg" alt="pepe" style={{width:40, height:40, marginLeft:0, verticalAlign:'middle', cursor:'pointer'}} />
+                </span>
+              )}
             </span>
           </div>
           <div style={{ fontSize: 15, color: "#bbb", marginTop: 2 }}>{desc || "Нет описания"}</div>
+          {/* ...удалено: любимый трек... */}
         </div>
-  <button onClick={() => setShowSettings(true)} style={{ background: "#23242a", color: "#fff", border: "1px solid #444", borderRadius: 12, padding: "8px 18px", fontSize: 15, cursor: "pointer", fontWeight: 500, display: "flex", alignItems: "center", gap: 8, transition: "background 0.2s, box-shadow 0.2s" }} onMouseOver={e => {e.currentTarget.style.background="#2a2b32";e.currentTarget.style.boxShadow="0 2px 12px #4fc3f7a0"}} onMouseOut={e => {e.currentTarget.style.background="#23242a";e.currentTarget.style.boxShadow="none"}}>
+  <button onClick={() => setShowSettings(true)} style={{ background: "rgba(35,36,42,0.35)", color: "#fff", border: "1px solid #444", borderRadius: 12, padding: "8px 18px", fontSize: 15, cursor: "pointer", fontWeight: 500, display: "flex", alignItems: "center", gap: 8, transition: "background 0.2s, box-shadow 0.2s" }} onMouseOver={e => {e.currentTarget.style.background="rgba(35,36,42,0.5)";e.currentTarget.style.boxShadow="0 2px 12px #4fc3f7a0"}} onMouseOut={e => {e.currentTarget.style.background="rgba(35,36,42,0.35)";e.currentTarget.style.boxShadow="none"}}>
           <FaCog /> Настройки
         </button>
       </div>
 
-      {/* Список друзей и устройства */}
+    {/* Список друзей и устройства */}
   <div style={{ display: "flex", gap: 24, marginTop: 24, transition: "gap 0.3s" }}>
         {/* Список друзей */}
-        <div style={{ flex: 1, background: "#23242a", borderRadius: 14, padding: 16, boxShadow: "0 1px 8px #0003" }}>
+  <div style={{ flex: 1, background: "rgba(35,36,42,0.35)", borderRadius: 14, padding: 16, boxShadow: "0 1px 8px #0003" }}>
           <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>Список друзей</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{maxHeight:220,overflowY:'auto',paddingRight:4,scrollbarWidth:'thin',scrollbarColor:'#bbb2 #23242a'}}>
@@ -239,7 +300,7 @@ export default function ProfilePage() {
                 {friends.length === 0 ? (
                   <div style={{ color: "#bbb", fontSize: 16 }}>Нет :(</div>
                 ) : friends.map(f => (
-                  <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "#23242a", borderRadius: 14, padding: "12px 16px", boxShadow: "0 2px 12px #0006", transition: "background 0.2s, box-shadow 0.2s", position: "relative" }} onMouseOver={e => {e.currentTarget.style.background="#292a2e";e.currentTarget.style.boxShadow="0 2px 16px #229ED944"}} onMouseOut={e => {e.currentTarget.style.background="#23242a";e.currentTarget.style.boxShadow="0 2px 12px #0006"}}>
+                  <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(35,36,42,0.35)", borderRadius: 14, padding: "12px 16px", boxShadow: "0 2px 12px #0006", transition: "background 0.2s, box-shadow 0.2s", position: "relative" }} onMouseOver={e => {e.currentTarget.style.background="rgba(35,36,42,0.5)";e.currentTarget.style.boxShadow="0 2px 16px #229ED944"}} onMouseOut={e => {e.currentTarget.style.background="rgba(35,36,42,0.35)";e.currentTarget.style.boxShadow="0 2px 12px #0006"}}>
                     <div style={{ position: "relative", width: 44, height: 44, borderRadius: "50%", background: "#444", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: 'none' }} onClick={() => window.location.href = `/profile/${f.id}`}> 
                       <img src={f.avatar || "https://ui-avatars.com/api/?name=" + (f.login || f.friendId)} alt="avatar" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", background: "#444", boxShadow: 'none' }} />
                       <span style={{ position: "absolute", left: 32, top: 32, width: 12, height: 12, borderRadius: "50%", background: f.isOnline ? "#1ed760" : "#888", border: "2px solid #23242a" }} />
@@ -255,6 +316,9 @@ export default function ProfilePage() {
                       {f.role === "verif" && (
                         <img src="/role-icons/verif.svg" alt="verif" style={{width:24, height:24, marginLeft:4, verticalAlign:'middle'}} />
                       )}
+                      {f.role === "pepe" && (
+                        <img src="/role-icons/pepe.svg" alt="pepe" style={{width:32, height:32, marginLeft:4, verticalAlign:'middle'}} title="пепешка дается только легендам, или же разработчикам - эта и тем, и другим" />
+                      )}
                     </span>
                     <button onClick={() => setRemoveFriendId(f.id)} style={{ position: "absolute", right: 8, top: 12, background: "transparent", color: "#fff", border: "none", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, cursor: "pointer", opacity: 0.5, transition: "opacity 0.2s", zIndex: 2, boxShadow: 'none' }} title="Удалить друга" onMouseOver={e => e.currentTarget.style.opacity = "0.8"} onMouseOut={e => e.currentTarget.style.opacity = "0.5"}>
                       ×
@@ -268,7 +332,7 @@ export default function ProfilePage() {
                 <div style={{ background: "#23242a", borderRadius: 18, padding: 32, minWidth: 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", textAlign: "center" }}>
                   <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 18 }}>Вы уверены, что хотите удалить друга?</div>
                   <div style={{ display: "flex", gap: 18, justifyContent: "center" }}>
-                    <button onClick={handleRemoveFriend} style={{ background: "#e74c3c", color: "#fff", border: "none", borderRadius: 8, padding: "8px 22px", fontSize: 16, fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 8px #e74c3c44" }}>Да</button>
+                    <button onClick={handleRemoveFriend} style={{ background: "#e74c3c", color: "#fff", border: "none", borderRadius: 8, padding: "8px 22px", fontSize: 16, fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 8px #e74c3f44" }}>Да</button>
                     <button onClick={() => setRemoveFriendId(null)} style={{ background: "#444", color: "#fff", border: "none", borderRadius: 8, padding: "8px 22px", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Отменить</button>
                   </div>
                 </div>
@@ -277,7 +341,7 @@ export default function ProfilePage() {
           </div>
         </div>
         {/* Устройства/сессии */}
-        <div style={{ flex: 1, background: "#23242a", borderRadius: 14, padding: 16, boxShadow: "0 1px 8px #0003" }}>
+  <div style={{ flex: 1, background: "rgba(35,36,42,0.35)", borderRadius: 14, padding: 16, boxShadow: "0 1px 8px #0003" }}>
           <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>Ваши устройства</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{maxHeight:220,overflowY:'auto',paddingRight:4,scrollbarWidth:'thin',scrollbarColor:'#bbb2 #23242a'}}>
@@ -293,55 +357,88 @@ export default function ProfilePage() {
                   <>
                     {/* Текущая сессия */}
                     {sessions.filter(s => s.isActive).map(current => (
-                      <div key={current.id} style={{ background: "#18191c", borderRadius: 10, padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                        <span style={{ color: "#fff", fontWeight: 600 }}>
-                          {current.deviceName} <span style={{ color: "#1ed760", fontSize: 13, marginLeft: 6 }}>(текущий)</span>
-                        </span>
-                        <button
-                          onClick={async () => {
-                            if (!user) return;
-                            await fetch("/api/session-end", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ userId: user.id, sessionId: current.id })
-                            });
-                            // Обновить список сессий после завершения
-                            fetch(`/api/profile?userId=${user.id}`)
-                              .then(r => r.json())
-                              .then(data => {
-                                setSessions((data.user.sessions || []).filter((s: any) => s.isActive));
+                      <React.Fragment key={current.id}>
+                        <div style={{ background: "rgba(35,36,42,0.35)", borderRadius: 10, padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                          <span style={{ color: "#fff", fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                            {getDeviceIconAndName(current.deviceName)}
+                            <span
+                              style={{ color: '#1ed760', fontSize: 13, marginLeft: 6, cursor: 'pointer', position: 'relative' }}
+                              onMouseEnter={e => {
+                                const tip = document.createElement('div');
+                                tip.innerText = sessions.filter(s => s.isActive).length > 1
+                                  ? 'Активных сеансов: ' + sessions.filter(s => s.isActive).length + '\nВозможно, кто-то ещё в аккаунте!'
+                                  : 'Активный сеанс' ;
+                                tip.style.position = 'fixed';
+                                tip.style.top = (e.clientY + 16) + 'px';
+                                tip.style.left = (e.clientX - 20) + 'px';
+                                tip.style.background = 'rgba(30,32,42,0.96)';
+                                tip.style.color = '#fff';
+                                tip.style.padding = '8px 18px';
+                                tip.style.borderRadius = '12px';
+                                tip.style.fontSize = '15px';
+                                tip.style.boxShadow = '0 2px 24px #229ED944';
+                                tip.style.zIndex = '9999';
+                                tip.style.whiteSpace = 'pre-line';
+                                tip.style.wordBreak = 'break-word';
+                                tip.style.transition = 'opacity 0.18s';
+                                tip.style.opacity = '0.98';
+                                tip.className = 'session-tooltip';
+                                if (e.currentTarget) e.currentTarget.appendChild(tip);
+                              }}
+                              onMouseLeave={e => {
+                                if (e.currentTarget) {
+                                  const tips = e.currentTarget.querySelectorAll('.session-tooltip');
+                                  tips.forEach(tip => tip.remove());
+                                }
+                              }}
+                            >(текущий)</span>
+                          </span>
+                          <button
+                            onClick={async () => {
+                              if (!user) return;
+                              await fetch("/api/session-end", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ userId: user.id, sessionId: current.id })
                               });
-                            localStorage.removeItem("user");
-                            window.location.href = "/auth/login";
-                          }}
-                          style={{
-                            background: 'transparent',
-                            color: '#e74c3c',
-                            border: 'none',
-                            borderRadius: 7,
-                            padding: '4px 10px',
-                            fontSize: 13,
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            transition: 'background 0.18s, color 0.18s',
-                          }}
-                          onMouseOver={e => {
-                            e.currentTarget.style.background = '#e74c3c';
-                            e.currentTarget.style.color = '#fff';
-                          }}
-                          onMouseOut={e => {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.color = '#e74c3c';
-                          }}
-                        >Завершить</button>
-                      </div>
+                              // Обновить список сессий после завершения
+                              fetch(`/api/profile?userId=${user.id}`)
+                                .then(r => r.json())
+                                .then(data => {
+                                  setSessions((data.user.sessions || []).filter((s: any) => s.isActive));
+                                });
+                              localStorage.removeItem("user");
+                              window.location.href = "/auth/login";
+                            }}
+                            style={{
+                              background: 'transparent',
+                              color: '#e74c3c',
+                              border: 'none',
+                              borderRadius: 7,
+                              padding: '4px 10px',
+                              fontSize: 13,
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              transition: 'background 0.18s, color 0.18s',
+                            }}
+                            onMouseOver={e => {
+                              e.currentTarget.style.background = '#e74c3c';
+                              e.currentTarget.style.color = '#fff';
+                            }}
+                            onMouseOut={e => {
+                              e.currentTarget.style.background = 'transparent';
+                              e.currentTarget.style.color = '#e74c3c';
+                            }}
+                          ><FaSignOutAlt style={{ fontSize: 18 }} /></button>
+                        </div>
+                      </React.Fragment>
                     ))}
                     {/* Остальные сессии */}
                     {sessions.filter(s => !s.isActive).length > 0 && (
                       <div style={{ marginTop: 6 }}>
                         {sessions.filter(s => !s.isActive).map(s => (
                           <div key={s.id} style={{ background: "#18191c", borderRadius: 10, padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                            <span style={{ color: "#bbb", fontWeight: 400 }}>{s.deviceName}</span>
+                            <span style={{ color: "#bbb", fontWeight: 400, display: 'flex', alignItems: 'center', gap: 8 }}>{getDeviceIconAndName(s.deviceName)}</span>
                             <button
                               onClick={async () => {
                                 if (!user) return;
@@ -366,7 +463,7 @@ export default function ProfilePage() {
                                 e.currentTarget.style.background = 'transparent';
                                 e.currentTarget.style.color = '#e74c3c';
                               }}
-                            >Завершить</button>
+                            ><FaSignOutAlt style={{ fontSize: 18 }} /></button>
                           </div>
                         ))}
                       </div>
@@ -461,8 +558,39 @@ export default function ProfilePage() {
                 )}
               </div>
             </div>
-            {/* Кастомизация */}
+            {/* Верификация аккаунта */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, marginTop: 24 }}>
+              <FaShieldAlt style={{ color: '#bbb', fontSize: 22 }} />
+              <span style={{ color: '#bbb', fontWeight: 700, fontSize: 17, letterSpacing: 0.5 }}>Верификация аккаунта</span>
+            </div>
+            <div style={{ background: 'rgba(35,36,42,0.35)', borderRadius: 14, padding: '18px 20px', boxShadow: '0 1px 8px #0003', marginBottom: 22, marginLeft: 0, maxWidth: 420, transition: 'box-shadow 0.2s, background 0.2s' }}>
+              <button
+                style={{
+                  background: '#1ed760',
+                  color: '#23242a',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '8px 18px',
+                  fontSize: 15,
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  minWidth: 110,
+                  marginBottom: 12,
+                  boxShadow: '0 2px 12px #1ed76044',
+                  letterSpacing: '0.5px',
+                  transition: 'background 0.2s, color 0.2s',
+                }}
+                onClick={() => { window.open('https://t.me/linkersupport', '_blank'); }}
+                onMouseOver={e => {e.currentTarget.style.background='#19c75f';e.currentTarget.style.color='#fff';}}
+                onMouseOut={e => {e.currentTarget.style.background='#1ed760';e.currentTarget.style.color='#23242a';}}
+              >Верифицировать аккаунт</button>
+              <div style={{ fontSize: 13, color: '#fff', marginTop: 6, fontWeight: 500 }}>
+                {'Создана для подтверждения личности.'}
+                <span id="verif-description"></span>
+              </div>
+            </div>
+            {/* Кастомизация */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
               <FaPalette style={{ color: '#bbb', fontSize: 22 }} />
               <span style={{ color: '#bbb', fontWeight: 700, fontSize: 17, letterSpacing: 0.5 }}>Кастомизация</span>
             </div>
@@ -509,7 +637,7 @@ export default function ProfilePage() {
               >Сохранить аватарку</button>
             </div>
             <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s" }}>
-              <label style={{ fontSize: 15, fontWeight: 500 }}>Фон панели (URL):</label><br />
+              <label style={{ fontSize: 15, fontWeight: 500 }}>Фон профиля (URL):</label><br />
               <input type="text" value={backgroundUrl} onChange={e => setBackgroundUrl(e.target.value)} style={{ marginTop: 6, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #444", background: "#18191c", color: "#fff", fontSize: 15 }} placeholder="https://..." />
               <button
                 style={{ marginTop: 10, background: "#18191c", color: "#fff", border: "1px solid #444", borderRadius: 8, padding: "8px 18px", fontSize: 15, cursor: "pointer", fontWeight: 500 }}
@@ -529,9 +657,9 @@ export default function ProfilePage() {
                 }}
               >Сохранить фон</button>
             </div>
+            {/* Вставка любимой песни удалена по запросу пользователя */}
           </div>
         </div>
       )}
         </div>
       )}
-

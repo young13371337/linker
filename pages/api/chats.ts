@@ -4,12 +4,12 @@ import { getSession } from 'next-auth/react';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getSession({ req });
-  if (!session || !session.user?.name) {
+  if (!session || !session.user?.id) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  const login = session.user.name;
-  const user = await prisma.user.findUnique({ where: { login } });
-  if (!user) return res.status(401).json({ error: 'user not found', login });
+  const userId = session.user.id;
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return res.status(401).json({ error: 'user not found', userId });
 
   if (req.method === 'POST') {
     const { name, userIds } = req.body;

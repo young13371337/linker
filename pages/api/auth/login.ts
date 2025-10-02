@@ -39,14 +39,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       else if (deviceName.includes('Safari')) browserName = 'Safari';
       else browserName = deviceName.split(' ')[0];
     }
-    await prisma.session.create({
+    // Создаём новую сессию
+    const newSession = await prisma.session.create({
       data: {
         userId: user.id,
         deviceName: browserName,
         isActive: true,
       }
     });
-  return res.status(200).json({ user: { id: user.id, login: user.login, role } });
+    // Завершаем все остальные сессии пользователя, кроме текущей
+    await prisma.session.updateMany({
+      where: {
+        userId: user.id,
+        id: { not: newSession.id }
+      },
+      data: { isActive: false }
+    });
+    return res.status(200).json({ user: { id: user.id, login: user.login, role } });
   } catch (e: any) {
     console.error("/api/auth/login error:", e);
     return res.status(500).json({ error: e.message || "Internal server error" });
