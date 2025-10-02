@@ -155,14 +155,14 @@ export default function FriendsPage() {
           <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 18, color: "#fff", display: "flex", alignItems: "center", gap: 8 }}>
             <FiUserPlus style={{ fontSize: 22, color: "#229ED9" }} /> Входящие заявки
           </div>
-          <div style={{ maxHeight: 220, overflowY: "auto", display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {Array.isArray(requests) && requests.length > 0 ? requests.map(r => (
               r && typeof r.login === "string" ? (
                 <div key={r.id} style={{ background: "#18191c", borderRadius: 12, padding: "10px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 2px 8px #0003", border: "none", transition: "box-shadow 0.2s" }}>
                   <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#292a2e", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, color: "#fff", fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 6px #0002" }} onClick={() => window.location.href = `/profile/${r.id}`}>{r.login[0].toUpperCase()}</div>
                   <span style={{ fontSize: 15, fontWeight: 500, cursor: "pointer", color: "#fff" }} onClick={() => window.location.href = `/profile/${r.id}`}>{r.login}</span>
-                  <button onClick={() => handleAccept(r.id)} style={{ background: "#229ED9", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 15, fontWeight: 500, cursor: "pointer", boxShadow: "none", display: "flex", alignItems: "center", gap: 6 }}><FiCheck style={{ fontSize: 16 }} /> Принять</button>
-                  <button onClick={() => handleDecline(r.id)} style={{ background: "#444", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 15, fontWeight: 500, cursor: "pointer", boxShadow: "none", display: "flex", alignItems: "center", gap: 6 }}><FiX style={{ fontSize: 16 }} /> Отклонить</button>
+                  <button onClick={() => handleAccept(r.id)} style={{ background: "#229ED9", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 15, fontWeight: 500, cursor: "pointer", boxShadow: "none", display: "flex", alignItems: "center", gap: 6 }}><FiCheck style={{ fontSize: 16 }} /></button>
+                  <button onClick={() => handleDecline(r.id)} style={{ background: "#444", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 15, fontWeight: 500, cursor: "pointer", boxShadow: "none", display: "flex", alignItems: "center", gap: 6 }}><FiX style={{ fontSize: 16 }} /></button>
                 </div>
               ) : null
             )) : <div style={{ color: "#bbb", fontSize: 16, textAlign: "left", marginTop: 0, paddingLeft: 0 }}>Нет входящих заявок</div>}

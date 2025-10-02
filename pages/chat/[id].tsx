@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { FaPaperPlane } from 'react-icons/fa';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 
@@ -14,6 +15,7 @@ const ChatWithFriend: React.FC = () => {
   const { id } = router.query;
   const { data: session, status } = useSession();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [friend, setFriend] = useState<{id: string, name: string, avatar?: string | null, role?: string} | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
@@ -164,8 +166,8 @@ const ChatWithFriend: React.FC = () => {
     ? { flex: 1, padding: '14px 16px', borderRadius: '12px', border: 'none', background: '#18191c', color: '#fff', fontSize: '16px', boxShadow: '0 2px 6px #2222', outline: 'none', minWidth: '0' }
     : { flex: 1, padding: '9px 12px', borderRadius: '9px', border: 'none', background: '#18191c', color: '#fff', fontSize: '14px', boxShadow: '0 2px 6px #2222', outline: 'none' };
   const buttonStyle = isMobile
-    ? { padding: '0 22px', borderRadius: '12px', background: '#229ed9', color: '#fff', border: 'none', fontWeight: 600, fontSize: '18px', boxShadow: '0 2px 6px #229ed933', transition: 'background .2s', cursor: 'pointer' }
-    : { padding: '0 16px', borderRadius: '9px', background: '#229ed9', color: '#fff', border: 'none', fontWeight: 600, fontSize: '14px', boxShadow: '0 2px 6px #229ed933', transition: 'background .2s', cursor: 'pointer' };
+    ? { width: 44, height: 44, borderRadius: '50%', background: '#229ed9', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 2px 6px #229ed933', transition: 'background .2s', cursor: 'pointer' }
+    : { width: 36, height: 36, borderRadius: '50%', background: '#229ed9', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, boxShadow: '0 2px 6px #229ed933', transition: 'background .2s', cursor: 'pointer' };
   return (
     <div
       style={{
@@ -202,26 +204,59 @@ const ChatWithFriend: React.FC = () => {
             display: 'flex',
             flexDirection: 'column',
             gap: isMobile ? 8 : 6,
-            scrollBehavior: 'smooth',
             minHeight: 0,
+          }}
+          ref={el => {
+            if (el) el.scrollTop = el.scrollHeight;
           }}
         >
           {messages.length === 0 ? (
             <div style={{ color: '#bbb', fontSize: 16, textAlign: 'center', marginTop: 32 }}><i>Нет сообщений</i></div>
           ) : (
-            messages.map((msg) => (
-              <div
-                key={msg.id}
-                style={{
-                  marginBottom: 0,
-                  textAlign: msg.sender === session?.user?.name ? 'right' : 'left',
-                  width: '100%',
-                }}
-              >
-                <span style={msg.sender === session?.user?.name ? messageStyle : { ...messageStyle, background: '#222' }}>{msg.text}</span>
-                <span style={{ fontSize: 11, color: '#888', marginLeft: 8 }}>{new Date(msg.createdAt).toLocaleTimeString()}</span>
-              </div>
-            ))
+            messages.map((msg) => {
+              const isOwn = msg.sender === (session?.user as any)?.id;
+              return (
+                <div
+                  key={msg.id}
+                  style={{
+                    marginBottom: 0,
+                    display: 'flex',
+                    flexDirection: 'row',
+                    justifyContent: isOwn ? 'flex-end' : 'flex-start',
+                    width: '100%',
+                    position: 'relative',
+                    alignItems: 'center',
+                  }}
+                  onMouseEnter={() => setHoveredMsgId(msg.id)}
+                  onMouseLeave={() => setHoveredMsgId(null)}
+                >
+                  {isOwn && hoveredMsgId === msg.id && (
+                    <button
+                      onClick={async () => {
+                        await fetch(`/api/messages/${msg.id}`, { method: 'DELETE', credentials: 'include' });
+                        setMessages(messages.filter(m => m.id !== msg.id));
+                      }}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#888',
+                        cursor: 'pointer',
+                        fontSize: 16,
+                        padding: 0,
+                        marginRight: 8,
+                        transition: 'color .15s',
+                        alignSelf: 'center',
+                      }}
+                      title="Удалить сообщение"
+                    >
+                      ×
+                    </button>
+                  )}
+                  <span style={isOwn ? messageStyle : { ...messageStyle, background: '#222' }}>{msg.text}</span>
+                  <span style={{ fontSize: 11, color: '#888', marginLeft: 8, alignSelf: 'flex-end' }}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+              );
+            })
           )}
         </div>
         <form
@@ -239,7 +274,9 @@ const ChatWithFriend: React.FC = () => {
             placeholder="Сообщение..."
             style={inputStyle}
           />
-          <button type="submit" style={buttonStyle}>→</button>
+          <button type="submit" style={buttonStyle}>
+            <FaPaperPlane />
+          </button>
         </form>
       </div>
     </div>

@@ -1,16 +1,20 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import prisma from '../../lib/prisma';
-import { getSession } from 'next-auth/react';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from './auth/[...nextauth]';
 
 // Модель сообщения: id, chatId, senderId, text, createdAt
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getSession({ req });
-  if (!session || !session.user?.id) {
+  const session = await getServerSession(req, res, authOptions);
+  let user = null;
+  if (session && session.user?.id) {
+    user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  } else if (session && session.user?.name) {
+    user = await prisma.user.findUnique({ where: { login: session.user.name } });
+  }
+  if (!session || !user) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  const userId = session.user.id;
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) return res.status(401).json({ error: 'user not found', userId });
 
   if (req.method === 'GET') {
     // Получить сообщения по chatId

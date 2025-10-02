@@ -7,8 +7,7 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
 import prisma from "../../../lib/prisma";
-
-export default NextAuth({
+export const authOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -72,26 +71,33 @@ export default NextAuth({
           data: { isActive: false }
         });
         // Если у пользователя нет 2FA, игнорируем credentials.twoFactorToken
-        return { id: user.id, name: user.login };
+  return { id: user.id, name: user.login, role: (user as any).role, avatar: (user as any).avatar };
       }
     })
   ],
   session: {
-    strategy: "jwt"
+    strategy: 'jwt' as const
   },
   secret: process.env.NEXTAUTH_SECRET || "dev-secret",
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: any, user?: any }) {
       if (user) {
         token.id = user.id;
+        token.name = user.name;
+        token.role = (user as any).role;
+        token.avatar = (user as any).avatar;
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: any, token: any }) {
       if (token && session.user) {
         session.user.id = token.id;
+        session.user.name = token.name;
+        session.user.role = token.role;
+        session.user.avatar = token.avatar;
       }
       return session;
     }
   }
-});
+};
+export default NextAuth(authOptions);

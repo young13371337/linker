@@ -6,13 +6,36 @@ export default function UserProfile() {
   const { id } = router.query;
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isFriend, setIsFriend] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{id:string,login:string}|null>(null);
 
   useEffect(() => {
     if (!id) return;
+    // Получаем текущего пользователя из localStorage
+    let loadedUser = null;
+    try {
+      const u = localStorage.getItem('app_user') || localStorage.getItem('user');
+      if (u) loadedUser = JSON.parse(u);
+    } catch {}
+    setCurrentUser(loadedUser);
     fetch(`/api/profile?userId=${id}`)
       .then(r => r.json())
       .then(data => {
         setUser(data.user);
+        setLoading(false);
+        // Проверяем, друг ли этот пользователь
+        if (data.user && loadedUser && data.user.login) {
+          fetch(`/api/friends/search?login=${data.user.login}&userId=${loadedUser.id}`)
+            .then(r => r.json())
+            .then(fdata => {
+              setIsFriend(!!(fdata.user && fdata.user.isFriend));
+            })
+            .catch(() => setIsFriend(false));
+        }
+      })
+      .catch(() => {
+        setUser(null);
         setLoading(false);
       });
   }, [id]);
@@ -35,7 +58,7 @@ export default function UserProfile() {
           : "#23242a"
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 18, paddingBottom: 18, borderBottom: "1px solid #333" }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 18, paddingBottom: 18, borderBottom: "1px solid #333" }}>
         <div style={{ position: "relative" }}>
           {user.avatar ? (
             <img src={user.avatar} alt="avatar" style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", background: "#444" }} />
@@ -46,32 +69,24 @@ export default function UserProfile() {
           <span style={{ position: "absolute", left: 48, top: 44, width: 14, height: 14, borderRadius: "50%", background: user.isOnline ? "#1ed760" : "#bbb", border: "2px solid #fff" }} />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: 1, display: "flex", alignItems: "center", gap: 10 }}>
-            {user.login}
-            {/* Бейджик роли */}
+          <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: 1, display: "flex", alignItems: "center", gap: 10, position: 'relative' }}>
+            <span>{user.login}</span>
             {user.role === "admin" && (
-              <span style={{ position: 'relative', display: 'inline-block' }}
+              <span
+                style={{ position: 'relative', display: 'inline-block' }}
                 onMouseEnter={e => {
                   const tip = document.createElement('div');
                   tip.innerText = 'Этот аккаунт принадлежит создателю Linker';
-                  tip.style.position = 'absolute';
-                  tip.style.top = '32px';
-                  tip.style.left = '0';
-                  tip.style.background = '#23242a';
-                  tip.style.color = '#fff';
-                  tip.style.padding = '7px 16px';
-                  tip.style.borderRadius = '10px';
-                  tip.style.fontSize = '15px';
-                  tip.style.boxShadow = '0 2px 16px #229ED944';
-                  tip.style.zIndex = '1000';
-                  tip.style.whiteSpace = 'nowrap';
+                  Object.assign(tip.style, {
+                    position: 'absolute', top: '32px', left: '0', background: '#23242a', color: '#fff', padding: '7px 16px', borderRadius: '10px', fontSize: '15px', boxShadow: '0 2px 16px #229ED944', zIndex: 1000, whiteSpace: 'nowrap'
+                  });
                   tip.className = 'admin-tooltip';
                   if (e.currentTarget) e.currentTarget.appendChild(tip);
                 }}
                 onMouseLeave={e => {
                   if (e.currentTarget) {
                     const tips = e.currentTarget.querySelectorAll('.admin-tooltip');
-                    tips.forEach(tip => tip.remove());
+                    tips.forEach((tip: any) => tip.remove());
                   }
                 }}
               >
@@ -79,28 +94,21 @@ export default function UserProfile() {
               </span>
             )}
             {user.role === "pepe" && (
-              <span style={{ position: 'relative', display: 'inline-block' }}
+              <span
+                style={{ position: 'relative', display: 'inline-block' }}
                 onMouseEnter={e => {
                   const tip = document.createElement('div');
                   tip.innerText = 'пепешка дается только легендам, или же разработчикам - эта и тем, и другим';
-                  tip.style.position = 'absolute';
-                  tip.style.top = '40px';
-                  tip.style.left = '0';
-                  tip.style.background = '#23242a';
-                  tip.style.color = '#fff';
-                  tip.style.padding = '7px 16px';
-                  tip.style.borderRadius = '10px';
-                  tip.style.fontSize = '15px';
-                  tip.style.boxShadow = '0 2px 16px #229ED944';
-                  tip.style.zIndex = '1000';
-                  tip.style.whiteSpace = 'nowrap';
+                  Object.assign(tip.style, {
+                    position: 'absolute', top: '40px', left: '0', background: '#23242a', color: '#fff', padding: '7px 16px', borderRadius: '10px', fontSize: '15px', boxShadow: '0 2px 16px #229ED944', zIndex: 1000, whiteSpace: 'nowrap'
+                  });
                   tip.className = 'pepe-tooltip';
                   if (e.currentTarget) e.currentTarget.appendChild(tip);
                 }}
                 onMouseLeave={e => {
                   if (e.currentTarget) {
                     const tips = e.currentTarget.querySelectorAll('.pepe-tooltip');
-                    tips.forEach(tip => tip.remove());
+                    tips.forEach((tip: any) => tip.remove());
                   }
                 }}
               >
@@ -108,28 +116,21 @@ export default function UserProfile() {
               </span>
             )}
             {user.role === "moderator" && (
-              <span style={{ position: 'relative', display: 'inline-block' }}
+              <span
+                style={{ position: 'relative', display: 'inline-block' }}
                 onMouseEnter={e => {
                   const tip = document.createElement('div');
                   tip.innerText = 'Аккаунт имеет статус модератора, отвечает за вашу безопасность';
-                  tip.style.position = 'absolute';
-                  tip.style.top = '32px';
-                  tip.style.left = '0';
-                  tip.style.background = '#23242a';
-                  tip.style.color = '#fff';
-                  tip.style.padding = '7px 16px';
-                  tip.style.borderRadius = '10px';
-                  tip.style.fontSize = '15px';
-                  tip.style.boxShadow = '0 2px 16px #229ED944';
-                  tip.style.zIndex = '1000';
-                  tip.style.whiteSpace = 'nowrap';
+                  Object.assign(tip.style, {
+                    position: 'absolute', top: '32px', left: '0', background: '#23242a', color: '#fff', padding: '7px 16px', borderRadius: '10px', fontSize: '15px', boxShadow: '0 2px 16px #229ED944', zIndex: 1000, whiteSpace: 'nowrap'
+                  });
                   tip.className = 'moderator-tooltip';
                   if (e.currentTarget) e.currentTarget.appendChild(tip);
                 }}
                 onMouseLeave={e => {
                   if (e.currentTarget) {
                     const tips = e.currentTarget.querySelectorAll('.moderator-tooltip');
-                    tips.forEach(tip => tip.remove());
+                    tips.forEach((tip: any) => tip.remove());
                   }
                 }}
               >
@@ -137,33 +138,65 @@ export default function UserProfile() {
               </span>
             )}
             {user.role === "verif" && (
-              <span style={{ position: 'relative', display: 'inline-block' }}
+              <span
+                style={{ position: 'relative', display: 'inline-block' }}
                 onMouseEnter={e => {
                   const tip = document.createElement('div');
                   tip.innerText = 'Аккаунт верифицирован компаниней Linker';
-                  tip.style.position = 'absolute';
-                  tip.style.top = '32px';
-                  tip.style.left = '0';
-                  tip.style.background = '#23242a';
-                  tip.style.color = '#fff';
-                  tip.style.padding = '7px 16px';
-                  tip.style.borderRadius = '10px';
-                  tip.style.fontSize = '15px';
-                  tip.style.boxShadow = '0 2px 16px #229ED944';
-                  tip.style.zIndex = '1000';
-                  tip.style.whiteSpace = 'nowrap';
+                  Object.assign(tip.style, {
+                    position: 'absolute', top: '32px', left: '0', background: '#23242a', color: '#fff', padding: '7px 16px', borderRadius: '10px', fontSize: '15px', boxShadow: '0 2px 16px #229ED944', zIndex: 1000, whiteSpace: 'nowrap'
+                  });
                   tip.className = 'verif-tooltip';
                   if (e.currentTarget) e.currentTarget.appendChild(tip);
                 }}
                 onMouseLeave={e => {
                   if (e.currentTarget) {
                     const tips = e.currentTarget.querySelectorAll('.verif-tooltip');
-                    tips.forEach(tip => tip.remove());
+                    tips.forEach((tip: any) => tip.remove());
                   }
                 }}
               >
                 <img src="/role-icons/verif.svg" alt="verif" style={{width:18, height:18, marginLeft:2, verticalAlign:'middle', cursor:'pointer'}} />
               </span>
+            )}
+            {/* Кнопка заявки/статус друга */}
+            {currentUser && user && currentUser.id !== user.id && (
+              isFriend ? (
+                <span style={{ color: '#bbb', fontWeight: 600, fontSize: 16, marginLeft: 12 }}>Ваш друг</span>
+              ) : requestSent ? (
+                <span style={{ color: '#229ed9', fontWeight: 500, fontSize: 15, marginLeft: 12 }}>Заявка отправлена</span>
+              ) : (
+                <button
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: '#229ed9',
+                    border: 'none',
+                    borderRadius: 18,
+                    color: '#fff',
+                    fontWeight: 500,
+                    fontSize: 15,
+                    padding: '7px 18px',
+                    boxShadow: '0 2px 12px #229ed944',
+                    cursor: 'pointer',
+                    transition: 'background .18s',
+                  }}
+                  title="Отправить заявку в друзья"
+                  onClick={async () => {
+                    if (!currentUser || !user) return;
+                    await fetch('/api/friends/request', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ userId: currentUser.id, friendId: user.id })
+                    });
+                    setRequestSent(true);
+                  }}
+                >
+                  + В друзья
+                </button>
+              )
             )}
           </div>
           <div style={{ fontSize: 15, color: "#bbb", marginTop: 6 }}>{user.description}</div>
