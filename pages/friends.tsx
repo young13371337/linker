@@ -54,7 +54,7 @@ export default function FriendsPage() {
     });
     // Отправить событие через WebSocket для toast-уведомления
     try {
-      const ws = new window.WebSocket('ws://localhost:3001');
+  const ws = new window.WebSocket('wss://websocket-production-33ba.up.railway.app');
       ws.onopen = () => {
         ws.send(JSON.stringify({
           type: 'friend_request',

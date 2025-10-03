@@ -27,7 +27,7 @@ const ChatWithFriend: React.FC = () => {
   // WebSocket подключение
   useEffect(() => {
     if (!chatId) return;
-    const ws = new window.WebSocket('ws://localhost:3001');
+  const ws = new window.WebSocket('wss://websocket-production-33ba.up.railway.app');
     wsRef.current = ws;
     ws.onopen = () => setWsConnected(true);
     ws.onclose = () => setWsConnected(false);
