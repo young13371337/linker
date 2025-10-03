@@ -11,21 +11,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } else if (session && session.user?.name) {
     user = await prisma.user.findUnique({ where: { login: session.user.name } });
   }
+  console.log('API /api/chats: session.user', session.user);
+  console.log('API /api/chats: resolved user', user);
   if (!session || !user) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   if (req.method === 'POST') {
     const { name, userIds } = req.body;
-    if (!Array.isArray(userIds) || userIds.length < 2) {
+    // Гарантируем, что название группы обязательно
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'Название группы обязательно' });
+    }
+    // Гарантируем, что текущий пользователь всегда в группе
+    let allUserIds = Array.isArray(userIds) ? [...userIds] : [];
+    if (!allUserIds.includes(user.id)) {
+      allUserIds.push(user.id);
+    }
+    if (allUserIds.length < 2) {
       return res.status(400).json({ error: 'Минимум 2 участника' });
     }
     // Создать чат и добавить пользователей
     const chat = await prisma.chat.create({
       data: {
-        name: name || null,
+        name: name,
         users: {
-          connect: userIds.map((id: string) => ({ id }))
+          connect: allUserIds.map((id: string) => ({ id }))
         }
       }
     });
@@ -75,6 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         users: true
       }
     });
+    console.log('API /api/chats: found chats for user', user.id, chats);
     return res.status(200).json({ chats });
   }
 

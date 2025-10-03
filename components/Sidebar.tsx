@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { getUser, clearUser } from "../lib/session";
 import { useRouter } from "next/router";
@@ -35,33 +35,30 @@ function showTempToast(msg = "Временно недоступно") {
 
 
 export default function Sidebar() {
+  const wsRef = useRef<WebSocket | null>(null);
+
+  // --- вынесенные функции для useEffect ---
+  const handleRoute = () => setUser(getUser());
+  const handleVisibility = () => setUser(getUser());
+  async function fetchPending() {
+    try {
+      const res = await fetch("/api/friends/pending");
+      const data = await res.json();
+      setPendingCount(data.count || 0);
+    } catch {}
+  }
   const [open, setOpen] = useState(true);
   const [user, setUser] = useState<any>(null);
-  const [pendingCount, setPendingCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
   const router = useRouter();
+  // fetch pending friend requests и подписки на события
   useEffect(() => {
-    // load initial user from localStorage
-    setUser(getUser());
-
-    // update user on route changes (login redirects) and when page becomes visible
-    const handleRoute = () => setUser(getUser());
-    const handleVisibility = () => setUser(getUser());
-
+    // Не блокируем рендер, просто подгружаем pendingCount
+    fetchPending();
+    window.addEventListener("focus", fetchPending);
     router.events.on("routeChangeComplete", handleRoute);
     window.addEventListener("visibilitychange", handleVisibility);
     window.addEventListener("focus", handleVisibility);
-
-    // fetch pending friend requests
-    async function fetchPending() {
-      try {
-        const res = await fetch("/api/friends/pending");
-        const data = await res.json();
-        setPendingCount(data.count || 0);
-      } catch {}
-    }
-    fetchPending();
-    // refetch on focus
-    window.addEventListener("focus", fetchPending);
     return () => {
       router.events.off("routeChangeComplete", handleRoute);
       window.removeEventListener("visibilitychange", handleVisibility);
@@ -194,7 +191,20 @@ export default function Sidebar() {
             >
               <span style={{ width: 22, textAlign: 'center', color: '#fff', fontSize: 18, position: 'relative' }}>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05C15.64 13.36 17 14.28 17 15.5V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-                {pendingCount > 0 && (
+                {pendingCount === null ? (
+                  <span style={{
+                    position: 'absolute',
+                    top: -3,
+                    right: -3,
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    background: '#888',
+                    opacity: 0.5,
+                    border: '2px solid #fff',
+                    zIndex: 2,
+                  }} />
+                ) : pendingCount > 0 && (
                   <span style={{
                     position: 'absolute',
                     top: -3,

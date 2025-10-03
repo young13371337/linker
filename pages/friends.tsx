@@ -52,6 +52,19 @@ export default function FriendsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: user.id, friendId })
     });
+    // Отправить событие через WebSocket для toast-уведомления
+    try {
+      const ws = new window.WebSocket('ws://localhost:3001');
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          type: 'friend_request',
+          fromId: user.id,
+          toId: friendId,
+          fromName: user.login
+        }));
+        setTimeout(() => ws.close(), 500);
+      };
+    } catch {}
     setSearchResult(null);
   };
 

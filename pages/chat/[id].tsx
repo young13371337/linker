@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { FaPaperPlane } from 'react-icons/fa';
+import React, { useEffect, useState, useRef } from 'react';
+import { FaPaperPlane, FaCheck, FaCheckDouble } from 'react-icons/fa';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 
@@ -11,6 +11,10 @@ interface Message {
 }
 
 const ChatWithFriend: React.FC = () => {
+  const [readMessages, setReadMessages] = useState<{[id: string]: boolean}>({});
+  const [isTyping, setIsTyping] = useState<string | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const [wsConnected, setWsConnected] = useState(false);
   const router = useRouter();
   const { id } = router.query;
   const { data: session, status } = useSession();
@@ -20,6 +24,59 @@ const ChatWithFriend: React.FC = () => {
   const [friend, setFriend] = useState<{id: string, name: string, avatar?: string | null, role?: string} | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
 
+  // WebSocket подключение
+  useEffect(() => {
+    if (!chatId) return;
+    const ws = new window.WebSocket('ws://localhost:3001');
+    wsRef.current = ws;
+    ws.onopen = () => setWsConnected(true);
+    ws.onclose = () => setWsConnected(false);
+    ws.onerror = () => setWsConnected(false);
+    ws.onmessage = (event) => {
+      setTimeout(() => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'typing' && msg.chatId === chatId && msg.userId !== (session?.user as any)?.id) {
+            setIsTyping(msg.userName || 'Собеседник печатает...');
+            setTimeout(() => setIsTyping(null), 1500);
+            return;
+          }
+          if (msg.type === 'read' && msg.chatId === chatId) {
+            setReadMessages((prev) => ({ ...prev, [msg.messageId]: true }));
+            return;
+          }
+          if (msg.chatId === chatId && msg.id) {
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === msg.id)) return prev;
+              return [...prev, msg];
+            });
+          }
+        } catch {}
+      }, Math.random() * 1000);
+    };
+    return () => {
+      ws.close();
+    };
+  }, [chatId]);
+
+  // Отправка события "прочитано" при отображении сообщений
+  useEffect(() => {
+    if (!chatId || !session?.user) return;
+    messages.forEach((msg) => {
+      if (msg.sender !== (session.user as any).id && !readMessages[msg.id]) {
+        if (wsRef.current && wsRef.current.readyState === 1) {
+          wsRef.current.send(JSON.stringify({
+            type: 'read',
+            chatId,
+            messageId: msg.id,
+            userId: (session.user as any).id
+          }));
+        }
+      }
+    });
+  }, [messages, chatId, session, readMessages]);
+
+  // Загрузка данных чата и друга
   useEffect(() => {
     if (status === "loading" || !session) return;
     const userId = (session?.user && (session.user as any).id) ? (session.user as any).id : undefined;
@@ -85,6 +142,13 @@ const ChatWithFriend: React.FC = () => {
       .then(res => res.json())
       .then(data => {
         if (data.message) {
+          // Отправить через WebSocket для других клиентов
+          if (wsRef.current && wsRef.current.readyState === 1) {
+            wsRef.current.send(JSON.stringify({
+              ...data.message,
+              chatId: chatId
+            }));
+          }
           setMessages([...messages, {
             id: data.message.id,
             sender: data.message.senderId,
@@ -252,8 +316,36 @@ const ChatWithFriend: React.FC = () => {
                       ×
                     </button>
                   )}
-                  <span style={isOwn ? messageStyle : { ...messageStyle, background: '#222' }}>{msg.text}</span>
-                  <span style={{ fontSize: 11, color: '#888', marginLeft: 8, alignSelf: 'flex-end' }}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span
+                    style={isOwn
+                      ? {
+                          ...messageStyle,
+                          display: 'inline-block',
+                          background: '#229ed9',
+                          color: '#fff',
+                          borderRadius: '16px',
+                          minWidth: 48,
+                          wordBreak: 'break-word',
+                          padding: '7px 14px',
+                          fontSize: '15px',
+                          boxShadow: '0 2px 6px #2222',
+                        }
+                      : { ...messageStyle, background: '#222', display: 'inline-block', wordBreak: 'break-word', borderRadius: '16px', fontSize: '15px', padding: '7px 14px' }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      <span style={{}}>{msg.text}</span>
+                      {isOwn && (
+                        <>
+                          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', marginLeft: 4, marginRight: 2, minWidth: 32, textAlign: 'right', letterSpacing: 0 }}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          {readMessages[msg.id] ? (
+                            <FaCheckDouble color="#b3d8ff" size={13} style={{ marginLeft: 2, verticalAlign: 'middle' }} />
+                          ) : (
+                            <FaCheck color="#b3d8ff" size={13} style={{ marginLeft: 2, verticalAlign: 'middle' }} />
+                          )}
+                        </>
+                      )}
+                    </span>
+                  </span>
                 </div>
               );
             })
@@ -271,6 +363,16 @@ const ChatWithFriend: React.FC = () => {
           <input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
+            onInput={() => {
+              if (wsRef.current && wsRef.current.readyState === 1 && chatId && session?.user) {
+                wsRef.current.send(JSON.stringify({
+                  type: 'typing',
+                  chatId,
+                  userId: (session.user as any).id,
+                  userName: (session.user as any).name || (session.user as any).login || 'Пользователь'
+                }));
+              }
+            }}
             placeholder="Сообщение..."
             style={inputStyle}
           />
@@ -278,6 +380,10 @@ const ChatWithFriend: React.FC = () => {
             <FaPaperPlane />
           </button>
         </form>
+        {/* Статус "печатает..." */}
+        {isTyping && (
+          <div style={{ color: '#bbb', fontSize: 14, marginTop: 4, marginLeft: 8 }}>{isTyping} печатает...</div>
+        )}
       </div>
     </div>
   );

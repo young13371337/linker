@@ -74,6 +74,7 @@ model Message {
   chatId    String
   senderId  String
   text      String
+  // removed delivered and readBy fields
   createdAt DateTime @default(now())
   chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
   sender    User     @relation("UserSentMessages", fields: [senderId], references: [id], onDelete: Cascade)
