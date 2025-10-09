@@ -61,7 +61,14 @@
 
 .link {
   color: #fff;
-  text-decoration: none;
+  text-decoration: none !important;
+}
+
+.link:visited,
+.link:active,
+.link:focus,
+.link:hover {
+  text-decoration: none !important;
 }
 
 .linkContent {
@@ -78,6 +85,11 @@
 
 .linkContent:hover {
   background: rgba(255,255,255,0.13);
+}
+
+.linkContent span {
+  text-decoration: none !important;
+  pointer-events: none;
 }
 
 .icon {

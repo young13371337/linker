@@ -274,6 +274,29 @@ const ChatWithFriend: React.FC = () => {
       >
         <div style={chatContainerStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: isMobile ? 10 : 16 }}>
+          <button
+            onClick={() => router.push('/chat')}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              marginRight: 6,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              color: '#bbb',
+              fontSize: isMobile ? 28 : 22,
+              transition: 'color 0.2s',
+            }}
+            title="Назад к чатам"
+            aria-label="Назад к чатам"
+            onMouseOver={e => (e.currentTarget.style.color = '#229ed9')}
+            onMouseOut={e => (e.currentTarget.style.color = '#bbb')}
+          >
+            <svg width={isMobile ? 28 : 22} height={isMobile ? 28 : 22} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M15.5 19L9.5 12L15.5 5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
           <img src={friend.avatar || '/window.svg'} alt="avatar" style={avatarStyle} />
           <span style={nameStyle}>
             {friend.name}

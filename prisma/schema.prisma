@@ -1,13 +1,13 @@
-
-model Post {
-  id          String   @id @default(uuid())
-  authorId    String
-  title       String
-  description String
-  photoUrl    String?
-  createdAt   DateTime @default(now())
-  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+model ChatUnread {
+  id        String   @id @default(uuid())
+  chatId    String
+  userId    String
+  count     Int      @default(0)
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([chatId, userId])
 }
+
 model Session {
   id         String   @id @default(uuid())
   userId     String
@@ -43,7 +43,8 @@ model User {
   sessions  Session[] @relation("UserSessions") // активные сессии/устройства
   sentMessages Message[] @relation("UserSentMessages")
   chats Chat[] @relation("ChatUsers")
-  posts Post[] // посты пользователя
+  // posts Post[] // посты пользователя
+  chatUnreads ChatUnread[]
 }
 
 model Friend {
@@ -67,6 +68,7 @@ model Chat {
   createdAt DateTime @default(now())
   users     User[]   @relation("ChatUsers")
   messages  Message[]
+  chatUnreads ChatUnread[]
 }
 
 model Message {

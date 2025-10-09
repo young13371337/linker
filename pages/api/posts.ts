@@ -1,3 +1,4 @@
+// Этот файл удалён. API для постов больше не существует.
 import { PrismaClient } from '@prisma/client';
 import type { NextApiRequest, NextApiResponse } from 'next';
 

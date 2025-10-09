@@ -83,11 +83,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       },
       include: {
-        users: true
+        users: true,
+        chatUnreads: {
+          where: { userId: user.id },
+          select: { count: true }
+        }
       }
     });
-    console.log('API /api/chats: found chats for user', user.id, chats);
-    return res.status(200).json({ chats });
+    // Добавляем unreadCount для каждого чата
+    const chatsWithUnread = chats.map(chat => {
+      const unreadCount = chat.chatUnreads && chat.chatUnreads.length > 0 ? chat.chatUnreads[0].count : 0;
+      // Удаляем chatUnreads из выдачи, чтобы не ломать фронт
+      const { chatUnreads, ...rest } = chat;
+      return { ...rest, unreadCount };
+    });
+    console.log('API /api/chats: found chats for user', user.id, chatsWithUnread);
+    return res.status(200).json({ chats: chatsWithUnread });
   }
 
   return res.status(405).end();

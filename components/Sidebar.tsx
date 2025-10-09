@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { getUser, clearUser } from "../lib/session";
 import { useRouter } from "next/router";
-import { FaComments, FaUser, FaSignOutAlt, FaRegEdit } from "react-icons/fa";
+import { FaComments, FaUser, FaSignOutAlt } from "react-icons/fa";
 import styles from "../styles/Sidebar.module.css"; // создадим CSS для hover и анимаций
 
 export default function Sidebar() {
@@ -93,7 +93,6 @@ export default function Sidebar() {
             text="Друзья"
             open={open}
           />
-          <SidebarLink href="/wall" icon={<FaRegEdit />} text="Посты" open={open} />
           <SidebarLink href="/profile" icon={<FaUser />} text="Профиль" open={open} />
         </nav>
 
@@ -110,8 +109,8 @@ export default function Sidebar() {
         className={styles.toggleBtn}
         onClick={() => setOpen(!open)}
         style={{
-          left: open ? (isMobile ? '80vw' : 268) : (isMobile ? 36 : 0),
-          top: 18,
+          left: (open ? 260 : 0) + 8,
+          top: 28,
           position: 'fixed',
           zIndex: 1101,
           background: 'transparent',
@@ -121,7 +120,7 @@ export default function Sidebar() {
           boxShadow: 'none',
           border: 'none',
           textDecoration: 'none',
-          transition: 'none',
+          transition: 'left 0.4s cubic-bezier(.4,0,.2,1)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

@@ -558,37 +558,6 @@ export default function ProfilePage() {
                 )}
               </div>
             </div>
-            {/* Верификация аккаунта */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, marginTop: 24 }}>
-              <FaShieldAlt style={{ color: '#bbb', fontSize: 22 }} />
-              <span style={{ color: '#bbb', fontWeight: 700, fontSize: 17, letterSpacing: 0.5 }}>Верификация аккаунта</span>
-            </div>
-            <div style={{ background: 'rgba(35,36,42,0.35)', borderRadius: 14, padding: '18px 20px', boxShadow: '0 1px 8px #0003', marginBottom: 22, marginLeft: 0, maxWidth: 420, transition: 'box-shadow 0.2s, background 0.2s' }}>
-              <button
-                style={{
-                  background: '#1ed760',
-                  color: '#23242a',
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '8px 18px',
-                  fontSize: 15,
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  minWidth: 110,
-                  marginBottom: 12,
-                  boxShadow: '0 2px 12px #1ed76044',
-                  letterSpacing: '0.5px',
-                  transition: 'background 0.2s, color 0.2s',
-                }}
-                onClick={() => { window.open('https://t.me/linkersupport', '_blank'); }}
-                onMouseOver={e => {e.currentTarget.style.background='#19c75f';e.currentTarget.style.color='#fff';}}
-                onMouseOut={e => {e.currentTarget.style.background='#1ed760';e.currentTarget.style.color='#23242a';}}
-              >Верифицировать аккаунт</button>
-              <div style={{ fontSize: 13, color: '#fff', marginTop: 6, fontWeight: 500 }}>
-                {'Создана для подтверждения личности.'}
-                <span id="verif-description"></span>
-              </div>
-            </div>
             {/* Кастомизация */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
               <FaPalette style={{ color: '#bbb', fontSize: 22 }} />
