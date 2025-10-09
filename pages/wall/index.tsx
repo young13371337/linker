@@ -25,7 +25,4 @@ export default function WallPage() {
         setLoading(false);
       });
   }, [submitting, session]);
-
-
-
-  // Этот файл удалён. Стена постов больше не существует.
+}
