@@ -76,7 +76,7 @@ export default function FriendsPage() {
   return (
     <>
       <h2 style={{ textAlign: "center", fontSize: 44, fontWeight: 700, margin: "72px 0 56px 0", color: "#fff" }}>Друзья и заявки</h2>
-      <div style={{ display: "flex", flexDirection: "row", gap: 60, justifyContent: "center", alignItems: "flex-start", width: "100%", marginTop: 32 }}>
+  <div style={{ display: "flex", flexDirection: "row", gap: 60, justifyContent: "center", alignItems: "flex-start", width: "100%", marginTop: 32, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
   {/* Поиск друзей смещён правее */}
   <div style={{ flex: 1, minWidth: 320, maxWidth: 400, padding: "18px 10px 18px 0", marginLeft: 180 }}>
           <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 18, color: "#fff", display: "flex", alignItems: "center", gap: 8 }}>

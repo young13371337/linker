@@ -142,7 +142,9 @@ export default function ProfilePage() {
       position: 'relative',
       background: backgroundUrl
         ? `linear-gradient(rgba(30,32,42,0.82),rgba(30,32,42,0.92)), url('${backgroundUrl}') center/cover no-repeat`
-        : "#23242a"
+        : "#23242a",
+      overflowX: "auto",
+      WebkitOverflowScrolling: "touch"
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 18, paddingBottom: 18, borderBottom: "1px solid #333" }}>
         <div style={{ position: "relative" }}>
@@ -298,7 +300,7 @@ export default function ProfilePage() {
               `}</style>
               <div className="custom-scrollbar" style={{overflowX:'hidden'}}>
                 {friends.length === 0 ? (
-                  <div style={{ color: "#bbb", fontSize: 16 }}>Нет :(</div>
+                  <div style={{ color: "#bbb", fontSize: 16 }}>У вас нет друзей</div>
                 ) : friends.map(f => (
                   <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(35,36,42,0.35)", borderRadius: 14, padding: "12px 16px", boxShadow: "0 2px 12px #0006", transition: "background 0.2s, box-shadow 0.2s", position: "relative" }} onMouseOver={e => {e.currentTarget.style.background="rgba(35,36,42,0.5)";e.currentTarget.style.boxShadow="0 2px 16px #229ED944"}} onMouseOut={e => {e.currentTarget.style.background="rgba(35,36,42,0.35)";e.currentTarget.style.boxShadow="0 2px 12px #0006"}}>
                     <div style={{ position: "relative", width: 44, height: 44, borderRadius: "50%", background: "#444", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: 'none' }} onClick={() => window.location.href = `/profile/${f.id}`}> 
