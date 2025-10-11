@@ -177,13 +177,9 @@ const ChatWithFriend: React.FC = () => {
 
   if (status === "loading") {
     return (
-      <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#111'}}>
-        <div style={{marginTop:80}}>
-          <div className="loader" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 48, height: 48, border: '6px solid #222', borderTop: '6px solid #229ed9', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-            <span style={{ color: '#bbb', fontSize: 18, fontWeight: 500 }}>Загрузка профиля...</span>
-          </div>
-          <style>{`@keyframes spin { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }`}</style>
+      <div style={{minHeight:'100vh',display:'flex',alignItems:'flex-start',justifyContent:'center',background:'#111'}}>
+        <div style={{marginTop:80,color:'#bbb',fontSize:22,fontWeight:500}}>
+          Загрузка...
         </div>
       </div>
     );
@@ -198,13 +194,9 @@ const ChatWithFriend: React.FC = () => {
     );
   }
   if (!friend) return (
-    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#111'}}>
-      <div style={{marginTop:80}}>
-        <div className="loader" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 48, height: 48, border: '6px solid #222', borderTop: '6px solid #229ed9', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-          <span style={{ color: '#bbb', fontSize: 18, fontWeight: 500 }}>Загрузка чата...</span>
-        </div>
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }`}</style>
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'flex-start',justifyContent:'center',background:'#111'}}>
+      <div style={{marginTop:80,color:'#bbb',fontSize:22,fontWeight:500}}>
+        Загрузка чата...
       </div>
     </div>
   );
@@ -530,8 +522,8 @@ const ChatWithFriend: React.FC = () => {
             <FaPaperPlane />
           </button>
         </form>
-        {/* Статус "печатает..." только над полем ввода */}
-        <div style={{ display: 'flex', alignItems: 'center', minHeight: 24, margin: '8px 0 2px 0' }}>
+        {/* Статус "печатает..." с анимацией */}
+        <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', minHeight: 24, marginBottom: 2 }}>
           {isTyping && <TypingIndicator />}
         </div>
       </div>
