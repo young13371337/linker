@@ -3,6 +3,7 @@ import prisma from '../../lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 import { pusher } from '../../lib/pusher';
+import { encryptMessage, decryptMessage } from '../../lib/encryption';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions);
@@ -24,7 +25,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       where: { chatId },
       orderBy: { createdAt: 'asc' }
     });
-    return res.status(200).json({ messages });
+    // Расшифровываем текст сообщений
+    const decryptedMessages = messages.map(msg => ({
+      ...msg,
+      text: msg.text ? decryptMessage(msg.text, chatId) : ''
+    }));
+    return res.status(200).json({ messages: decryptedMessages });
   }
 
   if (req.method === 'PUT') {
@@ -40,11 +46,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'POST') {
     const { chatId, text } = req.body;
     if (!chatId || !text) return res.status(400).json({ error: 'chatId and text required' });
+    const encryptedText = encryptMessage(text, chatId);
     const message = await prisma.message.create({
       data: {
         chatId,
         senderId: user.id,
-        text,
+        text: encryptedText,
         createdAt: new Date()
       }
     });
@@ -68,8 +75,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Отправить новое сообщение через Pusher
-    await pusher.trigger(`chat-${chatId}`, 'new-message', message);
-    return res.status(200).json({ message });
+  // Для Pusher и ответа расшифровываем текст
+  const messageToSend = { ...message, text };
+  await pusher.trigger(`chat-${chatId}`, 'new-message', messageToSend);
+  return res.status(200).json({ message: messageToSend });
   }
 }
 

@@ -10,8 +10,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(201).json({ user });
   } catch (e: any) {
     console.error("/api/auth/register error:", e);
-    // If we know it's a conflict
     if (e.message && e.message.includes("exists")) return res.status(409).json({ error: e.message });
+    if (e.message && e.message.includes("Слишком простой пароль")) return res.status(400).json({ error: e.message, code: "FORBIDDEN_PASSWORD" });
     return res.status(500).json({ error: "Internal server error" });
   }
 }
