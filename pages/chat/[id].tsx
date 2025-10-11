@@ -528,10 +528,22 @@ const ChatWithFriend: React.FC = () => {
             <FaPaperPlane />
           </button>
         </form>
-        {/* Статус "печатает..." только над полем ввода */}
-        <div style={{ display: 'flex', alignItems: 'center', minHeight: 24, margin: '8px 0 2px 0' }}>
-          {isTyping && <TypingIndicator />}
-        </div>
+        {/* Статус "печатает..." чуть выше поля ввода, слева */}
+        {isTyping && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            minHeight: 24,
+            margin: '8px 0 2px 0',
+            marginLeft: 4,
+            color: '#4fc3f7',
+            fontSize: 15,
+            fontWeight: 500,
+            maxWidth: '60%',
+          }}>
+            <TypingIndicator />
+          </div>
+        )}
       </div>
       </div>
     </>

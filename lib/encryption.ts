@@ -17,11 +17,16 @@ export function encryptMessage(message: string, chatId: string): string {
 }
 
 export function decryptMessage(encryptedMessage: string, chatId: string): string {
-    const key = getChatKey(chatId);
-    const [ivHex, encryptedHex] = encryptedMessage.split(':');
-    const iv = Buffer.from(ivHex, 'hex');
-    const encryptedText = Buffer.from(encryptedHex, 'hex');
-    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-    const decrypted = Buffer.concat([decipher.update(encryptedText), decipher.final()]);
-    return decrypted.toString('utf8');
+    try {
+        const key = getChatKey(chatId);
+        const [ivHex, encryptedHex] = encryptedMessage.split(':');
+        if (!ivHex || !encryptedHex) throw new Error('Invalid encrypted message format');
+        const iv = Buffer.from(ivHex, 'hex');
+        const encryptedText = Buffer.from(encryptedHex, 'hex');
+        const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+        const decrypted = Buffer.concat([decipher.update(encryptedText), decipher.final()]);
+        return decrypted.toString('utf8');
+    } catch (e) {
+        return '[Ошибка шифрования]';
+    }
 }
