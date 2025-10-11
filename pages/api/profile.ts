@@ -98,7 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Ошибочный дублирующийся код удалён. Всё внутри handler.
   // Обновить профиль (описание, аватар)
   if (req.method === "POST") {
-    const { userId, description, avatar, twoFactorToken, password, backgroundUrl, favoriteTrackUrl } = req.body;
+  const { userId, description, avatar, twoFactorToken, password, backgroundUrl, favoriteTrackUrl, login: newLogin } = req.body;
     if (!userId) return res.status(400).json({ error: "userId required" });
     try {
       const data: any = {};
@@ -108,14 +108,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (typeof backgroundUrl === "string" || backgroundUrl === null) data.backgroundUrl = backgroundUrl;
       if (typeof favoriteTrackUrl === "string" || favoriteTrackUrl === null) data.favoriteTrackUrl = favoriteTrackUrl;
       if (typeof password === "string" && password.length > 0) {
-        // Проверка на простой пароль
         const { forbiddenPasswords } = require('../../lib/forbidden-passwords');
         if (forbiddenPasswords.includes(password)) {
           return res.status(400).json({ error: "Слишком простой пароль", code: "FORBIDDEN_PASSWORD" });
         }
-        // hash password before saving
         const bcrypt = require('bcryptjs');
         data.password = await bcrypt.hash(password, 8);
+      }
+      if (typeof newLogin === "string" && newLogin.length > 0) {
+        // Проверка, занят ли логин
+        const existing = await prisma.user.findUnique({ where: { login: newLogin } });
+        if (existing) {
+          return res.status(409).json({ error: "Login is already taken" });
+        }
+        data.login = newLogin;
       }
       const user = await prisma.user.update({
         where: { id: userId },

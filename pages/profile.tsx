@@ -1,4 +1,79 @@
 import React, { useState, useEffect } from "react";
+import ToastNotification from "./chat/ToastNotification";
+import LottiePlayer from "../lib/LottiePlayer";
+// Форма смены логина
+type UserType = { id: string; login: string; verified?: boolean } | null;
+type ChangeLoginFormProps = {
+  user: UserType;
+  setUser: (u: any) => void;
+  setFriends: (f: any[]) => void;
+};
+function ChangeLoginForm({ user, setUser, setFriends }: ChangeLoginFormProps) {
+  const [newLogin, setNewLogin] = useState("");
+  const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string>("");
+
+  const handleChangeLogin = async () => {
+    if (!newLogin || !user) return;
+    setLoading(true);
+    setStatus("");
+    setShowToast(false);
+    setToastMsg("");
+    const res = await fetch("/api/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, login: newLogin })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setToastMsg("Логин успешно изменён!");
+      setShowToast(true);
+      setStatus("");
+      setUser(data.user);
+      // Получить новых друзей
+      fetch(`/api/profile?userId=${data.user.id}`)
+        .then(r => r.json())
+        .then(profile => {
+          setFriends(profile.user.friends || []);
+        });
+      try {
+        localStorage.setItem("user", JSON.stringify({ id: data.user.id, login: data.user.login }));
+      } catch {}
+    } else {
+      if (data.error === "Login is already taken") {
+        setToastMsg("Логин уже занят.");
+        setShowToast(true);
+        setStatus("");
+      } else {
+        setStatus(data.error || "Ошибка при смене логина");
+      }
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, position: 'relative' }}>
+      <label style={{ fontSize: 15, fontWeight: 500 }}>Новый логин:</label><br />
+      <input type="text" value={newLogin} onChange={e => setNewLogin(e.target.value)} style={{ marginTop: 6, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #444", background: "#18191c", color: "#fff", fontSize: 15 }} />
+      <button
+        style={{ marginTop: 10, background: "#18191c", color: "#fff", border: "1px solid #444", borderRadius: 8, padding: "8px 18px", fontSize: 15, cursor: "pointer", fontWeight: 500 }}
+        onClick={handleChangeLogin}
+        disabled={loading}
+      >{loading ? "Проверка..." : "Сменить логин"}</button>
+      {status && <span style={{ marginLeft: 12, color: status.includes("успешно") ? "#1ed760" : "#e74c3c", fontWeight: 500 }}>{status}</span>}
+      {showToast && (
+        <ToastNotification
+          type={toastMsg === "Логин успешно изменён!" ? "success" : "error"}
+          message={toastMsg}
+          duration={3000}
+          onClose={() => setShowToast(false)}
+        />
+      )}
+    </div>
+  );
+}
 import { getUser } from "../lib/session";
 import { FaUserCircle, FaCog, FaShieldAlt, FaPalette, FaLaptop, FaMobileAlt, FaDesktop, FaSignOutAlt } from "react-icons/fa";
 // Функция для определения типа устройства и возврата иконки и названия
@@ -45,7 +120,7 @@ function generate2FAToken() {
 
 export default function ProfilePage() {
   const [user, setUser] = useState<{ id: string; login: string; verified?: boolean } | null>(null);
-  const [userRole, setUserRole] = useState<string>("user");
+  const [userRole, setUserRole] = useState<string>("user"); // 'user' | 'admin' | 'moderator' | 'verif' | 'pepe' | 'krip'
   const [removeFriendId, setRemoveFriendId] = useState<string | null>(null);
   const [desc, setDesc] = useState<string>("");
   const [avatar, setAvatar] = useState<string>("");
@@ -127,7 +202,18 @@ export default function ProfilePage() {
   };
   useEffect(() => {
     const u = getUser();
-    setUser(u);
+    if (u && u.id) {
+      fetch(`/api/profile?userId=${u.id}`)
+        .then(r => r.json())
+        .then(data => {
+          setUser(data.user);
+          try {
+            localStorage.setItem("user", JSON.stringify({ id: data.user.id, login: data.user.login }));
+          } catch {}
+        });
+    } else {
+      setUser(u);
+    }
   }, []);
 
   return (
@@ -251,7 +337,7 @@ export default function ProfilePage() {
                 <span style={{ position: 'relative', display: 'inline-block' }}
                   onMouseEnter={e => {
                     const tip = document.createElement('div');
-                    tip.innerText = 'пепешка дается только легендам, или же разработчикам - эта и тем, и другим';
+                    tip.innerText = 'девелопер линкера';
                     tip.style.position = 'absolute';
                     tip.style.top = '40px';
                     tip.style.left = '0';
@@ -273,7 +359,15 @@ export default function ProfilePage() {
                     }
                   }}
                 >
-                  <img src="/role-icons/pepe.svg" alt="pepe" style={{width:40, height:40, marginLeft:0, verticalAlign:'middle', cursor:'pointer'}} />
+                  <div style={{width:24, height:24, marginLeft:0, verticalAlign:'middle', cursor:'pointer'}}>
+                    {/* TGS-анимация через LottiePlayer */}
+                    {String(userRole) === "krip" && (
+                      <LottiePlayer src="/role-icons/krip.json" width={28} height={28} loop={true} />
+                    )}
+                    {String(userRole) === "pepe" && (
+                      <LottiePlayer src="/role-icons/pepe.json" width={28} height={28} loop={true} />
+                    )}
+                  </div>
                 </span>
               )}
             </span>
@@ -565,6 +659,7 @@ export default function ProfilePage() {
               <FaPalette style={{ color: '#bbb', fontSize: 22 }} />
               <span style={{ color: '#bbb', fontWeight: 700, fontSize: 17, letterSpacing: 0.5 }}>Кастомизация</span>
             </div>
+            <ChangeLoginForm user={user} setUser={setUser} setFriends={setFriends} />
             <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s" }}>
               <label style={{ fontSize: 15, fontWeight: 500 }}>Описание:</label><br />
               <input type="text" value={desc} onChange={e => setDesc(e.target.value)} style={{ marginTop: 6, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #444", background: "#18191c", color: "#fff", fontSize: 15 }} />
