@@ -327,8 +327,6 @@ const ChatWithFriend: React.FC = () => {
                 {friend.role === 'pepe' && <img src="/role-icons/pepe.svg" alt="pepe" title="Пепешка" style={{ width: 16, height: 16, marginLeft: 2 }} />}
             </span>
           </div>
-          {/* Статус "печатает..." теперь в верхней панели */}
-          {isTyping && <TypingIndicator />}
         </div>
         <div
             className="chat-messages-scroll"
