@@ -56,7 +56,7 @@ const ChatWithFriend: React.FC = () => {
   // ...existing code...
   // Подключение к Pusher для получения новых сообщений
   useEffect(() => {
-    if (!chatId) return;
+    if (!chatId || !session) return;
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY || '', {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || '',
       forceTLS: true,
@@ -68,12 +68,23 @@ const ChatWithFriend: React.FC = () => {
         return [...prev, msg];
       });
     });
+    // --- обработка события "typing" ---
+    let typingTimeout: NodeJS.Timeout | null = null;
+    channel.bind('typing', (data: { userId: string, name: string }) => {
+      // показывать только если не текущий пользователь
+      if (data.userId !== (session.user as any).id) {
+        setIsTyping(data.name || 'Друг');
+        if (typingTimeout) clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => setIsTyping(null), 2000); // скрыть через 2 сек
+      }
+    });
     return () => {
       channel.unbind_all();
       channel.unsubscribe();
       pusher.disconnect();
+      if (typingTimeout) clearTimeout(typingTimeout);
     };
-  }, [chatId]);
+  }, [chatId, session]);
   // --- Автоскролл только при добавлении нового сообщения ---
   const chatScrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -354,7 +365,7 @@ const ChatWithFriend: React.FC = () => {
               });
               return groups.map(group => (
                 <React.Fragment key={group.date}>
-                  <div style={{ textAlign: 'center', color: '#b3d8ff', fontWeight: 500, fontSize: 15, margin: '18px 0 8px 0', letterSpacing: 0.5 }}>
+                  <div style={{ textAlign: 'center', color: '#bbb', fontWeight: 500, fontSize: 15, margin: '18px 0 8px 0', letterSpacing: 0.5 }}>
                     {group.label}
                   </div>
                   {group.items.map((msg) => {
@@ -436,13 +447,69 @@ const ChatWithFriend: React.FC = () => {
             gap: 8,
             marginTop: 0,
             paddingBottom: isMobile ? 8 : 0,
+            alignItems: 'center',
           }}
         >
+          {/* Кнопка скрепки слева */}
+          <button
+            type="button"
+            style={{
+              width: isMobile ? 44 : 36,
+              height: isMobile ? 44 : 36,
+              borderRadius: '50%',
+              background: inputStyle.background,
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: 2,
+              cursor: 'pointer',
+              boxShadow: inputStyle.boxShadow,
+              color: '#bbb',
+              fontSize: isMobile ? 22 : 18,
+              transition: 'background .2s',
+            }}
+            title="Отправить фото или файл"
+            aria-label="Отправить фото или файл"
+            onClick={() => {
+              // Открытие проводника/выбор файла
+              if (isMobile) {
+                document.getElementById('file-input')?.click();
+              } else {
+                document.getElementById('file-input')?.click();
+              }
+            }}
+          >
+            {/* SVG иконка скрепки */}
+            <svg width={isMobile ? 22 : 18} height={isMobile ? 22 : 18} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M17.657 11.314l-6.364 6.364a4 4 0 01-5.657-5.657l9.192-9.192a3 3 0 114.243 4.243l-9.193 9.192a2 2 0 102.828 2.828l6.364-6.364" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          {/* Скрытый input для выбора файла/медиа */}
+          <input
+            id="file-input"
+            type="file"
+            accept={isMobile ? 'image/*,video/*,audio/*,.pdf,.doc,.docx,.txt' : '*'}
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              // Пока что заглушка
+              const file = e.target.files?.[0];
+              if (file) {
+                alert(`Выбран файл: ${file.name}`);
+              }
+            }}
+          />
           <input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            onInput={() => {
-              // ...WebSocket удалён...
+            onInput={async () => {
+              if (!chatId || !session) return;
+              await fetch('/api/messages/typing', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ chatId })
+              });
             }}
             placeholder="Сообщение..."
             style={inputStyle}
@@ -452,7 +519,9 @@ const ChatWithFriend: React.FC = () => {
           </button>
         </form>
         {/* Статус "печатает..." с анимацией */}
-        {isTyping && <TypingIndicator />}
+        <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', minHeight: 24, marginBottom: 2 }}>
+          {isTyping && <TypingIndicator />}
+        </div>
       </div>
       </div>
     </>
