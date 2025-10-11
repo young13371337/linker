@@ -177,9 +177,13 @@ const ChatWithFriend: React.FC = () => {
 
   if (status === "loading") {
     return (
-      <div style={{minHeight:'100vh',display:'flex',alignItems:'flex-start',justifyContent:'center',background:'#111'}}>
-        <div style={{marginTop:80,color:'#bbb',fontSize:22,fontWeight:500}}>
-          Загрузка...
+      <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#111'}}>
+        <div style={{marginTop:80}}>
+          <div className="loader" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, border: '6px solid #222', borderTop: '6px solid #229ed9', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <span style={{ color: '#bbb', fontSize: 18, fontWeight: 500 }}>Загрузка профиля...</span>
+          </div>
+          <style>{`@keyframes spin { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }`}</style>
         </div>
       </div>
     );
@@ -194,9 +198,13 @@ const ChatWithFriend: React.FC = () => {
     );
   }
   if (!friend) return (
-    <div style={{minHeight:'100vh',display:'flex',alignItems:'flex-start',justifyContent:'center',background:'#111'}}>
-      <div style={{marginTop:80,color:'#bbb',fontSize:22,fontWeight:500}}>
-        Загрузка чата...
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#111'}}>
+      <div style={{marginTop:80}}>
+        <div className="loader" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 48, height: 48, border: '6px solid #222', borderTop: '6px solid #229ed9', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+          <span style={{ color: '#bbb', fontSize: 18, fontWeight: 500 }}>Загрузка чата...</span>
+        </div>
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }`}</style>
       </div>
     </div>
   );
@@ -284,39 +292,43 @@ const ChatWithFriend: React.FC = () => {
         }}
       >
         <div style={chatContainerStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: isMobile ? 10 : 16 }}>
-          <button
-            onClick={() => router.push('/chat')}
-            style={{
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              marginRight: 6,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              color: '#bbb',
-              fontSize: isMobile ? 28 : 22,
-              transition: 'color 0.2s',
-            }}
-            title="Назад к чатам"
-            aria-label="Назад к чатам"
-            onMouseOver={e => (e.currentTarget.style.color = '#229ed9')}
-            onMouseOut={e => (e.currentTarget.style.color = '#bbb')}
-          >
-            <svg width={isMobile ? 28 : 22} height={isMobile ? 28 : 22} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M15.5 19L9.5 12L15.5 5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-          <img src={friend.avatar || '/window.svg'} alt="avatar" style={avatarStyle} />
-          <span style={nameStyle}>
-            {friend.name}
-              {/* Иконка роли */}
-              {friend.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" title="Админ" style={{ width: 16, height: 16, marginLeft: 2 }} />}
-              {friend.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" title="Модератор" style={{ width: 16, height: 16, marginLeft: 2 }} />}
-              {friend.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" title="Верифицирован" style={{ width: 16, height: 16, marginLeft: 2 }} />}
-              {friend.role === 'pepe' && <img src="/role-icons/pepe.svg" alt="pepe" title="Пепешка" style={{ width: 16, height: 16, marginLeft: 2 }} />}
-          </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: isMobile ? 10 : 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              onClick={() => router.push('/chat')}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                marginRight: 6,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                color: '#bbb',
+                fontSize: isMobile ? 28 : 22,
+                transition: 'color 0.2s',
+              }}
+              title="Назад к чатам"
+              aria-label="Назад к чатам"
+              onMouseOver={e => (e.currentTarget.style.color = '#229ed9')}
+              onMouseOut={e => (e.currentTarget.style.color = '#bbb')}
+            >
+              <svg width={isMobile ? 28 : 22} height={isMobile ? 28 : 22} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15.5 19L9.5 12L15.5 5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <img src={friend.avatar || '/window.svg'} alt="avatar" style={avatarStyle} />
+            <span style={nameStyle}>
+              {friend.name}
+                {/* Иконка роли */}
+                {friend.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" title="Админ" style={{ width: 16, height: 16, marginLeft: 2 }} />}
+                {friend.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" title="Модератор" style={{ width: 16, height: 16, marginLeft: 2 }} />}
+                {friend.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" title="Верифицирован" style={{ width: 16, height: 16, marginLeft: 2 }} />}
+                {friend.role === 'pepe' && <img src="/role-icons/pepe.svg" alt="pepe" title="Пепешка" style={{ width: 16, height: 16, marginLeft: 2 }} />}
+            </span>
+          </div>
+          {/* Статус "печатает..." теперь в верхней панели */}
+          {isTyping && <TypingIndicator />}
         </div>
         <div
             className="chat-messages-scroll"
