@@ -84,14 +84,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "flex-end", background: "#111" }}>
-      {/* Lottie animation above the form */}
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#111" }}>
       <div style={{ display: "flex", justifyContent: "center", marginTop: 64, marginBottom: 18 }}>
         <div style={{ width: 220, height: 220 }}>
           <Lottie animationData={loginAnimation} loop={true} />
         </div>
       </div>
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16, width: 360, maxWidth: "90vw", margin: "0 auto 80px auto" }}>
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16, width: 360, maxWidth: "90vw", margin: "0 auto" }}>
         <input
           type="text"
           placeholder="Логин"
@@ -128,7 +127,7 @@ export default function LoginPage() {
           />
         )}
       </form>
-      <div style={{ marginTop: 10, marginBottom: 72, textAlign: "center", fontSize: 15 }}>
+      <div style={{ marginTop: 18, textAlign: "center", fontSize: 15 }}>
         Нет аккаунта? <a href="/auth/register" style={{ color: "#4fc3f7" }}>Зарегистрироваться</a>
       </div>
     </div>
