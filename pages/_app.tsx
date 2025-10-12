@@ -13,13 +13,15 @@ export default function App({ Component, pageProps }: AppProps) {
       router.replace("/auth/register");
     }
   }, [router]);
+  const hideSidebarRoutes = ["/auth/login", "/auth/register"];
+  const showSidebar = !hideSidebarRoutes.includes(router.pathname);
   return (
     <>
       <Head>
         <title>Linker Social</title>
       </Head>
       <SessionProvider session={pageProps.session}>
-        <Sidebar />
+        {showSidebar && <Sidebar />}
         <Component {...pageProps} />
       </SessionProvider>
     </>
