@@ -7,7 +7,7 @@ import styles from "../styles/Sidebar.module.css"; // создадим CSS дл�
 
 export default function Sidebar() {
   const router = useRouter();
-  const [user, setUser] = useState(getUser()); // синхронно сразу есть пользователь
+  const [user, setUser] = useState(getUser());
   const [open, setOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -35,7 +35,11 @@ export default function Sidebar() {
 
     fetchPending();
 
-    const handleVisibility = () => setUser(getUser());
+    const handleVisibility = () => {
+      const u = getUser();
+      setUser(u);
+      if (!u) setOpen(false); // скрыть сайдбар если пользователь вышел
+    };
     window.addEventListener("focus", handleVisibility);
     window.addEventListener("visibilitychange", handleVisibility);
 
@@ -46,9 +50,27 @@ export default function Sidebar() {
     };
   }, []);
 
+  useEffect(() => {
+    // Проверяем пользователя при монтировании
+    const u = getUser();
+    setUser(u);
+    if (!u) setOpen(false);
+
+    // Слушаем событие входа
+    const handleLogin = () => {
+      const u = getUser();
+      setUser(u);
+    };
+    window.addEventListener("user-login", handleLogin);
+    return () => {
+      window.removeEventListener("user-login", handleLogin);
+    };
+  }, []);
+
   const logout = () => {
     clearUser();
     setUser(null);
+    setOpen(false);
     router.push("/auth/login");
   };
 

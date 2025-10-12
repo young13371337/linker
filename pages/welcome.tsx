@@ -36,25 +36,30 @@ export default function Welcome() {
           >
             условия и положения мессенджера</motion.a>
         </p>
+  
         <div style={{ display: "flex", flexDirection: "row", gap: 20, marginBottom: 10 }}>
           <Link href="/auth/login" passHref legacyBehavior>
+           <motion.div
+          className="feature"
+          style={{ background: "#1e1e1e", padding: 20, borderRadius: 15, display: "flex", alignItems: "center", gap: 15, boxShadow: "0 4px 15px rgba(0,0,0,0.5)", transition: "0.3s" }}
+          whileHover={{ scale: 1.04, boxShadow: "0 8px 25px rgba(0,191,255,0.4)" }}
+          transition={{ type: "spring", stiffness: 300 }}
+        >
+          <FaBolt size={45} style={{ flexShrink: 0, color: "#00bfff", transition: "0.3s" }} />
+          <div className="feature-text">
+            <h3 style={{ margin: 0, fontSize: "1.3em" }}>НОВАЯ СТРАНИЦА</h3>
+            <p style={{ margin: "5px 0 0", color: "#aaaaaa", fontSize: "0.95em" }}>
+              МЫ СКОРО СДЕЛАЕМ НОВУЮ СТРАНИЦУ
+            </p>
+          </div>
+        </motion.div>
             <motion.a
               className="btn"
               style={{ display: "inline-block", padding: "15px 40px", borderRadius: 35, fontSize: "1.2em", fontWeight: "bold", background: "linear-gradient(90deg, #0077ff, #00bfff)", color: "white", textDecoration: "none", transition: "0.3s", boxShadow: "0 5px 20px rgba(0, 191, 255, 0.4)" }}
               whileHover={{ scale: 1.07, boxShadow: "0 8px 25px rgba(0,191,255,0.6)" }}
               transition={{ type: "spring", stiffness: 300 }}
             >
-              Войти
-            </motion.a>
-          </Link>
-          <Link href="/auth/register" passHref legacyBehavior>
-            <motion.a
-              className="btn"
-              style={{ display: "inline-block", padding: "15px 40px", borderRadius: 35, fontSize: "1.2em", fontWeight: "bold", background: "linear-gradient(90deg, #00bfff, #0077ff)", color: "white", textDecoration: "none", transition: "0.3s", boxShadow: "0 5px 20px rgba(0, 191, 255, 0.4)" }}
-              whileHover={{ scale: 1.07, boxShadow: "0 8px 25px rgba(0,191,255,0.6)" }}
-              transition={{ type: "spring", stiffness: 300 }}
-            >
-              Создать аккаунт
+              Авторизоватся
             </motion.a>
           </Link>
         </div>
@@ -99,6 +104,20 @@ export default function Welcome() {
             <h3 style={{ margin: 0, fontSize: "1.3em" }}>Мгновенная скорость</h3>
             <p style={{ margin: "5px 0 0", color: "#aaaaaa", fontSize: "0.95em" }}>
               Сообщения доставляются моментально, без задержек.
+            </p>
+          </div>
+        </motion.div>
+              <motion.div
+          className="feature"
+          style={{ background: "#1e1e1e", padding: 20, borderRadius: 15, display: "flex", alignItems: "center", gap: 15, boxShadow: "0 4px 15px rgba(0,0,0,0.5)", transition: "0.3s" }}
+          whileHover={{ scale: 1.04, boxShadow: "0 8px 25px rgba(0,191,255,0.4)" }}
+          transition={{ type: "spring", stiffness: 300 }}
+        >
+          <FaBolt size={45} style={{ flexShrink: 0, color: "#00bfff", transition: "0.3s" }} />
+          <div className="feature-text">
+            <h3 style={{ margin: 0, fontSize: "1.3em" }}>НОВАЯ СТРАНИЦА</h3>
+            <p style={{ margin: "5px 0 0", color: "#aaaaaa", fontSize: "0.95em" }}>
+              МЫ СКОРО СДЕЛАЕМ НОВУЮ СТРАНИЦУ
             </p>
           </div>
         </motion.div>
