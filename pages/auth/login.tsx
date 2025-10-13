@@ -84,8 +84,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#111" }}>
-      <div style={{ display: "flex", justifyContent: "center", marginTop: 64, marginBottom: 18 }}>
+  <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#111", paddingTop: "7vh" }}>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
         <div style={{ width: 220, height: 220 }}>
           <Lottie animationData={loginAnimation} loop={true} />
         </div>
