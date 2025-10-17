@@ -55,15 +55,15 @@ export default function LoginPage() {
             }
           }
         } catch {
-          console.warn("Не удалось получить профиль");
+          console.warn("Такого акаунта не существует.");
         }
 
-        setToast({ type: "success", message: "Успешный вход, Загрузка..." });
+        setToast({ type: "success", message: "Загрузка данных..." });
         setTimeout(() => router.push("/profile"), 800);
       }
     } catch (err) {
       console.error(err);
-      setToast({ type: "error", message: "Сервер недоступен" });
+      setToast({ type: "error", message: "Сервер выключен." });
     }
   };
 
@@ -79,7 +79,7 @@ export default function LoginPage() {
         setShow2FA(true);
       }
     } catch {
-      console.warn("Ошибка при проверке 2FA");
+      console.warn("Неверный 2FA");
     }
   };
 

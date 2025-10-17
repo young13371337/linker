@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getUser, clearUser } from "../lib/session";
 import { useRouter } from "next/router";
 import { FaComments, FaUser, FaSignOutAlt } from "react-icons/fa";
+import FaRobot from "./LinkerIntelligenceIcon";
 import styles from "../styles/Sidebar.module.css"; // создадим CSS для hover и анимаций
 
 export default function Sidebar() {
@@ -10,11 +11,15 @@ export default function Sidebar() {
   const [user, setUser] = useState(getUser());
   const [open, setOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
+  // SSR-safe isMobile detection
   const [isMobile, setIsMobile] = useState(false);
-
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
+    setMounted(true);
+  }, []);
+  useEffect(() => {
+    setIsMobile(window.innerWidth <= 600);
     const checkMobile = () => setIsMobile(window.innerWidth <= 600);
-    checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
@@ -74,13 +79,13 @@ export default function Sidebar() {
     router.push("/auth/login");
   };
 
-  if (!user) return null;
+  if (!user || !mounted) return null;
 
   return (
     <>
       <aside
         className={`${styles.sidebar} ${open ? styles.open : styles.closed}`}
-        style={isMobile ? { width: open ? '80vw' : 0, minWidth: 0, maxWidth: '320px', zIndex: 1000 } : {}}
+        style={mounted && isMobile ? { width: open ? '80vw' : 0, minWidth: 0, maxWidth: '320px', zIndex: 1000 } : {}}
       >
         <div className={styles.logo}>
           <img
@@ -116,6 +121,7 @@ export default function Sidebar() {
             open={open}
           />
           <SidebarLink href="/profile" icon={<FaUser />} text="Профиль" open={open} />
+          <SidebarLink href="/intelligence" icon={<FaRobot />} text="Интеллект" open={open} />
         </nav>
 
         <div className={styles.footer}>

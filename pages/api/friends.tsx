@@ -94,7 +94,7 @@ export default function FriendsPage() {
           {loading && <div style={{ color: "#bbb", marginTop: 12, fontSize: 16 }}>Поиск...</div>}
           {searchResult && (
             searchResult === "notfound" ? (
-              <div style={{ background: "#292a2e", borderRadius: 10, padding: "12px 18px", marginTop: 22, textAlign: "center", color: "#bbb", fontSize: 17, boxShadow: "0 2px 12px #0003" }}>Нет пользователя с таким логином</div>
+              <div style={{ background: "#292a2e", borderRadius: 10, padding: "12px 18px", marginTop: 22, textAlign: "center", color: "#bbb", fontSize: 17, boxShadow: "0 2px 12px #0003" }}>Такого пользователя нет, может вы ошиблись?</div>
             ) : (
               <div style={{ background: "#18191c", borderRadius: 14, padding: "16px 22px", marginTop: 22, display: "flex", alignItems: "center", gap: 18, boxShadow: "0 2px 16px #0006", transition: "box-shadow 0.2s" }}>
                 <img src={searchResult.avatar || "/logo.svg"} alt="avatar" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", background: "#292a2e", marginRight: 8, boxShadow: "0 2px 8px #0003" }} />

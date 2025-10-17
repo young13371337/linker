@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { getUser } from "../lib/session";
 import Sidebar from "../components/Sidebar";
+import ToastNotification from "./chat/ToastNotification";
 import { FiSearch, FiUserPlus, FiCheck, FiX } from "react-icons/fi";
 
 export default function FriendsPage() {
   // Отправить заявку в друзья
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const sendRequest = async (friendId: string) => {
-    if (!user?.id || user.id === friendId) return;
+    if (!user?.id || friendId === user.id) return;
     await fetch(`/api/friends/request`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: user.id, friendId })
     });
-    setSearchResult(null);
+  setSearchResult(null);
+  setToast({ type: 'success', message: 'Заявка отправлена' });
   };
 
   // Принять заявку
@@ -22,7 +25,8 @@ export default function FriendsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: user?.id, requestId })
     });
-    setRequests(requests.filter(r => r.id !== requestId));
+  setRequests(requests.filter(r => r.id !== requestId));
+  setToast({ type: 'success', message: 'Заявка принята' });
   };
 
   // Отклонить заявку
@@ -32,7 +36,8 @@ export default function FriendsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: user?.id, requestId })
     });
-    setRequests(requests.filter(r => r.id !== requestId));
+  setRequests(requests.filter(r => r.id !== requestId));
+  setToast({ type: 'success', message: 'Заявка отклонена' });
   };
   const [user, setUser] = useState<{ id: string; login: string } | null>(null);
   const [search, setSearch] = useState("");
@@ -44,7 +49,7 @@ export default function FriendsPage() {
   // Автоматический поиск при вводе
   useEffect(() => {
     if (!search || search.length < 2) {
-      setSearchResult(null);
+      setSearchResult([]);
       return;
     }
     let active = true;
@@ -53,7 +58,7 @@ export default function FriendsPage() {
       .then(res => res.json())
       .then(data => {
         if (active) {
-          setSearchResult(data.user === null ? "notfound" : data.user);
+          setSearchResult(Array.isArray(data.users) ? data.users : []);
           setLoading(false);
         }
       });
@@ -76,7 +81,15 @@ export default function FriendsPage() {
 
   return (
     <>
-      <h2 style={{ textAlign: "center", fontSize: 44, fontWeight: 700, margin: "72px 0 56px 0", color: "#fff" }}>Друзья и заявки</h2>
+      <h2 style={{ textAlign: "center", fontSize: 44, fontWeight: 700, margin: "72px 0 56px 0", color: "#fff" }}></h2>
+      {toast && (
+        <ToastNotification
+          type={toast.type}
+          message={toast.message}
+          duration={2500}
+          onClose={() => setToast(null)}
+        />
+      )}
       <div style={{ display: "flex", flexDirection: "row", gap: 60, justifyContent: "center", alignItems: "flex-start", width: "100%", marginTop: 32, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
         {/* Поиск друзей смещён правее */}
         <div style={{ flex: 1, minWidth: 320, maxWidth: 400, padding: "18px 10px 18px 0", marginLeft: 180 }}>
@@ -106,16 +119,32 @@ export default function FriendsPage() {
             />
           </div>
           {loading && <div style={{ color: "#bbb", marginTop: 12, fontSize: 16 }}>Поиск...</div>}
-          {searchResult && (
-            searchResult === "notfound" ? (
-              <div style={{ background: "none", borderRadius: 0, padding: "12px 18px", marginTop: 22, textAlign: "center", color: "#bbb", fontSize: 17, boxShadow: "none" }}>Нет пользователя с таким логином</div>
-            ) : (
-              <div style={{ background: "none", borderRadius: 0, padding: "16px 22px", marginTop: 22, display: "flex", alignItems: "center", gap: 18, boxShadow: "none", transition: "none" }}>
-                <img src={searchResult.avatar || "/logo.svg"} alt="avatar" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", background: "none", marginRight: 8, boxShadow: "none" }} />
-                <span style={{ fontSize: 17, fontWeight: 500, color: "#fff" }}>{searchResult.login}</span>
-                <button onClick={() => sendRequest(searchResult.id)} style={{ background: "#229ED9", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 15, fontWeight: 500, cursor: "pointer", boxShadow: "none", display: "flex", alignItems: "center", gap: 6 }}><FiUserPlus style={{ fontSize: 16 }} /> Добавить</button>
-              </div>
-            )
+          {Array.isArray(searchResult) && searchResult.length === 0 && !loading && (
+            <div style={{ background: "none", borderRadius: 0, padding: "12px 18px", marginTop: 22, textAlign: "center", color: "#bbb", fontSize: 17, boxShadow: "none" }}>Нет пользователя с таким логином</div>
+          )}
+          {Array.isArray(searchResult) && searchResult.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              {searchResult.map(foundUser => (
+                <div key={foundUser.id} style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '10px 0', borderBottom: '1px solid #2a2b3d' }}>
+                  <img src={foundUser.avatar || '/logo.svg'} alt="avatar" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', background: 'none', marginRight: 8, boxShadow: 'none' }} />
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ color: '#e3e8f0', fontWeight: 500 }}>{foundUser.login}</div>
+                    {foundUser.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" style={{ width: 24, height: 24 }} />}
+                    {foundUser.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" style={{ width: 24, height: 24 }} />}
+                    {foundUser.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" style={{ width: 24, height: 24 }} />}
+                  </div>
+                  {foundUser.isFriend ? (
+                    <span style={{ color: '#aaa', fontSize: 13 }}>Уже друг</span>
+                  ) : (foundUser.id === user?.id) ? (
+                    <span style={{ color: '#229ed9', fontSize: 15, fontWeight: 600 }}>Это вы</span>
+                  ) : (
+                    <span title="Добавить" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#229ed9', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', color: '#fff', fontSize: 22, fontWeight: 700 }} onClick={() => sendRequest(foundUser.id)}>
+                      +
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
         {/* Входящие заявки справа */}
@@ -126,11 +155,22 @@ export default function FriendsPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {Array.isArray(requests) && requests.length > 0 ? requests.map(r => (
               r && typeof r.login === "string" ? (
-                <div key={r.id} style={{ background: "none", borderRadius: 0, padding: "10px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "none", border: "none", transition: "none" }}>
-                  <div style={{ width: 34, height: 34, borderRadius: "50%", background: "none", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, color: "#fff", fontWeight: 600, cursor: "pointer", boxShadow: "none" }} onClick={() => window.location.href = `/profile/${r.id}`}>{r.login[0].toUpperCase()}</div>
-                  <span style={{ fontSize: 15, fontWeight: 500, cursor: "pointer", color: "#fff" }} onClick={() => window.location.href = `/profile/${r.id}`}>{r.login}</span>
-                  <button onClick={() => handleAccept(r.id)} style={{ background: "#229ED9", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 15, fontWeight: 500, cursor: "pointer", boxShadow: "none", display: "flex", alignItems: "center", gap: 6 }}><FiCheck style={{ fontSize: 16 }} /></button>
-                  <button onClick={() => handleDecline(r.id)} style={{ background: "#444", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 15, fontWeight: 500, cursor: "pointer", boxShadow: "none", display: "flex", alignItems: "center", gap: 6 }}><FiX style={{ fontSize: 16 }} /></button>
+                <div key={r.id} style={{ background: "none", borderRadius: 0, padding: "10px 16px", display: "flex", alignItems: "center", gap: 8, boxShadow: "none", border: "none", transition: "none" }}>
+                  <img src={r.avatar || '/logo.svg'} alt="avatar" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', background: 'none', marginRight: 6, boxShadow: 'none' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 15, fontWeight: 500, cursor: "pointer", color: "#fff" }} onClick={() => window.location.href = `/profile/${r.id}`}>{r.login}</span>
+                    {r.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" style={{ width: 22, height: 22 }} />}
+                    {r.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" style={{ width: 22, height: 22 }} />}
+                    {r.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" style={{ width: 22, height: 22 }} />}
+                    {/* Принять: плюс */}
+                    <span title="Принять" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#229ed9', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', color: '#fff', fontSize: 22, fontWeight: 700, marginLeft: 8 }} onClick={() => handleAccept(r.id)}>
+                      +
+                    </span>
+                    {/* Отклонить: крестик */}
+                    <span title="Отклонить" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#ff1a1a', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', color: '#fff', fontSize: 22, fontWeight: 700, marginLeft: 4 }} onClick={() => handleDecline(r.id)}>
+                      ×
+                    </span>
+                  </div>
                 </div>
               ) : null
             )) : <div style={{ color: "#bbb", fontSize: 16, textAlign: "left", marginTop: 0, paddingLeft: 0 }}>Нет входящих заявок</div>}

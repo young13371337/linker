@@ -1,10 +1,11 @@
 model ChatUnread {
-  id        String   @id @default(uuid())
-  chatId    String
-  userId    String
-  count     Int      @default(0)
-  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  chatId String
+  userId String
+  count  Int    @default(0)
+  chat   Chat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([chatId, userId])
 }
 
@@ -16,9 +17,9 @@ model Session {
   createdAt  DateTime @default(now())
   user       User     @relation("UserSessions", fields: [userId], references: [id], onDelete: Cascade)
 }
+
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 
 generator client {
   provider = "prisma-client-js"
@@ -30,28 +31,28 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  login     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  avatar    String?  // ссылка на аватарку
-  description String? // описание профиля
+  id             String       @id @default(uuid())
+  login          String       @unique
+  password       String
+  createdAt      DateTime     @default(now())
+  avatar         String? // ссылка на аватарку
+  description    String? // описание профиля
   twoFactorToken String? // токен для 2FA
-  role      String   @default("user") // роль пользователя: admin, moderator, user
-  backgroundUrl String? // публичный фон профиля (URL)
-  friends   Friend[] @relation("UserFriends") // связи с друзьями
-  sessions  Session[] @relation("UserSessions") // активные сессии/устройства
-  sentMessages Message[] @relation("UserSentMessages")
-  chats Chat[] @relation("ChatUsers")
+  role           String       @default("user") // роль пользователя: admin, moderator, user
+  backgroundUrl  String? // публичный фон профиля (URL)
+  friends        Friend[]     @relation("UserFriends") // связи с друзьями
+  sessions       Session[]    @relation("UserSessions") // активные сессии/устройства
+  sentMessages   Message[]    @relation("UserSentMessages")
+  chats          Chat[]       @relation("ChatUsers")
   // posts Post[] // посты пользователя
-  chatUnreads ChatUnread[]
+  chatUnreads    ChatUnread[]
 }
 
 model Friend {
-  id        String   @id @default(uuid())
-  userId    String
-  friendId  String
-  user      User     @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  id       String @id @default(uuid())
+  userId   String
+  friendId String
+  user     User   @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model FriendRequest {
@@ -61,13 +62,12 @@ model FriendRequest {
   createdAt DateTime @default(now())
 }
 
-
 model Chat {
-  id        String   @id @default(uuid())
-  name      String?
-  createdAt DateTime @default(now())
-  users     User[]   @relation("ChatUsers")
-  messages  Message[]
+  id          String       @id @default(uuid())
+  name        String?
+  createdAt   DateTime     @default(now())
+  users       User[]       @relation("ChatUsers")
+  messages    Message[]
   chatUnreads ChatUnread[]
 }
 
@@ -76,10 +76,8 @@ model Message {
   chatId    String
   senderId  String
   text      String
-  // removed delivered and readBy fields
+  audioUrl  String? // ссылка на аудиофайл для голосовых сообщений
   createdAt DateTime @default(now())
   chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
   sender    User     @relation("UserSentMessages", fields: [senderId], references: [id], onDelete: Cascade)
 }
-
-

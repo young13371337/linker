@@ -119,7 +119,15 @@ function generate2FAToken() {
 }
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<{ id: string; login: string; verified?: boolean } | null>(null);
+  const [showNewsModal, setShowNewsModal] = useState(false);
+  const [user, setUser] = useState<{ id: string; login: string; verified?: boolean } | null>(() => {
+    // Попробовать взять пользователя из localStorage для мгновенного отображения
+    try {
+      const u = localStorage.getItem("user");
+      if (u) return JSON.parse(u);
+    } catch {}
+    return null;
+  });
   const [userRole, setUserRole] = useState<string>("user"); // 'user' | 'admin' | 'moderator' | 'verif' | 'pepe' | 'krip'
   const [removeFriendId, setRemoveFriendId] = useState<string | null>(null);
   const [desc, setDesc] = useState<string>("");
@@ -201,6 +209,8 @@ export default function ProfilePage() {
     setRemoveFriendId(null);
   };
   useEffect(() => {
+    // Сначала не блокируем рендер, а сразу показываем user из localStorage (см. useState выше)
+    // Потом асинхронно обновляем профиль с сервера
     const u = getUser();
     if (u && u.id) {
       fetch(`/api/profile?userId=${u.id}`)
@@ -250,7 +260,7 @@ export default function ProfilePage() {
                 <span style={{ position: 'relative', display: 'inline-block' }}
                   onMouseEnter={e => {
                     const tip = document.createElement('div');
-                    tip.innerText = 'Этот аккаунт принадлежит создателю Linker';
+                    tip.innerText = 'Linker Developer';
                     tip.style.position = 'absolute';
                     tip.style.top = '32px';
                     tip.style.left = '0';
@@ -308,7 +318,7 @@ export default function ProfilePage() {
                 <span style={{ position: 'relative', display: 'inline-block' }}
                   onMouseEnter={e => {
                     const tip = document.createElement('div');
-                    tip.innerText = 'аккаунт верифицирован';
+                    tip.innerText = 'Заблокированный аккаунт за нарушение правил Linker';
                     tip.style.position = 'absolute';
                     tip.style.top = '32px';
                     tip.style.left = '0';
@@ -337,7 +347,7 @@ export default function ProfilePage() {
                 <span style={{ position: 'relative', display: 'inline-block' }}
                   onMouseEnter={e => {
                     const tip = document.createElement('div');
-                    tip.innerText = 'девелопер линкера';
+                    tip.innerText = 'Linker Developer';
                     tip.style.position = 'absolute';
                     tip.style.top = '40px';
                     tip.style.left = '0';
@@ -380,197 +390,122 @@ export default function ProfilePage() {
         </button>
       </div>
 
-    {/* Список друзей и устройства */}
-  <div style={{ display: "flex", gap: 24, marginTop: 24, transition: "gap 0.3s" }}>
-        {/* Список друзей */}
-  <div style={{ flex: 1, background: "rgba(35,36,42,0.35)", borderRadius: 14, padding: 16, boxShadow: "0 1px 8px #0003" }}>
-          <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>Список друзей</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{maxHeight:220,overflowY:'auto',paddingRight:4,scrollbarWidth:'thin',scrollbarColor:'#bbb2 #23242a'}}>
-              <style>{`
-                .custom-scrollbar::-webkit-scrollbar {width:8px;background:#23242a;}
-                .custom-scrollbar::-webkit-scrollbar-thumb {background:#bbb2;border-radius:8px;opacity:0.5;}
-                .custom-scrollbar {scrollbar-width:thin;scrollbar-color:#bbb2 #23242a;overflow-x:hidden;}
-              `}</style>
-              <div className="custom-scrollbar" style={{overflowX:'hidden'}}>
-                {friends.length === 0 ? (
-                  <div style={{ color: "#bbb", fontSize: 16 }}>У вас нет друзей</div>
-                ) : friends.map(f => (
-                  <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(35,36,42,0.35)", borderRadius: 14, padding: "12px 16px", boxShadow: "0 2px 12px #0006", transition: "background 0.2s, box-shadow 0.2s", position: "relative" }} onMouseOver={e => {e.currentTarget.style.background="rgba(35,36,42,0.5)";e.currentTarget.style.boxShadow="0 2px 16px #229ED944"}} onMouseOut={e => {e.currentTarget.style.background="rgba(35,36,42,0.35)";e.currentTarget.style.boxShadow="0 2px 12px #0006"}}>
-                    <div style={{ position: "relative", width: 44, height: 44, borderRadius: "50%", background: "#444", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: 'none' }} onClick={() => window.location.href = `/profile/${f.id}`}> 
-                      <img src={f.avatar || "https://ui-avatars.com/api/?name=" + (f.login || f.friendId)} alt="avatar" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", background: "#444", boxShadow: 'none' }} />
-                      <span style={{ position: "absolute", left: 32, top: 32, width: 12, height: 12, borderRadius: "50%", background: f.isOnline ? "#1ed760" : "#888", border: "2px solid #23242a" }} />
-                    </div>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ fontSize: 17, fontWeight: 600, cursor: "pointer", color: "#fff" }} onClick={() => window.location.href = `/profile/${f.id}`}>{f.login || f.friendId}</span>
-                      {f.role === "admin" && (
-                        <img src="/role-icons/admin.svg" alt="admin" style={{width:24, height:24, marginLeft:4, verticalAlign:'middle'}} />
-                      )}
-                      {f.role === "moderator" && (
-                        <img src="/role-icons/moderator.svg" alt="moderator" style={{width:24, height:24, marginLeft:4, verticalAlign:'middle'}} />
-                      )}
-                      {f.role === "verif" && (
-                        <img src="/role-icons/verif.svg" alt="verif" style={{width:24, height:24, marginLeft:4, verticalAlign:'middle'}} />
-                      )}
-                      {f.role === "pepe" && (
-                        <img src="/role-icons/pepe.svg" alt="pepe" style={{width:32, height:32, marginLeft:4, verticalAlign:'middle'}} title="пепешка дается только легендам, или же разработчикам - эта и тем, и другим" />
-                      )}
-                    </span>
-                    <button onClick={() => setRemoveFriendId(f.id)} style={{ position: "absolute", right: 8, top: 12, background: "transparent", color: "#fff", border: "none", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, cursor: "pointer", opacity: 0.5, transition: "opacity 0.2s", zIndex: 2, boxShadow: 'none' }} title="Удалить друга" onMouseOver={e => e.currentTarget.style.opacity = "0.8"} onMouseOut={e => e.currentTarget.style.opacity = "0.5"}>
-                      ×
-                    </button>
+    {/* Список друзей и новости */}
+    <div style={{ display: "flex", gap: 24, marginTop: 24, transition: "gap 0.3s" }}>
+      {/* Список друзей */}
+      <div style={{ flex: 1, background: "rgba(35,36,42,0.35)", borderRadius: 14, padding: 16, boxShadow: "0 1px 8px #0003" }}>
+        <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>Список друзей</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{maxHeight:220,overflowY:'auto',paddingRight:4,scrollbarWidth:'thin',scrollbarColor:'#bbb2 #23242a'}}>
+            <style>{`
+              .custom-scrollbar::-webkit-scrollbar {width:8px;background:#23242a;}
+              .custom-scrollbar::-webkit-scrollbar-thumb {background:#bbb2;border-radius:8px;opacity:0.5;}
+              .custom-scrollbar {scrollbar-width:thin;scrollbar-color:#bbb2 #23242a;overflow-x:hidden;}
+            `}</style>
+            <div className="custom-scrollbar" style={{overflowX:'hidden'}}>
+              {friends.length === 0 ? (
+                <div style={{ color: "#bbb", fontSize: 16 }}>У вас нет друзей</div>
+              ) : friends.map(f => (
+                <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(35,36,42,0.35)", borderRadius: 14, padding: "12px 16px", boxShadow: "0 2px 12px #0006", transition: "background 0.2s, box-shadow 0.2s", position: "relative" }} onMouseOver={e => {e.currentTarget.style.background="rgba(35,36,42,0.5)";e.currentTarget.style.boxShadow="0 2px 16px #229ED944"}} onMouseOut={e => {e.currentTarget.style.background="rgba(35,36,42,0.35)";e.currentTarget.style.boxShadow="0 2px 12px #0006"}}>
+                  <div style={{ position: "relative", width: 44, height: 44, borderRadius: "50%", background: "#444", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: 'none' }} onClick={() => window.location.href = `/profile/${f.id}`}> 
+                    <img src={f.avatar || "https://ui-avatars.com/api/?name=" + (f.login || f.friendId)} alt="avatar" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", background: "#444", boxShadow: 'none' }} />
+                    <span style={{ position: "absolute", left: 32, top: 32, width: 12, height: 12, borderRadius: "50%", background: f.isOnline ? "#1ed760" : "#888", border: "2px solid #23242a" }} />
                   </div>
-                ))}
-              </div>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 17, fontWeight: 600, cursor: "pointer", color: "#fff" }} onClick={() => window.location.href = `/profile/${f.id}`}>{f.login || f.friendId}</span>
+                    {f.role === "admin" && (
+                      <img src="/role-icons/admin.svg" alt="admin" style={{width:24, height:24, marginLeft:4, verticalAlign:'middle'}} />
+                    )}
+                    {f.role === "moderator" && (
+                      <img src="/role-icons/moderator.svg" alt="moderator" style={{width:24, height:24, marginLeft:4, verticalAlign:'middle'}} />
+                    )}
+                    {f.role === "verif" && (
+                      <img src="/role-icons/verif.svg" alt="verif" style={{width:24, height:24, marginLeft:4, verticalAlign:'middle'}} />
+                    )}
+                    {f.role === "pepe" && (
+                      <img src="/role-icons/pepe.svg" alt="pepe" style={{width:32, height:32, marginLeft:4, verticalAlign:'middle'}} title="Linker Developer" />
+                    )}
+                  </span>
+                  <button onClick={() => setRemoveFriendId(f.id)} style={{ position: "absolute", right: 8, top: 12, background: "transparent", color: "#fff", border: "none", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, cursor: "pointer", opacity: 0.5, transition: "opacity 0.2s", zIndex: 2, boxShadow: 'none' }} title="Удалить друга" onMouseOver={e => e.currentTarget.style.opacity = "0.8"} onMouseOut={e => e.currentTarget.style.opacity = "0.5"}>
+                    ×
+                  </button>
+                </div>
+              ))}
             </div>
-            {removeFriendId && (
-              <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <div style={{ background: "#23242a", borderRadius: 18, padding: 32, minWidth: 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", textAlign: "center" }}>
-                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 18 }}>Вы уверены, что хотите удалить друга?</div>
-                  <div style={{ display: "flex", gap: 18, justifyContent: "center" }}>
-                    <button onClick={handleRemoveFriend} style={{ background: "#e74c3c", color: "#fff", border: "none", borderRadius: 8, padding: "8px 22px", fontSize: 16, fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 8px #e74c3f44" }}>Да</button>
-                    <button onClick={() => setRemoveFriendId(null)} style={{ background: "#444", color: "#fff", border: "none", borderRadius: 8, padding: "8px 22px", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Отменить</button>
-                  </div>
+          </div>
+          {removeFriendId && (
+            <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ background: "#23242a", borderRadius: 18, padding: 32, minWidth: 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", textAlign: "center" }}>
+                <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 18 }}>Вы уверены, что хотите удалить друга?</div>
+                <div style={{ display: "flex", gap: 18, justifyContent: "center" }}>
+                  <button onClick={handleRemoveFriend} style={{ background: "#e74c3c", color: "#fff", border: "none", borderRadius: 8, padding: "8px 22px", fontSize: 16, fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 8px #e74c3f44" }}>Да</button>
+                  <button onClick={() => setRemoveFriendId(null)} style={{ background: "#444", color: "#fff", border: "none", borderRadius: 8, padding: "8px 22px", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Отменить</button>
                 </div>
               </div>
-            )}
+            </div>
+          )}
+        </div>
+      </div>
+      {/* Новости */}
+      <div style={{ flex: 1, background: "rgba(35,36,42,0.35)", borderRadius: 14, padding: 16, boxShadow: "0 1px 8px #0003" }}>
+        <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>Новости</div>
+        <div
+          style={{
+            cursor: 'pointer',
+            borderRadius: 12,
+            overflow: 'hidden',
+            background: 'linear-gradient(135deg, #23242a 85%, #2a2d3a 100%)',
+            boxShadow: '0 1px 8px #0006',
+            marginBottom: 14,
+            transition: 'box-shadow 0.22s, transform 0.14s',
+            border: '1px solid #23242a',
+            maxWidth: 260,
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}
+          onClick={() => setShowNewsModal(true)}
+          onMouseOver={e => {
+            e.currentTarget.style.boxShadow = '0 4px 16px #229ED944';
+            e.currentTarget.style.transform = 'translateY(-1px) scale(1.01)';
+          }}
+          onMouseOut={e => {
+            e.currentTarget.style.boxShadow = '0 1px 8px #0006';
+            e.currentTarget.style.transform = 'none';
+          }}
+        >
+          <img src="/news-images/update.jpg" alt="Новое обновление" style={{ width: '100%', height: 70, objectFit: 'cover', display: 'block', borderTopLeftRadius: 12, borderTopRightRadius: 12 }} />
+          <div style={{ padding: '10px 12px 8px 12px', textAlign: 'center', width: '100%' }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', letterSpacing: 0.1 }}>Обновление v5.0</div>
           </div>
         </div>
-        {/* Устройства/сессии */}
-  <div style={{ flex: 1, background: "rgba(35,36,42,0.35)", borderRadius: 14, padding: 16, boxShadow: "0 1px 8px #0003" }}>
-          <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>Ваши устройства</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{maxHeight:220,overflowY:'auto',paddingRight:4,scrollbarWidth:'thin',scrollbarColor:'#bbb2 #23242a'}}>
-              <style>{`
-                .custom-scrollbar::-webkit-scrollbar {width:8px;background:#23242a;}
-                .custom-scrollbar::-webkit-scrollbar-thumb {background:#bbb2;border-radius:8px;opacity:0.5;}
-                .custom-scrollbar {scrollbar-width:thin;scrollbar-color:#bbb2 #23242a;}
-              `}</style>
-              <div className="custom-scrollbar">
-                {sessions.length === 0 ? (
-                  <div style={{ color: "#bbb", fontSize: 16 }}>Нет устройств</div>
-                ) : (
-                  <>
-                    {/* Текущая сессия */}
-                    {sessions.filter(s => s.isActive).map(current => (
-                      <React.Fragment key={current.id}>
-                        <div style={{ background: "rgba(35,36,42,0.35)", borderRadius: 10, padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                          <span style={{ color: "#fff", fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                            {getDeviceIconAndName(current.deviceName)}
-                            <span
-                              style={{ color: '#1ed760', fontSize: 13, marginLeft: 6, cursor: 'pointer', position: 'relative' }}
-                              onMouseEnter={e => {
-                                const tip = document.createElement('div');
-                                tip.innerText = sessions.filter(s => s.isActive).length > 1
-                                  ? 'Активных сеансов: ' + sessions.filter(s => s.isActive).length + '\nВозможно, кто-то ещё в аккаунте!'
-                                  : 'Активный сеанс' ;
-                                tip.style.position = 'fixed';
-                                tip.style.top = (e.clientY + 16) + 'px';
-                                tip.style.left = (e.clientX - 20) + 'px';
-                                tip.style.background = 'rgba(30,32,42,0.96)';
-                                tip.style.color = '#fff';
-                                tip.style.padding = '8px 18px';
-                                tip.style.borderRadius = '12px';
-                                tip.style.fontSize = '15px';
-                                tip.style.boxShadow = '0 2px 24px #229ED944';
-                                tip.style.zIndex = '9999';
-                                tip.style.whiteSpace = 'pre-line';
-                                tip.style.wordBreak = 'break-word';
-                                tip.style.transition = 'opacity 0.18s';
-                                tip.style.opacity = '0.98';
-                                tip.className = 'session-tooltip';
-                                if (e.currentTarget) e.currentTarget.appendChild(tip);
-                              }}
-                              onMouseLeave={e => {
-                                if (e.currentTarget) {
-                                  const tips = e.currentTarget.querySelectorAll('.session-tooltip');
-                                  tips.forEach(tip => tip.remove());
-                                }
-                              }}
-                            >(текущий)</span>
-                          </span>
-                          <button
-                            onClick={async () => {
-                              if (!user) return;
-                              await fetch("/api/session-end", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ userId: user.id, sessionId: current.id })
-                              });
-                              // Обновить список сессий после завершения
-                              fetch(`/api/profile?userId=${user.id}`)
-                                .then(r => r.json())
-                                .then(data => {
-                                  setSessions((data.user.sessions || []).filter((s: any) => s.isActive));
-                                });
-                              localStorage.removeItem("user");
-                              window.location.href = "/auth/login";
-                            }}
-                            style={{
-                              background: 'transparent',
-                              color: '#e74c3c',
-                              border: 'none',
-                              borderRadius: 7,
-                              padding: '4px 10px',
-                              fontSize: 13,
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              transition: 'background 0.18s, color 0.18s',
-                            }}
-                            onMouseOver={e => {
-                              e.currentTarget.style.background = '#e74c3c';
-                              e.currentTarget.style.color = '#fff';
-                            }}
-                            onMouseOut={e => {
-                              e.currentTarget.style.background = 'transparent';
-                              e.currentTarget.style.color = '#e74c3c';
-                            }}
-                          ><FaSignOutAlt style={{ fontSize: 18 }} /></button>
-                        </div>
-                      </React.Fragment>
-                    ))}
-                    {/* Остальные сессии */}
-                    {sessions.filter(s => !s.isActive).length > 0 && (
-                      <div style={{ marginTop: 6 }}>
-                        {sessions.filter(s => !s.isActive).map(s => (
-                          <div key={s.id} style={{ background: "#18191c", borderRadius: 10, padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                            <span style={{ color: "#bbb", fontWeight: 400, display: 'flex', alignItems: 'center', gap: 8 }}>{getDeviceIconAndName(s.deviceName)}</span>
-                            <button
-                              onClick={async () => {
-                                if (!user) return;
-                                await fetch("/api/session-end", {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ userId: user.id, sessionId: s.id })
-                                });
-                                // Обновить список сессий после завершения
-                                fetch(`/api/profile?userId=${user.id}`)
-                                  .then(r => r.json())
-                                  .then(data => {
-                                    setSessions(data.user.sessions || []);
-                                  });
-                              }}
-                              style={{ background: 'transparent', color: '#e74c3c', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 14, fontWeight: 500, cursor: 'pointer', transition: 'background 0.18s, color 0.18s' }}
-                              onMouseOver={e => {
-                                e.currentTarget.style.background = '#e74c3c';
-                                e.currentTarget.style.color = '#fff';
-                              }}
-                              onMouseOut={e => {
-                                e.currentTarget.style.background = 'transparent';
-                                e.currentTarget.style.color = '#e74c3c';
-                              }}
-                            ><FaSignOutAlt style={{ fontSize: 18 }} /></button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
+        {/* Можно добавить другие новости ниже */}
+      </div>
+
+      {/* Модальное окно с новостью */}
+      {showNewsModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#000a', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.3s' }}>
+          <div style={{ background: '#23242a', borderRadius: 18, padding: 0, minWidth: 340, maxWidth: 420, boxShadow: '0 2px 24px #0008', color: '#fff', position: 'relative', textAlign: 'center', overflow: 'hidden' }}>
+            <button onClick={() => setShowNewsModal(false)} style={{ position: 'absolute', top: 10, right: 16, zIndex: 100, background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer', transition: 'color 0.2s' }} onMouseOver={e => {e.currentTarget.style.color="#4fc3f7"}} onMouseOut={e => {e.currentTarget.style.color="#fff"}}>✕</button>
+            <img src="/news-images/update.jpg" alt="Новое обновление" style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block', borderTopLeftRadius: 18, borderTopRightRadius: 18 }} />
+            <div style={{ padding: '24px 22px 18px 22px' }}>
+              <div style={{ fontSize: 19, fontWeight: 700, marginBottom: 10 }}>Linker Social Minor Update v5.0</div>
+              <div style={{ color: '#bbb', fontSize: 16, marginBottom: 8 }}>
+                Изменена авторизация, логика, дизайн.
+                Добавлены новые роли.
+                Удален список устройств, теперь вас просто будут уведомлять о новых активных устройствах.<br />
+                <br />
+                Linker Inteligence - Нейросеть, которая будет помогать, отвечать на вопросы или просто общатся с вами. (v1linkBeta)
+                Изменена система друзей, исправлено много багов с системой друзей
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
+    </div>
 
       {/* Модальное окно настроек */}
       {showSettings && (

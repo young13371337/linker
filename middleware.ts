@@ -5,10 +5,7 @@ export function middleware(request: import('next/server').NextRequest) {
     const isAuth = request.cookies.get('next-auth.session-token') || request.cookies.get('next-auth.session');
     const path = request.nextUrl.pathname;
 
-    // При заходе на корень "/" редиректим на /auth/register
-    if (path === '/') {
-      return NextResponse.redirect(new URL('/auth/register', request.url));
-    }
+    // Главная страница теперь доступна всем, редирект убран
 
     return NextResponse.next();
   } catch (e) {

@@ -167,7 +167,7 @@ export default function UserProfile() {
             {/* Кнопка заявки/статус друга */}
             {currentUser && user && currentUser.id !== user.id && (
               isFriend ? (
-                <span style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', background: 'none', borderRadius: 18, color: '#fff', fontWeight: 600, fontSize: 16, padding: '7px 18px' }}>Ваш друг</span>
+                <span style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', background: 'none', borderRadius: 18, color: '#4caf50', fontWeight: 600, fontSize: 16, padding: '7px 18px' }}>Ваш друг</span>
               ) : requestSent ? (
                 <span style={{ color: '#229ed9', fontWeight: 500, fontSize: 15, marginLeft: 12 }}>Заявка отправлена</span>
               ) : (
