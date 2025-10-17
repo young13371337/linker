@@ -318,7 +318,7 @@ export default function ProfilePage() {
                 <span style={{ position: 'relative', display: 'inline-block' }}
                   onMouseEnter={e => {
                     const tip = document.createElement('div');
-                    tip.innerText = 'Заблокированный аккаунт за нарушение правил Linker';
+                    tip.innerText = 'Оффициальный аккаунт';
                     tip.style.position = 'absolute';
                     tip.style.top = '32px';
                     tip.style.left = '0';
