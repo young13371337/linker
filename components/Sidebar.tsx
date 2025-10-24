@@ -129,27 +129,27 @@ export default function Sidebar() {
           </button>
         </div>
       </aside>
-      {/* Кнопка открытия/закрытия всегда рядом с сайдбаром */}
+      {/* Кнопка открытия/закрытия фиксирована вне сайдбара, всегда в левом верхнем углу */}
       <button
         aria-label={open ? "Close sidebar" : "Open sidebar"}
         className={styles.toggleBtn}
         onClick={() => setOpen(!open)}
         style={{
-          left: (open ? 260 : 0) + 8,
-          top: 28,
           position: 'fixed',
+          left: 12,
+          top: 18,
           zIndex: 1101,
-          background: 'transparent',
+          background: '#0f0f0f',
           borderRadius: 8,
-          padding: 4,
+          padding: 8,
           fontSize: 18,
           boxShadow: 'none',
           border: 'none',
           textDecoration: 'none',
-          transition: 'left 0.4s cubic-bezier(.4,0,.2,1)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          transition: 'background 0.2s',
         }}
       >
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
