@@ -1151,12 +1151,7 @@ const ChatWithFriend: React.FC = () => {
                         if (recordInterval.current) clearInterval(recordInterval.current);
                         setIsRecording(false);
                         setRecordTime(0);
-                        // Минимальная длительность записи 1 секунда
-                        if (recordTime < 1) {
-                          alert('Запись слишком короткая!');
-                          audioChunksRef.current = [];
-                          return;
-                        }
+                        // (Проверка минимальной длительности аудио отключена)
                         // ...existing code...
                         // Минимальная длительность записи 1 секунда
                         if (videoTime < 1) {
