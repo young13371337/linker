@@ -317,22 +317,7 @@ const ChatWithFriend: React.FC = () => {
             if (videoTimer.current) clearInterval(videoTimer.current);
             setVideoRecording(false);
             setVideoTime(0);
-            // Минимальная длительность записи 1 секунда
-            if (videoTime < 1) {
-              alert('Видео слишком короткое!');
-              setShowVideoPreview(false);
-              setVideoBlob(null);
-              setVideoChunks([]);
-              if (videoRef.current) {
-                videoRef.current.srcObject = null;
-                videoRef.current.src = '';
-              }
-              if (stream) {
-                stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
-              }
-              setVideoStream(null);
-              return;
-            }
+            // (Проверка минимальной длительности видео отключена)
             const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
             // (Проверка минимального размера видео отключена)
             // Сразу отправляем кружок

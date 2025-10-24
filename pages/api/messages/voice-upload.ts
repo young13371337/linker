@@ -16,7 +16,7 @@ export const config = {
 function parseForm(req: NextApiRequest): Promise<{ fields: any; files: any }> {
 	return new Promise((resolve, reject) => {
 	const { IncomingForm } = require('formidable');
-	const form = new IncomingForm({ multiples: false, allowEmptyFiles: false, minFileSize: 1 });
+	const form = new IncomingForm({ multiples: false, allowEmptyFiles: false });
 		form.parse(req, (err: any, fields: any, files: any) => {
 			if (err) reject(err);
 			else resolve({ fields, files });
