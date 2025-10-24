@@ -16,22 +16,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   // Файл должен лежать в storage/video
   const filePath = path.join(process.cwd(), 'storage', 'video', filename);
+  console.log('[VIDEO API] filePath:', filePath);
   if (!fs.existsSync(filePath)) {
+    console.error('[VIDEO API] File not found:', filePath);
     return res.status(404).json({ error: 'File not found' });
   }
   try {
     const encrypted = fs.readFileSync(filePath);
-    // chatId можно получить из БД по filename (по message.videoUrl)
-    // Для простоты: ищем message по videoUrl
     const prisma = (await import('../../../../lib/prisma')).default;
     const message = await prisma.message.findFirst({ where: { videoUrl: { contains: filename } } });
-    if (!message) return res.status(404).json({ error: 'Message not found' });
+    console.log('[VIDEO API] message:', message);
+    if (!message) {
+      console.error('[VIDEO API] Message not found for filename:', filename);
+      return res.status(404).json({ error: 'Message not found' });
+    }
     const chatId = message.chatId;
+    console.log('[VIDEO API] chatId:', chatId);
     const decrypted = decryptFileBuffer(encrypted, chatId);
     res.setHeader('Content-Type', 'video/webm');
     res.setHeader('Content-Disposition', `inline; filename="${filename.replace(/\.enc$/, '.webm')}"`);
     res.status(200).send(decrypted);
   } catch (e) {
+    console.error('[VIDEO API] Decryption failed:', e);
     res.status(500).json({ error: 'Decryption failed', details: String(e) });
   }
 }

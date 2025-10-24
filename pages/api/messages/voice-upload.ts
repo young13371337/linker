@@ -47,11 +47,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			   fileName = `${Date.now()}-${file.originalFilename ? file.originalFilename.replace(/\.[^/.]+$/, fileExt) : 'voice.mp3'}`;
 			   // Шифруем файл перед сохранением
 			   filePath = path.join(uploadDir, fileName + '.enc');
+			   console.log('[VOICE UPLOAD] filePath:', filePath);
 			   const fileBuffer = fs.readFileSync(file.filepath || file.path);
 			   const encryptedBuffer = encryptFileBuffer(fileBuffer, chatId);
 			   fs.writeFileSync(filePath, encryptedBuffer);
 			   urlField = 'audioUrl';
 			   urlValue = `/api/media/voice/${fileName}.enc`;
+			   console.log('[VOICE UPLOAD] urlValue:', urlValue, 'chatId:', chatId);
 		   } else {
 			   res.status(400).json({ error: 'No audio file', fields, files });
 			   return;
