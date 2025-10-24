@@ -1153,22 +1153,7 @@ const ChatWithFriend: React.FC = () => {
                         setRecordTime(0);
                         // (Проверка минимальной длительности аудио отключена)
                         // ...existing code...
-                        // Минимальная длительность записи 1 секунда
-                        if (videoTime < 1) {
-                          alert('Видео слишком короткое!');
-                          setShowVideoPreview(false);
-                          setVideoBlob(null);
-                          setVideoChunks([]);
-                          if (videoRef.current) {
-                            videoRef.current.srcObject = null;
-                            videoRef.current.src = '';
-                          }
-                          if (stream) {
-                            stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
-                          }
-                          setVideoStream(null);
-                          return;
-                        }
+                        // (Проверка минимальной длительности видео отключена)
                         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
                         audioChunksRef.current = [];
                         // (Проверка минимального размера аудио отключена)
