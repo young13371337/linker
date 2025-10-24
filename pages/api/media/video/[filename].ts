@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'No filename' });
   }
   // Файл должен лежать в storage/video
-  const filePath = path.join(process.cwd(), 'storage', 'video', filename);
+  const filePath = path.join(process.cwd(), '.private_media', 'video', filename);
   console.log('[VIDEO API] filePath:', filePath);
   if (!fs.existsSync(filePath)) {
     console.error('[VIDEO API] File not found:', filePath);

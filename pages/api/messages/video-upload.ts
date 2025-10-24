@@ -37,11 +37,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return;
       }
       // --- Шифруем видеофайл и сохраняем с .enc ---
-      const uploadDir = path.join(process.cwd(), 'storage', 'video');
-      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-      const fileName = `${Date.now()}-circle.webm`;
-      const encFileName = fileName + '.enc';
-      const filePath = path.join(uploadDir, encFileName);
+  const uploadDir = path.join(process.cwd(), '.private_media', 'video');
+  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+  const fileName = `${Date.now()}-circle.webm`;
+  const encFileName = fileName + '.enc';
+  const filePath = path.join(uploadDir, encFileName);
   let chatId = fields.chatId;
   if (Array.isArray(chatId)) chatId = chatId[0];
   const fileBuffer = fs.readFileSync(video.filepath || video.path);
