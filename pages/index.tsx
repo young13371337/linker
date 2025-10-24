@@ -74,7 +74,7 @@ const Landing: React.FC = () => {
       >
         {/* Для мобильных: текст и анимация под кнопками */}
         {isMobile && (
-          <div style={{ marginTop: 120, padding: '0 8px' }}>
+          <div style={{ marginTop: 180, padding: '0 8px' }}>
             <h1
               style={{
                 fontSize: 26,
