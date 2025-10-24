@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ChatUnread {
+  id     String @id @default(uuid())
+  chatId String
+  userId String
+  count  Int    @default(0)
+  chat   Chat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+}
+
+model Session {
+  id         String   @id @default(uuid())
+  userId     String
+  deviceName String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  user       User     @relation("UserSessions", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id             String       @id @default(uuid())
+  password       String
+  createdAt      DateTime     @default(now())
+  login          String       @unique
+  avatar         String?
+  description    String?
+  twoFactorSecret String?
+  twoFactorEnabled Boolean @default(false)
+  role           String       @default("user")
+  backgroundUrl  String?
+  chatUnreads    ChatUnread[]
+  friends        Friend[]     @relation("UserFriends")
+  sentMessages   Message[]    @relation("UserSentMessages")
+  sessions       Session[]    @relation("UserSessions")
+  chats          Chat[]       @relation("ChatUsers")
+}
+
+model Friend {
+  id       String @id @default(uuid())
+  userId   String
+  friendId String
+  user     User   @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FriendRequest {
+  id        String   @id @default(uuid())
+  fromId    String
+  toId      String
+  createdAt DateTime @default(now())
+}
+
+model Chat {
+  id          String       @id @default(uuid())
+  name        String?
+  createdAt   DateTime     @default(now())
+  chatUnreads ChatUnread[]
+  messages    Message[]
+  users       User[]       @relation("ChatUsers")
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  chatId    String
+  senderId  String
+  text      String
+  createdAt DateTime @default(now())
+  audioUrl  String?
+  videoUrl  String?
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender    User     @relation("UserSentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+}
