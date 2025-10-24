@@ -21,13 +21,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     take: 10 // ограничение на количество результатов
   });
   // Определяем, является ли найденный пользователь другом
-  let usersWithFriendStatus = users.map(u => ({ ...u, isFriend: false }));
+  let usersWithFriendStatus = (Array.isArray(users) ? users : []).map(u => ({ ...u, isFriend: false }));
   if (userId && typeof userId === "string") {
     const friendIds = await prisma.friend.findMany({
       where: { userId },
       select: { friendId: true }
     });
-    const friendIdSet = new Set(friendIds.map(f => f.friendId));
+  const friendIdSet = new Set(friendIds.map((f: any) => f.friendId));
     usersWithFriendStatus = usersWithFriendStatus.map(u => ({ ...u, isFriend: friendIdSet.has(u.id) }));
   }
   return res.status(200).json({ users: usersWithFriendStatus });

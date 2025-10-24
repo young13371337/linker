@@ -1,3 +1,11 @@
+// @ts-ignore
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      [elemName: string]: any;
+    }
+  }
+}
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { getUser, clearUser } from "../lib/session";
@@ -82,46 +90,29 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside
-        className={`${styles.sidebar} ${open ? styles.open : styles.closed}`}
-        style={mounted && isMobile ? { width: open ? '80vw' : 0, minWidth: 0, maxWidth: '320px', zIndex: 1000 } : {}}
-      >
-        <div className={styles.logo}>
-          <img
-            src={open ? "/logo.svg" : "/logo2.svg"}
-            alt="Logo"
-            className={styles.logoImg}
-          />
-        </div>
-
+      <aside className={styles.sidebar} style={{ left: open ? 0 : -240 }}>
         <nav className={styles.nav}>
-          <SidebarLink href="/chat" icon={<FaComments />} text="Чат" open={open} />
           <SidebarLink
             href="/friends"
             icon={
-              <span className={styles.iconWrapper}>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  width="18"
-                  height="18"
-                  fill="white"
-                >
-                  <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05C15.64 13.36 17 14.28 17 15.5V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
-                </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="white">
+                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05C15.64 13.36 17 14.28 17 15.5V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+              </svg>
+            }
+            text={
+              <>
+                Друзья
                 {pendingCount === null ? (
                   <span className={styles.pendingDotGrey} />
                 ) : pendingCount > 0 ? (
                   <span className={styles.pendingDotRed} />
                 ) : null}
-              </span>
+              </>
             }
-            text="Друзья"
             open={open}
           />
           <SidebarLink href="/profile" icon={<FaUser />} text="Профиль" open={open} />
         </nav>
-
         <div className={styles.footer}>
           <button className={styles.logoutBtn} onClick={logout}>
             <FaSignOutAlt />
@@ -139,7 +130,7 @@ export default function Sidebar() {
           left: 12,
           top: 18,
           zIndex: 1101,
-          background: '#0f0f0f',
+          background: 'transparent',
           borderRadius: 8,
           padding: 8,
           fontSize: 18,
