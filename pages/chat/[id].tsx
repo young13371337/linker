@@ -334,21 +334,7 @@ const ChatWithFriend: React.FC = () => {
               return;
             }
             const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
-            if (blob.size < 2048) {
-              alert('Видеофайл слишком мал!');
-              setShowVideoPreview(false);
-              setVideoBlob(null);
-              setVideoChunks([]);
-              if (videoRef.current) {
-                videoRef.current.srcObject = null;
-                videoRef.current.src = '';
-              }
-              if (stream) {
-                stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
-              }
-              setVideoStream(null);
-              return;
-            }
+            // (Проверка минимального размера видео отключена)
             // Сразу отправляем кружок
             if (chatId && session) {
               const formData = new FormData();
@@ -1190,10 +1176,7 @@ const ChatWithFriend: React.FC = () => {
                         }
                         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
                         audioChunksRef.current = [];
-                        if (audioBlob.size < 2048) {
-                          alert('Голосовой файл слишком мал!');
-                          return;
-                        }
+                        // (Проверка минимального размера аудио отключена)
                         const formData = new FormData();
                         formData.append('chatId', chatId || '');
                         formData.append('audio', audioBlob, 'voice.webm');
@@ -1222,10 +1205,7 @@ const ChatWithFriend: React.FC = () => {
                       // Остановить запись и отправить
                       if (mediaRecorder && isRecording) {
                         // Минимальная длительность
-                        if (recordTime < 1) {
-                          alert('Запись слишком короткая!');
-                          return;
-                        }
+                        // (Проверка минимальной длительности аудио отключена)
                         mediaRecorder.stop();
                         mediaRecorder.stream.getTracks().forEach(track => track.stop());
                       }
