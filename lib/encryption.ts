@@ -1,3 +1,21 @@
+// --- Шифрование/дешифрование файлов (Buffer <-> Buffer) ---
+export function encryptFileBuffer(buffer: Buffer, chatId: string): Buffer {
+    const key = getChatKey(chatId);
+    const iv = crypto.randomBytes(IV_LENGTH);
+    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+    const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
+    // Сохраняем IV в начале файла
+    return Buffer.concat([iv, encrypted]);
+}
+
+export function decryptFileBuffer(buffer: Buffer, chatId: string): Buffer {
+    const key = getChatKey(chatId);
+    const iv = buffer.slice(0, IV_LENGTH);
+    const encrypted = buffer.slice(IV_LENGTH);
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+    return decrypted;
+}
 import crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-ctr';

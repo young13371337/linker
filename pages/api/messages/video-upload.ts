@@ -1,9 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
 import fs from 'fs';
+
 import prisma from '../../../lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
+import { encryptFileBuffer } from '../../../lib/encryption';
 
 export const config = {
   api: {
@@ -33,19 +35,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.status(400).json({ error: 'No video file', fields, files });
         return;
       }
-      const fileSize = video.size || (video.filepath ? fs.statSync(video.filepath).size : 0);
-      if (!fileSize || fileSize < 2048) {
-        res.status(400).json({ error: 'Video file too short (min 1 секунда)', size: fileSize });
-        return;
-      }
-  const uploadDir = path.join(process.cwd(), 'storage', 'video');
-  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-  const fileName = `${Date.now()}-circle.webm`;
-  const filePath = path.join(uploadDir, fileName);
-  fs.copyFileSync(video.filepath || video.path, filePath);
-  const videoUrl = `/storage/video/${fileName}`;
-      let chatId = fields.chatId;
-      if (Array.isArray(chatId)) chatId = chatId[0];
+      // --- Шифруем видеофайл и сохраняем с .enc ---
+      const uploadDir = path.join(process.cwd(), 'storage', 'video');
+      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+      const fileName = `${Date.now()}-circle.webm`;
+      const encFileName = fileName + '.enc';
+      const filePath = path.join(uploadDir, encFileName);
+  let chatId = fields.chatId;
+  if (Array.isArray(chatId)) chatId = chatId[0];
+  const fileBuffer = fs.readFileSync(video.filepath || video.path);
+  const encryptedBuffer = encryptFileBuffer(fileBuffer, chatId);
+  fs.writeFileSync(filePath, encryptedBuffer);
+  const videoUrl = `/api/media/video/${encFileName}`;
       const session = await getServerSession(req, res, authOptions);
       const userId = session?.user?.id;
       if (!chatId) {

@@ -1,9 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
 import fs from 'fs';
+
 import prisma from '../../../lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
+import { encryptFileBuffer } from '../../../lib/encryption';
 
 export const config = {
 	api: {
@@ -34,6 +36,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		   let audio = files.audio;
 		   if (Array.isArray(audio)) audio = audio[0];
 		   let file, fileType, fileExt, uploadDir, fileName, filePath, urlField, urlValue;
+		   let chatId = fields.chatId;
+		   if (Array.isArray(chatId)) chatId = chatId[0];
 		   if (audio) {
 			   file = audio;
 			   fileType = 'audio';
@@ -41,24 +45,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			   uploadDir = path.join(process.cwd(), 'storage', 'voice');
 			   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 			   fileName = `${Date.now()}-${file.originalFilename ? file.originalFilename.replace(/\.[^/.]+$/, fileExt) : 'voice.mp3'}`;
-			   filePath = path.join(uploadDir, fileName);
-			   fs.copyFileSync(file.filepath || file.path, filePath);
+			   // Шифруем файл перед сохранением
+			   filePath = path.join(uploadDir, fileName + '.enc');
+			   const fileBuffer = fs.readFileSync(file.filepath || file.path);
+			   const encryptedBuffer = encryptFileBuffer(fileBuffer, chatId);
+			   fs.writeFileSync(filePath, encryptedBuffer);
 			   urlField = 'audioUrl';
-			   urlValue = `/api/messages/voice/${fileName}`;
+			   urlValue = `/api/media/voice/${fileName}.enc`;
 		   } else {
 			   res.status(400).json({ error: 'No audio file', fields, files });
 			   return;
 		   }
-		   // Проверка размера файла (минимум ~2КБ)
-		   const fileSize = file.size || (file.filepath ? fs.statSync(file.filepath).size : 0);
-		   if (!fileSize || fileSize < 2048) {
-			   res.status(400).json({ error: `${fileType} file too short (min 1 секунда)`, size: fileSize });
-			   return;
-		   }
-		   let chatId = fields.chatId;
-		   if (Array.isArray(chatId)) chatId = chatId[0];
-		   const session = await getServerSession(req, res, authOptions);
-		   const userId = session?.user?.id;
+		   // (Проверка минимального размера файла отключена)
+		   let session = await getServerSession(req, res, authOptions);
+		   let userId = session?.user?.id;
 		   if (!chatId) {
 			   res.status(400).json({ error: 'No chatId provided', fields });
 			   return;
