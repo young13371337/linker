@@ -768,22 +768,24 @@ const ChatWithFriend: React.FC = () => {
                 <span style={{ position: 'absolute', right: -2, bottom: -2, width: 14, height: 14, borderRadius: '50%', background: friend?.status === 'online' ? '#1ed760' : '#888', border: '2px solid #23242a' }} />
               )}
             </div>
-            <span style={nameStyle}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>{friend?.name || friend?.login || <span style={{color:'#888'}}>Загрузка...</span>}</span>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={nameStyle}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>{friend?.name || friend?.login || <span style={{color:'#888'}}>Загрузка...</span>}</span>
+                </span>
+                {/* Иконка роли */}
+                {friend?.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" title="Админ" style={{ width: 16, height: 16, marginLeft: 2 }} />}
+                {friend?.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" title="Модератор" style={{ width: 16, height: 16, marginLeft: 2 }} />}
+                {friend?.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" title="Верифицирован" style={{ width: 16, height: 16, marginLeft: 2 }} />}
+                {friend?.role === 'pepe' && <img src="/role-icons/pepe.svg" alt="pepe" title="Пепешка" style={{ width: 16, height: 16, marginLeft: 2 }} />}
               </span>
-              {/* typing indicator under the nickname */}
+              {/* typing indicator below the whole header (under name and status) */}
               {isTyping && (
-                <div style={{ fontSize: 13, color: '#4fc3f7', marginTop: 2 }}>
+                <div style={{ fontSize: 13, color: '#4fc3f7', marginTop: 6 }}>
                   {isTyping} печатает...
                 </div>
               )}
-              {/* Иконка роли */}
-              {friend?.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" title="Админ" style={{ width: 16, height: 16, marginLeft: 2 }} />}
-              {friend?.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" title="Модератор" style={{ width: 16, height: 16, marginLeft: 2 }} />}
-              {friend?.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" title="Верифицирован" style={{ width: 16, height: 16, marginLeft: 2 }} />}
-              {friend?.role === 'pepe' && <img src="/role-icons/pepe.svg" alt="pepe" title="Пепешка" style={{ width: 16, height: 16, marginLeft: 2 }} />}
-            </span>
+            </div>
           </div>
         </div>
         <div
