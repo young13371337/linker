@@ -20,13 +20,20 @@ export default function FriendsPage() {
 
   // Принять заявку
   const handleAccept = async (requestId: string) => {
-    await fetch(`/api/friends/accept`, {
+    const res = await fetch(`/api/friends/accept`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: user?.id, requestId })
     });
-  setRequests(requests.filter(r => r.id !== requestId));
-  setToast({ type: 'success', message: 'Заявка принята' });
+    const data = await res.json();
+    
+    setRequests(requests.filter(r => r.id !== requestId));
+    setToast({ type: 'success', message: 'Заявка принята' });
+    
+    // Перенаправляем в созданный чат
+    if (data.chat?.id) {
+      window.location.href = `/chat/${requestId}`;
+    }
   };
 
   // Отклонить заявку

@@ -427,6 +427,12 @@ const ChatWithFriend: React.FC = () => {
                   videoUrl: msg.videoUrl || undefined
                 }));
                 setMessages(msgs);
+                // Прокручиваем в конец после загрузки сообщений
+                setTimeout(() => {
+                  if (chatScrollRef.current) {
+                    chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+                  }
+                }, 100);
                 try {
                   localStorage.setItem('chat-messages', JSON.stringify(msgs));
                 } catch {}
@@ -814,17 +820,34 @@ const ChatWithFriend: React.FC = () => {
                         {isOwn && hoveredMsgId === msg.id && (
                           <button
                             onClick={async () => {
-                              let res;
-                              if (msg.videoUrl) {
-                                res = await fetch(`/api/messages/video-upload?id=${msg.id}`, { method: 'DELETE', credentials: 'include' });
-                              } else {
-                                res = await fetch(`/api/messages/${msg.id}`, { method: 'DELETE', credentials: 'include' });
-                              }
-                              if (res.status === 204) {
-                                setMessages(messages.filter(m => m.id !== msg.id));
-                              } else {
-                                const data = await res.json().catch(() => ({}));
-                                alert('Ошибка удаления: ' + (data?.error || res.status));
+                              try {
+                                const endpoint = msg.videoUrl 
+                                  ? `/api/messages/video-upload?id=${msg.id}`
+                                  : `/api/messages/${msg.id}`;
+                                
+                                const res = await fetch(endpoint, { 
+                                  method: 'DELETE', 
+                                  credentials: 'include' 
+                                });
+
+                                if (res.status === 204) {
+                                  // Успешное удаление - убираем сообщение из UI
+                                  setMessages(prev => prev.filter(m => m.id !== msg.id));
+                                  return;
+                                }
+
+                                // Пытаемся получить детали ошибки
+                                const data = await res.json();
+                                if (data.error) {
+                                  throw new Error(data.error);
+                                }
+                              } catch (err) {
+                                console.error('Error deleting message:', err);
+                                alert(
+                                  err instanceof Error 
+                                    ? err.message 
+                                    : 'Не удалось удалить сообщение'
+                                );
                               }
                             }}
                             style={{
