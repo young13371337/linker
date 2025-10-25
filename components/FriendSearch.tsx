@@ -3,6 +3,7 @@ import UserStatus from './UserStatus';
 import { useSession } from 'next-auth/react';
 
 const FriendSearch: React.FC = () => {
+  const { data: session } = useSession();
   const [toast, setToast] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   type UserResult = {
@@ -11,6 +12,7 @@ const FriendSearch: React.FC = () => {
   avatar?: string;
   role?: string;
   isFriend?: boolean;
+  requestSent?: boolean;
   status?: import('./UserStatus').UserStatusType;
   };
   const [results, setResults] = useState<UserResult[]>([]);
@@ -24,7 +26,8 @@ const FriendSearch: React.FC = () => {
     }
     setLoading(true);
     setError('');
-    fetch(`/api/friends/search?login=${encodeURIComponent(query)}`)
+    const userIdParam = session?.user ? `&userId=${encodeURIComponent((session.user as any).id)}` : '';
+    fetch(`/api/friends/search?login=${encodeURIComponent(query)}${userIdParam}`)
       .then(res => res.json())
       .then(data => {
         if (data.error) setError(data.error);
@@ -79,6 +82,8 @@ const FriendSearch: React.FC = () => {
               </div>
               {user.isFriend ? (
                 <span style={{ color: '#aaa', fontSize: 13 }}>Уже друг</span>
+              ) : user.requestSent ? (
+                <span style={{ color: '#bbb', fontSize: 13 }}>Заявка отправлена</span>
               ) : (
                 <span
                   title="Добавить"
@@ -95,7 +100,7 @@ const FriendSearch: React.FC = () => {
                       if (res.ok) {
                         setToast('Заявка отправлена');
                         // mark locally as sent
-                        setResults(prev => prev.map(r => r.id === user.id ? { ...r, isFriend: true } : r));
+                        setResults(prev => prev.map(r => r.id === user.id ? { ...r, requestSent: true } : r));
                       } else {
                         const data = await res.json().catch(() => ({}));
                         setToast(data?.error || 'Ошибка при отправке заявки');
