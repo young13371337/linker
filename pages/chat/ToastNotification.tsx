@@ -49,29 +49,39 @@ const ToastNotification: React.FC<ToastProps> = ({ type, message, duration = 400
       </div>
       <span style={{fontSize:17}}>{message}</span>
       {actions && actions.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          {actions.map((a, idx) => (
-            <button
-              key={idx}
-              onClick={async () => {
-                try {
-                  await a.onClick();
-                } catch (e) {
-                  // ignore action errors here
-                  console.error('Toast action error', e);
-                }
-                setVisible(false);
-                setTimeout(onClose, 200);
-              }}
-              style={{
-                padding: '8px 12px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: type === 'error' ? '#ff5252' : '#229ed9', color: '#fff', fontWeight: 600,
-                ...(a.style || {})
-              }}
-            >
-              {a.label}
-            </button>
-          ))}
+        <div style={{ display: 'flex', gap: 8, marginTop: 8, width: '100%' }}>
+          {actions.map((a, idx) => {
+            const isTwo = actions.length === 2;
+            const base: React.CSSProperties = {
+              padding: '6px 8px',
+              borderRadius: 8,
+              border: 'none',
+              cursor: 'pointer',
+              background: '#777',
+              color: '#fff',
+              fontWeight: 600,
+              fontSize: 13,
+              lineHeight: '1',
+            };
+            const style: React.CSSProperties = isTwo ? { ...base, flex: 1 } : base;
+            return (
+              <button
+                key={idx}
+                onClick={async () => {
+                  try {
+                    await a.onClick();
+                  } catch (e) {
+                    console.error('Toast action error', e);
+                  }
+                  setVisible(false);
+                  setTimeout(onClose, 200);
+                }}
+                style={style}
+              >
+                {a.label}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
