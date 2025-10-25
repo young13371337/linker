@@ -44,9 +44,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 	}
 	try {
 		const { fields, files } = await parseForm(req);
-		console.log('Voice upload fields:', fields);
-		console.log('Voice upload files:', files);
+		console.log('[VOICE UPLOAD] parsed fields:', fields);
+		console.log('[VOICE UPLOAD] parsed files keys:', Object.keys(files || {}));
+		console.log('[VOICE UPLOAD] raw audio object:', files?.audio);
 		   let audio = files.audio;
+		   console.log('[VOICE UPLOAD] audio.filepath:', (audio as any)?.filepath || (audio as any)?.path);
 		   if (Array.isArray(audio)) audio = audio[0];
 		   let file, fileType, fileExt, uploadDir, fileName, filePath, urlField, urlValue;
 		   let chatId = fields.chatId;

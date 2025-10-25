@@ -42,7 +42,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Публикация видео
     try {
       const { fields, files } = await parseForm(req);
+      console.log('[VIDEO UPLOAD] parsed fields:', fields);
+      console.log('[VIDEO UPLOAD] parsed files keys:', Object.keys(files || {}));
       let video = files.video;
+      console.log('[VIDEO UPLOAD] raw video object:', video);
       if (Array.isArray(video)) video = video[0];
       if (!video) {
         res.status(400).json({ error: 'No video file', fields, files });
@@ -57,7 +60,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       let videoUrl: string;
-    try {
+      try {
+        console.log('[VIDEO UPLOAD] video.filepath:', (video as any)?.filepath || (video as any)?.path);
       // Сохраняем видео в оригинальном виде (без шифрования)
           const uploadDir = path.join(process.cwd(), 'storage', 'video');
       if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
