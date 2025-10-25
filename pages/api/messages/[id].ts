@@ -2,8 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import prisma from '../../../lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
+import { decryptMessage } from '../../../lib/encryption';
 import path from 'path';
 import fs from 'fs';
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Проверяем наличие папки .private_media
 const mediaRoot = path.join(process.cwd(), '.private_media');
@@ -38,10 +41,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       select: {
         id: true,
         senderId: true,
+        chatId: true,
+        text: true,
         audioUrl: true,
         videoUrl: true
       }
     });
+
+    // Добавляем небольшую задержку
+    await sleep(100);
     
     if (!msg) {
       console.log('[DELETE MESSAGE] Message not found:', id);
@@ -89,6 +97,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.error('[DELETE MESSAGE] Error deleting video file:', e);
       }
     }
+
+    // Пытаемся расшифровать сообщение для логов
+    if (msg.text && msg.chatId) {
+      try {
+        const decryptedText = decryptMessage(msg.text, msg.chatId);
+        console.log('[DELETE MESSAGE] Encrypted message content:', decryptedText);
+      } catch (e) {
+        console.error('[DELETE MESSAGE] Failed to decrypt message:', e);
+      }
+    }
+
+    // Добавляем еще небольшую задержку перед удалением
+    await sleep(100);
 
     // Удаляем сообщение из базы данных после удаления файлов
     console.log('[DELETE MESSAGE] Deleting message from database:', id);
