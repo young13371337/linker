@@ -532,7 +532,7 @@ export default function ProfilePage() {
       <div style={{ marginTop: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'rgba(255,255,255,0.02)', padding: '8px 12px', borderRadius: 10, color: '#ccc', marginBottom: 12 }}>
           <div style={{ fontSize: 13, color: '#bfbfbf' }}>Ваш UserID — <span style={{ color: '#9aa0a6', fontWeight: 700 }}>{user.id}</span></div>
-          <button
+            <button
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(user.id);
@@ -547,10 +547,10 @@ export default function ProfilePage() {
                 setTimeout(() => setShowToast(false), 2000);
               }
             }}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.03)', color: '#e6e6e6', cursor: 'pointer' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, background: 'transparent', border: '1px solid rgba(255,255,255,0.06)', color: '#e6e6e6', cursor: 'pointer' }}
             aria-label="Copy UserID"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="9" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.2"/><rect x="4" y="4" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.2"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="9" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.2"/><rect x="4" y="4" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.2"/></svg>
           </button>
         </div>
       </div>
