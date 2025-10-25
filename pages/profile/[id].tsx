@@ -1,4 +1,26 @@
 import React, { useEffect, useState } from "react";
+
+// Small copy button component used on other users' profile page
+function CopyButton({ idToCopy }: { idToCopy: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(idToCopy);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    } catch (e) {
+      // ignore
+    }
+  };
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <button onClick={handleCopy} aria-label="Copy UserID" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.03)', color: '#e6e6e6', cursor: 'pointer' }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="9" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.2"/><rect x="4" y="4" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.2"/></svg>
+      </button>
+      {copied && <span style={{ fontSize: 13, color: '#9aa0a6' }}>Скопировано</span>}
+    </div>
+  );
+}
 import { useRouter } from "next/router";
 
 export default function UserProfile() {
@@ -63,7 +85,7 @@ export default function UserProfile() {
           : "#23242a"
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 18, paddingBottom: 18, borderBottom: "1px solid #333" }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 18, paddingBottom: 18, borderBottom: "1px solid #333" }}>
         <div style={{ position: "relative" }}>
           {user.avatar ? (
             <img src={user.avatar} alt="avatar" style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", background: "#444" }} />
@@ -77,7 +99,7 @@ export default function UserProfile() {
             <span style={{ position: "absolute", left: 50, top: 46, width: 14, height: 14, borderRadius: "50%", background: user.status === 'online' ? "#1ed760" : "#bbb", border: "2px solid #fff" }} />
           )}
         </div>
-        <div style={{ flex: 1 }}>
+  <div style={{ flex: 1 }}>
           <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: 1, display: "flex", flexDirection: "column", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, position: 'relative' }}>
               <span>{user.login}</span>
@@ -224,6 +246,15 @@ export default function UserProfile() {
           </div>
         </div>
       </div>
+      {/* If this user is a friend, show their UserID and a copy button */}
+      {isFriend && user && user.id && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'rgba(255,255,255,0.02)', padding: '8px 12px', borderRadius: 10, color: '#ccc', marginTop: 12 }}>
+            <div style={{ fontSize: 13, color: '#bfbfbf' }}>UserID — <span style={{ color: '#9aa0a6', fontWeight: 700 }}>{user.id}</span></div>
+            <CopyButton idToCopy={user.id} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

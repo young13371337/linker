@@ -373,6 +373,34 @@ export default function ProfilePage() {
         />
       )}
       <div style={{ position: 'relative', zIndex: 1 }}>
+        {/* UserID row (subtle) */}
+        {user && user.id && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'rgba(255,255,255,0.02)', padding: '8px 12px', borderRadius: 10, color: '#ccc' }}>
+              <div style={{ fontSize: 13, color: '#bfbfbf' }}>Ваш UserID — <span style={{ color: '#9aa0a6', fontWeight: 700 }}>{user.id}</span></div>
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(user.id);
+                    setToastMsg('Скопировано в буфер');
+                    setToastType('success');
+                    setShowToast(true);
+                    setTimeout(() => setShowToast(false), 1500);
+                  } catch (e) {
+                    setToastMsg('Не удалось скопировать');
+                    setToastType('error');
+                    setShowToast(true);
+                    setTimeout(() => setShowToast(false), 2000);
+                  }
+                }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.03)', color: '#e6e6e6', cursor: 'pointer' }}
+                aria-label="Copy UserID"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="9" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.2"/><rect x="4" y="4" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.2"/></svg>
+              </button>
+            </div>
+          </div>
+        )}
   {/* ...остальной JSX... */}
       <div style={{ display: "flex", alignItems: "center", gap: 18, paddingBottom: 18, borderBottom: "1px solid #333" }}>
         <div style={{ position: "relative" }}>
