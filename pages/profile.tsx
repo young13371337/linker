@@ -658,13 +658,14 @@ export default function ProfilePage() {
               color: "#fff",
               position: "relative",
               transition: "box-shadow 0.3s, background 0.3s",
-              maxHeight: "90vh",
+              maxHeight: "100vh",
+              minHeight: "100vh",
+              width: "100vw",
               overflowY: "auto",
               scrollbarWidth: "none",
-              minHeight: "60vh",
-              width: "90vw",
               overscrollBehaviorY: "contain",
-              WebkitOverflowScrolling: "touch"
+              WebkitOverflowScrolling: "touch",
+              touchAction: "pan-y"
             }}
             onTouchStart={e => {
               // Свайп вниз для закрытия на мобильных
@@ -675,7 +676,8 @@ export default function ProfilePage() {
             onTouchEnd={e => {
               const startY = Number(e.currentTarget.getAttribute('data-touchstart'));
               const endY = e.changedTouches[0].clientY;
-              if (startY && endY - startY > 80) setShowSettings(false);
+              // Только если свайп вниз больше 120px
+              if (startY && endY - startY > 120) setShowSettings(false);
             }}
             onClick={e => e.stopPropagation()}
           >
