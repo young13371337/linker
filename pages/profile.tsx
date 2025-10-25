@@ -521,7 +521,7 @@ export default function ProfilePage() {
           <div style={{ fontSize: 15, color: "#bbb", marginTop: 2 }}>{desc || "Нет описания"}</div>
           {/* ...удалено: любимый трек... */}
         </div>
-  <button onClick={() => setShowSettings(true)} style={{ background: "rgba(35,36,42,0.35)", color: "#fff", border: "1px solid #444", borderRadius: 12, padding: "8px 18px", fontSize: 15, cursor: "pointer", fontWeight: 500, display: "flex", alignItems: "center", gap: 8, transition: "background 0.2s, box-shadow 0.2s" }} onMouseOver={e => {e.currentTarget.style.background="rgba(35,36,42,0.5)";e.currentTarget.style.boxShadow="0 2px 12px #4fc3f7a0"}} onMouseOut={e => {e.currentTarget.style.background="rgba(35,36,42,0.35)";e.currentTarget.style.boxShadow="none"}}>
+  <button onClick={() => setShowSettings(true)} style={{ background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,0.04)", borderRadius: 12, padding: "8px 18px", fontSize: 15, cursor: "pointer", fontWeight: 500, display: "flex", alignItems: "center", gap: 8, transition: "background 0.18s, box-shadow 0.18s" }} onMouseOver={e => {e.currentTarget.style.background="rgba(255,255,255,0.02)";e.currentTarget.style.boxShadow="0 2px 12px rgba(79,195,247,0.12)"}} onMouseOut={e => {e.currentTarget.style.background="transparent";e.currentTarget.style.boxShadow="none"}}>
           <FaCog /> 
         </button>
       </div>
