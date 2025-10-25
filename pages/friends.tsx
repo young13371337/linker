@@ -40,10 +40,7 @@ export default function FriendsPage() {
     setRequests(requests.filter(r => r.id !== requestId));
     setToast({ type: 'success', message: 'Заявка принята' });
     
-    // Перенаправляем в созданный чат
-    if (data.chat?.id) {
-      window.location.href = `/chat/${data.chat.id}`;
-    }
+    // Do not navigate automatically after accept; server still creates chat if needed.
   };
 
   // Отклонить заявку

@@ -81,9 +81,9 @@ export default function Sidebar() {
             if (res.ok) {
               // decrement pending count
               setPendingCount(prev => (typeof prev === 'number' && prev > 0 ? prev - 1 : 0));
-              // optionally navigate to chat if server returned chat
-              const data = await res.json().catch(() => ({}));
-              if (data?.chat?.id) window.location.href = `/chat/${data.chat.id}`;
+              // consume response but do not navigate automatically; show confirmation
+              await res.json().catch(() => ({}));
+              setToastMsg({ type: 'success', message: 'Заявка принята' });
             } else {
               const d = await res.json().catch(() => ({}));
               setToastMsg({ type: 'error', message: d?.error || 'Ошибка при принятии' });
