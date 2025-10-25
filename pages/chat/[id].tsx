@@ -290,7 +290,7 @@ const ChatWithFriend: React.FC = () => {
       marginBottom: 0,
       lineHeight: '1.1'
     }}>
-      просто печатает...
+      печатает...
     </div>
   );
 
