@@ -7,7 +7,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!userId || !friendId) return res.status(400).json({ error: "userId and friendId required" });
   // Проверка на существование заявки
   const existing = await prisma.friendRequest.findFirst({ where: { fromId: userId, toId: friendId } });
-  if (existing) return res.status(400).json({ error: "Request already sent" });
+  if (existing) return res.status(400).json({ error: "Заявка уже отправлена." });
   await prisma.friendRequest.create({ data: { fromId: userId, toId: friendId } });
   return res.status(200).json({ ok: true });
 }
