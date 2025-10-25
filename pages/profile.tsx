@@ -253,6 +253,9 @@ export default function ProfilePage() {
       });
   }, [session, status]);
 
+  // If user has more than 2 friends, enable compact scroll for the friends list
+  const isFriendsScrollable = friends.length > 2;
+
   // Включить 2FA
   // Включить 2FA через Google Authenticator
   async function handleEnable2FA() {
@@ -524,18 +527,20 @@ export default function ProfilePage() {
       </div>
 
     {/* Список друзей и новости */}
-    <div style={{ display: "flex", gap: 24, marginTop: 24, transition: "gap 0.3s" }}>
+        <div style={{ display: "flex", gap: 24, marginTop: 24, transition: "gap 0.3s" }}>
       {/* Список друзей */}
       <div style={{ flex: 1, background: "rgba(35,36,42,0.35)", borderRadius: 14, padding: 16, boxShadow: "0 1px 8px #0003" }}>
         <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>Список друзей</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{maxHeight:220,overflowY:'auto',paddingRight:4,scrollbarWidth:'thin',scrollbarColor:'#bbb2 #23242a'}}>
+          <div
+            style={isFriendsScrollable ? { maxHeight: 220, overflowY: 'auto', paddingRight: 4, scrollbarWidth: 'thin', scrollbarColor: 'rgba(187,187,187,0.35) #23242a' } : { paddingRight: 4 }}
+          >
             <style>{`
-              .custom-scrollbar::-webkit-scrollbar {width:8px;background:#23242a;}
-              .custom-scrollbar::-webkit-scrollbar-thumb {background:#bbb2;border-radius:8px;opacity:0.5;}
-              .custom-scrollbar {scrollbar-width:thin;scrollbar-color:#bbb2 #23242a;overflow-x:hidden;}
+              .custom-scrollbar::-webkit-scrollbar { width: 8px; background: #23242a; }
+              .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(187,187,187,0.35); border-radius: 8px; }
+              .custom-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(187,187,187,0.35) #23242a; overflow-x: hidden; }
             `}</style>
-            <div className="custom-scrollbar" style={{overflowX:'hidden'}}>
+            <div className={isFriendsScrollable ? "custom-scrollbar" : undefined} style={{ overflowX: 'hidden' }}>
               {friends.length === 0 ? (
                 <div style={{ color: "#bbb", fontSize: 16 }}>У вас нет друзей</div>
               ) : friends.map(f => (
