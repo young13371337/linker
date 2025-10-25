@@ -128,9 +128,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
   } catch (error) {
     console.error('Error in message deletion:', error);
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    const payload: any = { error: 'Internal server error' };
+    if (process.env.NODE_ENV !== 'production') {
+      payload.details = error instanceof Error ? error.message : String(error);
+      payload.stack = error instanceof Error && error.stack ? error.stack : undefined;
+    }
+    return res.status(500).json(payload);
   }
 }

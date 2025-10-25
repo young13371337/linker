@@ -757,6 +757,12 @@ const ChatWithFriend: React.FC = () => {
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span>{friend?.name || friend?.login || <span style={{color:'#888'}}>Загрузка...</span>}</span>
               </span>
+              {/* typing indicator under the nickname */}
+              {isTyping && (
+                <div style={{ fontSize: 13, color: '#4fc3f7', marginTop: 2 }}>
+                  {isTyping} печатает...
+                </div>
+              )}
               {/* Иконка роли */}
               {friend?.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" title="Админ" style={{ width: 16, height: 16, marginLeft: 2 }} />}
               {friend?.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" title="Модератор" style={{ width: 16, height: 16, marginLeft: 2 }} />}
@@ -959,7 +965,7 @@ const ChatWithFriend: React.FC = () => {
               ));
             })()
           )}
-          {isTyping && <TypingIndicator name={isTyping} />}
+          {/* typing indicator removed from messages area — moved to header */}
         </div>
         <form
           onSubmit={handleSendMessage}
