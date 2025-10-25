@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import UserStatus from './UserStatus';
+import { useSession } from 'next-auth/react';
 
 const FriendSearch: React.FC = () => {
   const [toast, setToast] = useState<string | null>(null);
@@ -82,8 +83,26 @@ const FriendSearch: React.FC = () => {
                 <span
                   title="Добавить"
                   style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#1aff1a', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer' }}
-                  onClick={() => {
-                    setToast('Заявка отправлена');
+                  onClick={async () => {
+                    // Send friend request to API; server will infer current user from session cookies
+                    try {
+                      const res = await fetch('/api/friends/request', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ friendId: user.id })
+                      });
+                      if (res.ok) {
+                        setToast('Заявка отправлена');
+                        // mark locally as sent
+                        setResults(prev => prev.map(r => r.id === user.id ? { ...r, isFriend: true } : r));
+                      } else {
+                        const data = await res.json().catch(() => ({}));
+                        setToast(data?.error || 'Ошибка при отправке заявки');
+                      }
+                    } catch (err) {
+                      setToast('Ошибка при отправке заявки');
+                    }
                     setTimeout(() => setToast(null), 2500);
                   }}
                 >

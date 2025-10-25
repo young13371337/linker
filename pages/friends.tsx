@@ -9,13 +9,23 @@ export default function FriendsPage() {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const sendRequest = async (friendId: string) => {
     if (!user?.id || friendId === user.id) return;
-    await fetch(`/api/friends/request`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, friendId })
-    });
-  setSearchResult(null);
-  setToast({ type: 'success', message: 'Заявка отправлена' });
+    try {
+      const res = await fetch(`/api/friends/request`, {
+        method: "POST",
+        credentials: 'include',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, friendId })
+      });
+      if (res.ok) {
+        setSearchResult(null);
+        setToast({ type: 'success', message: 'Заявка отправлена' });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setToast({ type: 'error', message: data?.error || 'Ошибка при отправке заявки' });
+      }
+    } catch (e) {
+      setToast({ type: 'error', message: 'Ошибка сети' });
+    }
   };
 
   // Принять заявку
@@ -32,7 +42,7 @@ export default function FriendsPage() {
     
     // Перенаправляем в созданный чат
     if (data.chat?.id) {
-      window.location.href = `/chat/${requestId}`;
+      window.location.href = `/chat/${data.chat.id}`;
     }
   };
 

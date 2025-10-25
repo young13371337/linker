@@ -194,12 +194,22 @@ export default function UserProfile() {
                   title="Отправить заявку в друзья"
                   onClick={async () => {
                     if (!currentUser || !user) return;
-                    await fetch('/api/friends/request', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ userId: currentUser.id, friendId: user.id })
-                    });
-                    setRequestSent(true);
+                    try {
+                      const res = await fetch('/api/friends/request', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: currentUser.id, friendId: user.id })
+                      });
+                      if (res.ok) {
+                        setRequestSent(true);
+                      } else {
+                        const data = await res.json().catch(() => ({}));
+                        alert(data?.error || 'Ошибка при отправке заявки');
+                      }
+                    } catch (e) {
+                      alert('Ошибка сети');
+                    }
                   }}
                 >
                   + В друзья

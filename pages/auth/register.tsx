@@ -9,6 +9,7 @@ export default function RegisterPage() {
   const [toast, setToast] = useState<{type: 'error'|'success', message: string}|null>(null);
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
+  const router = useRouter();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Пример логики, можно заменить на свою
@@ -24,7 +25,9 @@ export default function RegisterPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setToast({ type: 'success', message: "Регистрация успешна! Теперь войдите." });
+        // Перенаправляем пользователя на страницу входа
+        router.push('/auth/login');
+        setToast({ type: 'success', message: "Регистрация успешна! Перенаправление..." });
       } else {
         setToast({ type: 'error', message: data.error || "Ошибка регистрации" });
       }
