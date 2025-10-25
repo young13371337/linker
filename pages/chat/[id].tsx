@@ -281,14 +281,16 @@ const ChatWithFriend: React.FC = () => {
     }
   };
 
-  const TypingIndicator = ({ name }: { name: string }) => (
-    <div style={{ 
-      fontSize: '0.85em',
-      color: '#666',
-      padding: '4px 8px',
-      marginBottom: '8px'
+  const TypingIndicator = ({ name }: { name?: string }) => (
+    <div style={{
+      fontSize: 13,
+      color: '#888',
+      padding: 0,
+      marginTop: 2,
+      marginBottom: 0,
+      lineHeight: '1.1'
     }}>
-      {name} печатает...
+      просто печатает...
     </div>
   );
 
@@ -781,9 +783,7 @@ const ChatWithFriend: React.FC = () => {
               </span>
               {/* typing indicator below the whole header (under name and status) */}
               {isTyping && (
-                <div style={{ fontSize: 13, color: '#4fc3f7', marginTop: 6 }}>
-                  {isTyping} печатает...
-                </div>
+                <TypingIndicator name={isTyping} />
               )}
             </div>
           </div>
