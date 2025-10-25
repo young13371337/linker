@@ -16,18 +16,29 @@ export const config = {
 function parseForm(req: NextApiRequest): Promise<{ fields: any; files: any }> {
   return new Promise((resolve, reject) => {
   const { IncomingForm } = require('formidable');
-  // minFileSize: 1 removed to allow any video length
-  const form = new IncomingForm({ multiples: false, allowEmptyFiles: false });
-    form.parse(req, (err: any, fields: any, files: any) => {
-      if (err) reject(err);
-      else resolve({ fields, files });
-    });
+  const form = new IncomingForm({ 
+    multiples: false, 
+    allowEmptyFiles: false,
+    keepExtensions: true,
+    maxFileSize: 50 * 1024 * 1024, // 50MB максимум для видео
+    filter: function ({mimetype}: {mimetype?: string}) {
+      return mimetype && mimetype.includes('video');
+    }
+  });
+  form.parse(req, (err: any, fields: any, files: any) => {
+    if (err) reject(err);
+    else resolve({ fields, files });
+  });
   });
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Enable CORS for faster response
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, DELETE');
+  
   if (req.method === 'POST') {
-    // Публикация кружка
+    // Публикация видео
     try {
       const { fields, files } = await parseForm(req);
       let video = files.video;
@@ -36,18 +47,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.status(400).json({ error: 'No video file', fields, files });
         return;
       }
-      // --- Шифруем видеофайл и сохраняем с .enc ---
-  const uploadDir = path.join(process.cwd(), '.private_media', 'video');
-  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-  const fileName = `${Date.now()}-circle.webm`;
-  const encFileName = fileName + '.enc';
-  const filePath = path.join(uploadDir, encFileName);
-  let chatId = fields.chatId;
-  if (Array.isArray(chatId)) chatId = chatId[0];
-  const fileBuffer = fs.readFileSync(video.filepath || video.path);
-  const encryptedBuffer = encryptFileBuffer(fileBuffer, chatId);
-  fs.writeFileSync(filePath, encryptedBuffer);
-  const videoUrl = `/api/media/video/${encFileName}`;
+
+      let chatId = fields.chatId;
+      if (Array.isArray(chatId)) chatId = chatId[0];
+      if (!chatId) {
+        res.status(400).json({ error: 'No chatId provided' });
+        return;
+      }
+
+      let videoUrl: string;
+      try {
+          // --- Шифруем видеофайл и сохраняем с .enc ---
+          const uploadDir = path.join(process.cwd(), '.private_media', 'video');
+          if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+          const fileName = `${Date.now()}-circle.webm`;
+          const encFileName = fileName + '.enc';
+          const filePath = path.join(uploadDir, encFileName);
+          
+          console.log('[VIDEO UPLOAD] Reading file from:', video.filepath || video.path);
+          
+          // Читаем файл через промисы для лучшей производительности
+          const fileBuffer = await fs.promises.readFile(video.filepath || video.path);
+          if (!fileBuffer || fileBuffer.length === 0) {
+              throw new Error('Empty video file buffer');
+          }
+          
+          // Отправляем частичный ответ клиенту пока идет шифрование
+          res.writeHead(202);
+          
+          console.log('[VIDEO UPLOAD] Encrypting file for chat:', chatId);
+          const encryptedBuffer = encryptFileBuffer(fileBuffer, chatId);
+          
+          // Асинхронная запись файла
+          await fs.promises.writeFile(filePath, encryptedBuffer);
+          
+          videoUrl = `/api/media/video/${encFileName}`;
+          console.log('[VIDEO UPLOAD] File saved as:', filePath);
+      } catch (error: any) {
+          console.error('[VIDEO UPLOAD] Error:', error);
+          res.status(500).json({ error: 'Video processing failed', details: error.message || 'Unknown error' });
+          return;
+      }
       const session = await getServerSession(req, res, authOptions);
       const userId = session?.user?.id;
       if (!chatId) {

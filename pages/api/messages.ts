@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       orderBy: { createdAt: 'asc' }
     });
     // Расшифровываем текст сообщений
-    const decryptedMessages = messages.map(msg => ({
+    const decryptedMessages = messages.map((msg: any) => ({
       ...msg,
       text: msg.text ? decryptMessage(msg.text, chatId) : ''
     }));
@@ -44,41 +44,59 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ ok: true });
   }
   if (req.method === 'POST') {
+    // Включаем CORS для быстрого ответа
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST');
+
     const { chatId, text } = req.body;
     if (!chatId || !text) return res.status(400).json({ error: 'chatId and text required' });
-    const encryptedText = encryptMessage(text, chatId);
-    const message = await prisma.message.create({
-      data: {
-        chatId,
-        senderId: user.id,
-        text: encryptedText,
-        createdAt: new Date()
-      }
-    });
+    
+    try {
+      // Шифруем сообщение
+      const encryptedText = encryptMessage(text, chatId);
 
-    // Получить всех участников чата
-    const chat = await prisma.chat.findUnique({
-      where: { id: chatId },
-      include: { users: true }
-    });
-    if (chat) {
-      for (const u of chat.users) {
-        if (u.id !== user.id) {
-          // Увеличить счетчик непрочитанных для каждого пользователя, кроме отправителя
-          await prisma.chatUnread.upsert({
+      // Параллельные запросы для создания сообщения и получения участников чата
+      const [message, chat] = await Promise.all([
+        prisma.message.create({
+          data: {
+            chatId,
+            senderId: user.id,
+            text: encryptedText,
+            createdAt: new Date()
+          }
+        }),
+        prisma.chat.findUnique({
+          where: { id: chatId },
+          include: { users: true }
+        })
+      ]);
+
+      // Формируем сообщение для отправки сразу
+      const messageToSend = { ...message, text };
+
+      // Параллельно обновляем счетчики и отправляем через Pusher
+      Promise.all([
+        // Обновление счетчиков непрочитанных сообщений
+        chat?.users?.filter((u: any) => u.id !== user.id).map((u: any) => 
+          prisma.chatUnread.upsert({
             where: { chatId_userId: { chatId, userId: u.id } },
             update: { count: { increment: 1 } },
             create: { chatId, userId: u.id, count: 1 }
-          });
-        }
-      }
-    }
+          })
+        ) || [],
+        // Отправка через Pusher
+        pusher.trigger(`chat-${chatId}`, 'new-message', messageToSend)
+      ]).catch(error => {
+        console.error('Background operations error:', error);
+        // Не блокируем ответ при ошибках фоновых операций
+      });
 
-    // Отправить новое сообщение через Pusher
-  // Для Pusher и ответа расшифровываем текст
-  const messageToSend = { ...message, text };
-  await pusher.trigger(`chat-${chatId}`, 'new-message', messageToSend);
-  return res.status(200).json({ message: messageToSend });
+      // Быстрый ответ клиенту
+      return res.status(200).json({ message: messageToSend });
+    } catch (error: any) {
+      console.error('Message send error:', error);
+      return res.status(500).json({ error: 'Failed to send message', details: error.message });
+    }
   }
 }
 

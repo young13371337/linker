@@ -16,15 +16,27 @@ export const config = {
 function parseForm(req: NextApiRequest): Promise<{ fields: any; files: any }> {
 	return new Promise((resolve, reject) => {
 	const { IncomingForm } = require('formidable');
-	const form = new IncomingForm({ multiples: false, allowEmptyFiles: false });
-		form.parse(req, (err: any, fields: any, files: any) => {
-			if (err) reject(err);
-			else resolve({ fields, files });
-		});
+	const form = new IncomingForm({ 
+		multiples: false, 
+		allowEmptyFiles: false,
+		keepExtensions: true,
+		maxFileSize: 10 * 1024 * 1024, // 10MB максимум
+		filter: function ({mimetype}: {mimetype?: string}) {
+			return mimetype && mimetype.includes('audio');
+		}
+	});
+	form.parse(req, (err: any, fields: any, files: any) => {
+		if (err) reject(err);
+		else resolve({ fields, files });
+	});
 	});
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+	// Enable CORS for faster response
+	res.setHeader('Access-Control-Allow-Origin', '*');
+	res.setHeader('Access-Control-Allow-Methods', 'POST');
+	
 	if (req.method !== 'POST') {
 		res.status(405).json({ error: 'Method not allowed' });
 		return;
@@ -38,6 +50,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		   let file, fileType, fileExt, uploadDir, fileName, filePath, urlField, urlValue;
 		   let chatId = fields.chatId;
 		   if (Array.isArray(chatId)) chatId = chatId[0];
+
+           if (!chatId) {
+               throw new Error('No chatId provided');
+           }
+
 		   if (audio) {
 			   file = audio;
 			   fileType = 'audio';
@@ -45,15 +62,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			   uploadDir = path.join(process.cwd(), '.private_media', 'voice');
 			   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 			   fileName = `${Date.now()}-${file.originalFilename ? file.originalFilename.replace(/\.[^/.]+$/, fileExt) : 'voice.mp3'}`;
-			   // Шифруем файл перед сохранением
-			   filePath = path.join(uploadDir, fileName + '.enc');
-			   console.log('[VOICE UPLOAD] filePath:', filePath);
-			   const fileBuffer = fs.readFileSync(file.filepath || file.path);
-			   const encryptedBuffer = encryptFileBuffer(fileBuffer, chatId);
-			   fs.writeFileSync(filePath, encryptedBuffer);
-			   urlField = 'audioUrl';
-			   urlValue = `/api/media/voice/${fileName}.enc`;
-			   console.log('[VOICE UPLOAD] urlValue:', urlValue, 'chatId:', chatId);
+			   
+			   try {
+                   // Шифруем файл перед сохранением
+                   filePath = path.join(uploadDir, fileName + '.enc');
+                   console.log('[VOICE UPLOAD] filePath:', filePath);
+                   
+                   // Читаем файл через промисы
+                   const fileBuffer = await fs.promises.readFile(file.filepath || file.path);
+                   if (!fileBuffer || fileBuffer.length === 0) {
+                       throw new Error('Empty file buffer');
+                   }
+
+                   // Отправляем частичный ответ клиенту пока идет шифрование
+                   res.writeHead(202);
+                   
+                   const encryptedBuffer = encryptFileBuffer(fileBuffer, chatId);
+                   
+                   // Используем асинхронную запись файла
+                   await fs.promises.writeFile(filePath, encryptedBuffer);
+                   
+                   urlField = 'audioUrl';
+                   urlValue = `/api/media/voice/${fileName}.enc`;
+                   console.log('[VOICE UPLOAD] urlValue:', urlValue, 'chatId:', chatId);
+               } catch (error: any) {
+                   console.error('[VOICE UPLOAD] Encryption error:', error);
+                   throw new Error(`File encryption failed: ${error.message || 'Unknown error'}`);
+               }
 		   } else {
 			   res.status(400).json({ error: 'No audio file', fields, files });
 			   return;

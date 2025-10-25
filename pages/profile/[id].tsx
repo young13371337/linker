@@ -63,7 +63,7 @@ export default function UserProfile() {
           : "#23242a"
       }}
     >
-  <div style={{ display: "flex", alignItems: "center", gap: 18, paddingBottom: 18, borderBottom: "1px solid #333" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 18, paddingBottom: 18, borderBottom: "1px solid #333" }}>
         <div style={{ position: "relative" }}>
           {user.avatar ? (
             <img src={user.avatar} alt="avatar" style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", background: "#444" }} />
@@ -78,9 +78,10 @@ export default function UserProfile() {
           )}
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: 1, display: "flex", alignItems: "center", gap: 10, position: 'relative' }}>
-            <span>{user.login}</span>
-            {user.role === "admin" && (
+          <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, position: 'relative' }}>
+              <span>{user.login}</span>
+              {user.role === "admin" && (
               <span
                 style={{ position: 'relative', display: 'inline-block' }}
                 onMouseEnter={e => {
@@ -168,11 +169,9 @@ export default function UserProfile() {
                 <img src="/role-icons/verif.svg" alt="verif" style={{width:18, height:18, marginLeft:2, verticalAlign:'middle', cursor:'pointer'}} />
               </span>
             )}
-            {/* Кнопка заявки/статус друга */}
-            {currentUser && user && currentUser.id !== user.id && (
-              isFriend ? (
-                <span style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', background: 'none', borderRadius: 18, color: '#fff', fontWeight: 600, fontSize: 16, padding: '7px 18px' }}>Ваш друг</span>
-              ) : requestSent ? (
+            {/* Кнопка заявки */}
+            {currentUser && user && currentUser.id !== user.id && !isFriend && (
+              requestSent ? (
                 <span style={{ color: '#229ed9', fontWeight: 500, fontSize: 15, marginLeft: 12 }}>Заявка отправлена</span>
               ) : (
                 <button
@@ -207,8 +206,12 @@ export default function UserProfile() {
                 </button>
               )
             )}
+            </div>
+            <div style={{ fontSize: 15, color: "#bbb", marginTop: 2 }}>{user.description}</div>
+            {isFriend && (
+              <div style={{ fontSize: 14, color: '#1ed760', fontWeight: 500, marginTop: 4 }}>Ваш друг</div>
+            )}
           </div>
-          <div style={{ fontSize: 15, color: "#bbb", marginTop: 6 }}>{user.description}</div>
         </div>
       </div>
     </div>
