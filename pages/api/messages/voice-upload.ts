@@ -7,6 +7,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 // No encryption for voice files anymore — store raw files under pages/api/.private_media/voice
 import { pusher } from '../../../lib/pusher';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 export const config = {
 	api: {
@@ -34,6 +36,9 @@ function parseForm(req: NextApiRequest): Promise<{ fields: any; files: any }> {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
 	// Enable CORS for faster response
 	res.setHeader('Access-Control-Allow-Origin', '*');
+	// Allow credentials so browser can send cookies when needed
+	res.setHeader('Access-Control-Allow-Credentials', 'true');
+	res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 	res.setHeader('Access-Control-Allow-Methods', 'POST');
 	
 	if (req.method !== 'POST') {
@@ -41,15 +46,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		return;
 	}
 	try {
-		// Verify session early
-		const sessionEarly = await getServerSession(req, res, authOptions);
+		// session check will be attempted below; continue to parsing so we can return helpful errors
+		let sessionEarly;
+		try {
+			sessionEarly = await getServerSession(req, res, authOptions);
+		} catch (se) {
+			console.error('[VOICE UPLOAD] getServerSession error:', se);
+		}
 		if (!sessionEarly || !sessionEarly.user?.id) {
-			console.error('[VOICE UPLOAD] Unauthorized: no session');
-			res.status(401).json({ error: 'Unauthorized' });
-			return;
+			console.warn('[VOICE UPLOAD] Warning: no session found (request may be missing cookies)');
 		}
 
-		const { fields, files } = await parseForm(req);
+		let fields: any, files: any;
+		try {
+			({ fields, files } = await parseForm(req));
+		} catch (pfErr: any) {
+			console.error('[VOICE UPLOAD] parseForm failed:', pfErr && pfErr.stack ? pfErr.stack : String(pfErr));
+			res.status(500).json({ error: 'Failed to parse multipart form', details: String(pfErr), stack: pfErr?.stack });
+			return;
+		}
 		console.log('[VOICE UPLOAD] parsed fields:', fields);
 		console.log('[VOICE UPLOAD] parsed files keys:', Object.keys(files || {}));
 		console.log('[VOICE UPLOAD] raw audio object:', files?.audio);
@@ -95,19 +110,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 						   throw accessErr;
 					   }
 
-					   // Stream-copy temp -> destination
-					   await new Promise<void>((resolve, reject) => {
-						   const rs = fs.createReadStream(tmpPath);
-						   const ws = fs.createWriteStream(filePath);
-						   rs.on('error', (err) => { console.error('[VOICE UPLOAD] read error', err); reject(err); });
-						   ws.on('error', (err) => { console.error('[VOICE UPLOAD] write error', err); reject(err); });
-						   ws.on('finish', () => resolve());
-						   rs.pipe(ws);
-					   });
-
+					   // Read file into buffer and store base64 in DB when no external storage configured
+					   const fileBuffer = await fs.promises.readFile(tmpPath);
+					   if (!fileBuffer || fileBuffer.length === 0) throw new Error('Empty audio file');
+					   const base64 = fileBuffer.toString('base64');
+					   (req as any)._audioBase64 = base64;
+					   (req as any)._audioMime = (file as any)?.mimetype || 'audio/mpeg';
+					   // set placeholder url which we'll replace after creating the message
 					   urlField = 'audioUrl';
-					   urlValue = `/api/media/voice/${fileName}`;
-					   console.log('[VOICE UPLOAD] urlValue:', urlValue, 'chatId:', chatId);
+					   urlValue = '__DB_BASE64__';
+					   console.log('[VOICE UPLOAD] Prepared audio base64 to store in DB');
 				   } catch (error: any) {
 					   console.error('[VOICE UPLOAD] File processing error:', error);
 					   throw new Error(`File processing failed: ${error.message || 'Unknown error'}`);
@@ -127,14 +139,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			   res.status(401).json({ error: 'Unauthorized: no userId from session', session });
 			   return;
 		   }
+		   // Create message and save base64 audio into DB
 		   const message = await prisma.message.create({
 			   data: {
 				   chatId,
 				   senderId: userId,
 				   text: '',
 				   [urlField]: urlValue,
+				   audioBase64: (req as any)._audioBase64 || null,
+				   audioMime: (req as any)._audioMime || null,
 			   },
 		   });
+		   // Update audioUrl to DB-serving endpoint
+		   const dbUrl = `/api/media/db/${message.id}/audio`;
+		   await prisma.message.update({ where: { id: message.id }, data: { audioUrl: dbUrl } });
+		   message.audioUrl = dbUrl;
 		// Отправляем событие в Pusher
 		try {
 			await pusher.trigger(`chat-${chatId}`, 'new-message', {

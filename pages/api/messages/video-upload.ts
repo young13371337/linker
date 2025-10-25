@@ -7,6 +7,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 // No encryption for video files — store raw files under pages/api/.private_media/video
 import { pusher } from '../../../lib/pusher';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 export const config = {
   api: {
@@ -34,20 +36,34 @@ function parseForm(req: NextApiRequest): Promise<{ fields: any; files: any }> {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Enable CORS for faster response
   res.setHeader('Access-Control-Allow-Origin', '*');
+  // Allow credentials so browser can send cookies when needed
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Access-Control-Allow-Methods', 'POST, DELETE');
   
   if (req.method === 'POST') {
     // Публикация видео
     try {
       // Verify session before parsing large multipart body
-      const sessionEarly = await getServerSession(req, res, authOptions);
+      let sessionEarly;
+      try {
+        sessionEarly = await getServerSession(req, res, authOptions);
+      } catch (se) {
+        console.error('[VIDEO UPLOAD] getServerSession error:', se);
+      }
       if (!sessionEarly || !sessionEarly.user?.id) {
-        console.error('[VIDEO UPLOAD] Unauthorized: no session');
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
+        // don't short-circuit here — continue to parse to give better error details when testing
+        console.warn('[VIDEO UPLOAD] Warning: no session found (request may be missing cookies)');
       }
 
-      const { fields, files } = await parseForm(req);
+      let fields: any, files: any;
+      try {
+        ({ fields, files } = await parseForm(req));
+      } catch (pfErr: any) {
+        console.error('[VIDEO UPLOAD] parseForm failed:', pfErr && pfErr.stack ? pfErr.stack : String(pfErr));
+        res.status(500).json({ error: 'Failed to parse multipart form', details: String(pfErr), stack: pfErr?.stack });
+        return;
+      }
       console.log('[VIDEO UPLOAD] parsed fields:', fields);
       console.log('[VIDEO UPLOAD] parsed files keys:', Object.keys(files || {}));
       let video = files.video;
@@ -85,31 +101,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           throw accessErr;
         }
 
-        // Сохраняем видео в оригинальном виде (без шифрования)
-        const uploadDir = path.join(process.cwd(), 'storage', 'video');
-        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-        const fileName = `${Date.now()}-circle.webm`;
-        const filePath = path.join(uploadDir, fileName);
+        // Read file buffer and store as base64 in DB when external object storage is not configured.
+        // This keeps media persisted in the database (text column) so deployments without S3 still work.
+        const fileBuffer = await fs.promises.readFile(tmpPath);
+        if (!fileBuffer || fileBuffer.length === 0) throw new Error('Empty video file');
+        const base64 = fileBuffer.toString('base64');
 
-        console.log('[VIDEO UPLOAD] Copying from temp to storage:', tmpPath, '->', filePath);
-        // Stream-copy temp -> destination to avoid high memory usage
-        await new Promise<void>((resolve, reject) => {
-          const rs = fs.createReadStream(tmpPath);
-          const ws = fs.createWriteStream(filePath);
-          rs.on('error', (err) => { console.error('[VIDEO UPLOAD] read error', err); reject(err); });
-          ws.on('error', (err) => { console.error('[VIDEO UPLOAD] write error', err); reject(err); });
-          ws.on('finish', () => resolve());
-          rs.pipe(ws);
-        });
-
-        videoUrl = `/api/media/video/${fileName}`;
-        console.log('[VIDEO UPLOAD] File saved as:', filePath);
-      } catch (error: any) {
-          console.error('[VIDEO UPLOAD] Error:', error);
-          res.status(500).json({ error: 'Video processing failed', details: error.message || 'Unknown error' });
-          return;
-      }
-      const session = sessionEarly || await getServerSession(req, res, authOptions);
+        // We'll create the message including base64 data below; set videoUrl to DB-serving endpoint placeholder
+        // videoUrl will point to an API route that serves media from DB by message id.
+        videoUrl = '__DB_BASE64__';
+        // store base64 later when creating the message
+        (req as any)._videoBase64 = base64;
+        (req as any)._videoMime = (video as any)?.mimetype || 'video/webm';
+    } catch (error: any) {
+      console.error('[VIDEO UPLOAD] Error:', error && error.stack ? error.stack : String(error));
+      res.status(500).json({ error: 'Video processing failed', details: error?.message || String(error), stack: error?.stack });
+      return;
+    }
+    const session = sessionEarly || await getServerSession(req, res, authOptions);
       const userId = session?.user?.id;
       if (!chatId) {
         res.status(400).json({ error: 'No chatId provided', fields });
@@ -119,14 +128,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.status(401).json({ error: 'Unauthorized: no userId from session', session });
         return;
       }
+      // Create message and store base64 video in DB so it persists on Vercel
       const message = await prisma.message.create({
         data: {
           chatId,
           senderId: userId,
           text: '',
-          videoUrl,
+          videoUrl: videoUrl,
+          videoBase64: (req as any)._videoBase64 || null,
+          videoMime: (req as any)._videoMime || null,
         },
       });
+      // Update videoUrl to point to our DB-serving endpoint
+      const dbUrl = `/api/media/db/${message.id}/video`;
+      await prisma.message.update({ where: { id: message.id }, data: { videoUrl: dbUrl } });
+      // reflect change locally
+      message.videoUrl = dbUrl;
       // Уведомляем подписчиков через Pusher
       try {
         await pusher.trigger(`chat-${chatId}`, 'new-message', {

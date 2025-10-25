@@ -75,7 +75,13 @@ model Message {
   text      String
   createdAt DateTime @default(now())
   audioUrl  String?
+  // Base64-encoded audio stored in DB for deployments without external object storage
+  audioBase64 String?
+  audioMime   String?
   videoUrl  String?
+  // Base64-encoded video stored in DB
+  videoBase64 String?
+  videoMime   String?
   chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
   sender    User     @relation("UserSentMessages", fields: [senderId], references: [id], onDelete: Cascade)
 }
