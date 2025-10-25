@@ -1,13 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+interface ToastAction {
+  label: string;
+  // action may be async; return value ignored
+  onClick: () => void | Promise<void>;
+  style?: React.CSSProperties;
+}
+
 interface ToastProps {
   type: 'error' | 'success';
   message: string;
   duration?: number;
   onClose: () => void;
+  actions?: ToastAction[];
 }
 
-const ToastNotification: React.FC<ToastProps> = ({ type, message, duration = 4000, onClose }) => {
+const ToastNotification: React.FC<ToastProps> = ({ type, message, duration = 4000, onClose, actions }) => {
   const [visible, setVisible] = useState(true);
   const [progress, setProgress] = useState(100);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -40,6 +48,32 @@ const ToastNotification: React.FC<ToastProps> = ({ type, message, duration = 400
         <div style={{height:'100%',width:`${progress}%`,background:type==='error'?'#ff5252':'#4caf50',transition:'width .2s'}} />
       </div>
       <span style={{fontSize:17}}>{message}</span>
+      {actions && actions.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          {actions.map((a, idx) => (
+            <button
+              key={idx}
+              onClick={async () => {
+                try {
+                  await a.onClick();
+                } catch (e) {
+                  // ignore action errors here
+                  console.error('Toast action error', e);
+                }
+                setVisible(false);
+                setTimeout(onClose, 200);
+              }}
+              style={{
+                padding: '8px 12px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                background: type === 'error' ? '#ff5252' : '#229ed9', color: '#fff', fontWeight: 600,
+                ...(a.style || {})
+              }}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

@@ -66,9 +66,55 @@ export default function Sidebar() {
     const onFriendRequest = (data: any) => {
       try {
         const from = data?.fromLogin || 'Пользователь';
+        const fromId = data?.fromId;
         // increment pending count optimistically
         setPendingCount(prev => (typeof prev === 'number' ? prev + 1 : 1));
-        setToastMsg({ type: 'success', message: `${from} отправил вам заявку в друзья` });
+        // prepare actions: accept and decline
+        const accept = async () => {
+          try {
+            const res = await fetch('/api/friends/accept', {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ requestId: fromId })
+            });
+            if (res.ok) {
+              // decrement pending count
+              setPendingCount(prev => (typeof prev === 'number' && prev > 0 ? prev - 1 : 0));
+              // optionally navigate to chat if server returned chat
+              const data = await res.json().catch(() => ({}));
+              if (data?.chat?.id) window.location.href = `/chat/${data.chat.id}`;
+            } else {
+              const d = await res.json().catch(() => ({}));
+              setToastMsg({ type: 'error', message: d?.error || 'Ошибка при принятии' });
+            }
+          } catch (e) {
+            console.error('Accept failed', e);
+            setToastMsg({ type: 'error', message: 'Ошибка сети' });
+          }
+        };
+        const decline = async () => {
+          try {
+            const res = await fetch('/api/friends/decline', {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ requestId: fromId })
+            });
+            if (res.ok) {
+              setPendingCount(prev => (typeof prev === 'number' && prev > 0 ? prev - 1 : 0));
+              setToastMsg({ type: 'success', message: 'Заявка отклонена' });
+            } else {
+              const d = await res.json().catch(() => ({}));
+              setToastMsg({ type: 'error', message: d?.error || 'Ошибка при отклонении' });
+            }
+          } catch (e) {
+            console.error('Decline failed', e);
+            setToastMsg({ type: 'error', message: 'Ошибка сети' });
+          }
+        };
+
+        setToastMsg({ type: 'success', message: `${from} отправил вам заявку в друзья`, actions: [ { label: 'Принять', onClick: accept }, { label: 'Отклонить', onClick: decline, style: { background: '#ff5252' } } ] });
       } catch (e) {
         console.error('Error handling friend-request pusher event', e);
       }
@@ -83,7 +129,8 @@ export default function Sidebar() {
     };
   }, []);
 
-  const [toastMsg, setToastMsg] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  type ToastActionLocal = { label: string; onClick: () => void | Promise<void>; style?: React.CSSProperties };
+  const [toastMsg, setToastMsg] = useState<{ type: 'success' | 'error'; message: string; actions?: ToastActionLocal[] } | null>(null);
 
   useEffect(() => {
     // Проверяем пользователя при монтировании
@@ -119,6 +166,7 @@ export default function Sidebar() {
           message={toastMsg.message}
           duration={4000}
           onClose={() => setToastMsg(null)}
+          actions={toastMsg.actions}
         />
       )}
       {/* Оверлей для мобильного закрытия сайдбара */}
