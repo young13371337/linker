@@ -830,24 +830,33 @@ const ChatWithFriend: React.FC = () => {
                                   credentials: 'include' 
                                 });
 
+                                // Успешное удаление (204 No Content)
                                 if (res.status === 204) {
-                                  // Успешное удаление - убираем сообщение из UI
                                   setMessages(prev => prev.filter(m => m.id !== msg.id));
                                   return;
                                 }
 
-                                // Пытаемся получить детали ошибки
-                                const data = await res.json();
-                                if (data.error) {
-                                  throw new Error(data.error);
+                                // Любой другой статус считаем ошибкой
+                                if (!res.ok) {
+                                  // Пробуем получить текст ошибки, если есть
+                                  const errorText = await res.text();
+                                  let errorMessage = 'Не удалось удалить сообщение';
+                                  
+                                  try {
+                                    const errorData = JSON.parse(errorText);
+                                    if (errorData.error) {
+                                      errorMessage = errorData.error;
+                                    }
+                                  } catch {
+                                    // Если не удалось распарсить JSON, используем статус
+                                    errorMessage = `Ошибка удаления: ${res.status} ${res.statusText}`;
+                                  }
+                                  
+                                  throw new Error(errorMessage);
                                 }
                               } catch (err) {
                                 console.error('Error deleting message:', err);
-                                alert(
-                                  err instanceof Error 
-                                    ? err.message 
-                                    : 'Не удалось удалить сообщение'
-                                );
+                                alert(err instanceof Error ? err.message : 'Не удалось удалить сообщение');
                               }
                             }}
                             style={{
