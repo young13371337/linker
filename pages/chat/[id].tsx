@@ -546,12 +546,25 @@ const ChatWithFriend: React.FC = () => {
           audioUrl: payload.audioUrl,
           videoUrl: payload.videoUrl
         };
-        
-        // Добавляем новое сообщение в список
-        setMessages(prev => [...prev, newMsg]);
+
+        setMessages(prev => {
+          // Если сообщение с таким id уже есть — игнорируем (дедупликация)
+          if (prev.some(m => m.id === newMsg.id)) return prev;
+
+          // Если есть временное сообщение (temp-...) с тем же текстом и отправителем — заменим его
+          const tempIndex = prev.findIndex(m => typeof m.id === 'string' && m.id.startsWith('temp-') && m.sender === newMsg.sender && m.text === newMsg.text);
+          if (tempIndex !== -1) {
+            const copy = [...prev];
+            copy[tempIndex] = newMsg;
+            return copy;
+          }
+
+          // Иначе добавляем в конец
+          return [...prev, newMsg];
+        });
 
         // Устанавливаем анимацию для нового сообщения
-  setAnimatedMsgIds(prev => new Set([...prev, payload.id]));
+        setAnimatedMsgIds(prev => new Set([...prev, payload.id]));
 
         // Автоматически прокручиваем к новому сообщению
         setTimeout(scrollToBottom, 50);
@@ -1352,22 +1365,6 @@ const ChatWithFriend: React.FC = () => {
           )}
         </form>
         {/* (удалено дублирующееся отображение индикатора записи) */}
-        {/* Статус "печатает..." чуть выше поля ввода, слева */}
-        {isTyping && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            minHeight: 24,
-            margin: '8px 0 2px 0',
-            marginLeft: 4,
-            color: '#4fc3f7',
-            fontSize: 15,
-            fontWeight: 500,
-            maxWidth: '60%',
-          }}>
-            <TypingIndicator name={isTyping} />
-          </div>
-        )}
       </div>
       {/* (модалка удалена, только inline превью) */}
       </div>
