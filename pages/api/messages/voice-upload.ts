@@ -5,7 +5,7 @@ import fs from 'fs';
 import prisma from '../../../lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
-import { encryptFileBuffer } from '../../../lib/encryption';
+// No encryption for voice files anymore — store raw files under pages/api/.private_media/voice
 import { pusher } from '../../../lib/pusher';
 
 export const config = {
@@ -60,31 +60,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			   file = audio;
 			   fileType = 'audio';
 			   fileExt = '.mp3';
-			   uploadDir = path.join(process.cwd(), 'pages', 'api', '.private_media', 'voice');
+			   // Save media under storage/voice (outside pages) to avoid direct listing
+			   uploadDir = path.join(process.cwd(), 'storage', 'voice');
 			   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 			   fileName = `${Date.now()}-${file.originalFilename ? file.originalFilename.replace(/\.[^/.]+$/, fileExt) : 'voice.mp3'}`;
 			   
 			   try {
-                   // Шифруем файл перед сохранением
-				   filePath = path.join(uploadDir, fileName + '.enc');
+				   // Сохраняем оригинальный файл (без шифрования)
+				   filePath = path.join(uploadDir, fileName);
                    console.log('[VOICE UPLOAD] filePath:', filePath);
                    
                    // Читаем файл через промисы
-                   const fileBuffer = await fs.promises.readFile(file.filepath || file.path);
+				   const fileBuffer = await fs.promises.readFile(file.filepath || file.path);
                    if (!fileBuffer || fileBuffer.length === 0) {
                        throw new Error('Empty file buffer');
                    }
 
                    // Отправляем частичный ответ клиенту пока идет шифрование
                    res.writeHead(202);
+				   // Сохраняем файл без шифрования
+				   await fs.promises.writeFile(filePath, fileBuffer);
                    
-                   const encryptedBuffer = encryptFileBuffer(fileBuffer, chatId);
-                   
-                   // Используем асинхронную запись файла
-                   await fs.promises.writeFile(filePath, encryptedBuffer);
-                   
-                   urlField = 'audioUrl';
-                   urlValue = `/api/media/voice/${fileName}.enc`;
+				   urlField = 'audioUrl';
+				   urlValue = `/api/media/voice/${fileName}`;
                    console.log('[VOICE UPLOAD] urlValue:', urlValue, 'chatId:', chatId);
                } catch (error: any) {
                    console.error('[VOICE UPLOAD] Encryption error:', error);

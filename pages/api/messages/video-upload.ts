@@ -5,7 +5,7 @@ import fs from 'fs';
 import prisma from '../../../lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
-import { encryptFileBuffer } from '../../../lib/encryption';
+// No encryption for video files — store raw files under pages/api/.private_media/video
 import { pusher } from '../../../lib/pusher';
 
 export const config = {
@@ -57,33 +57,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       let videoUrl: string;
-      try {
-          // --- Шифруем видеофайл и сохраняем с .enc ---
-          const uploadDir = path.join(process.cwd(), 'pages', 'api', '.private_media', 'video');
-          if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-          const fileName = `${Date.now()}-circle.webm`;
-          const encFileName = fileName + '.enc';
-          const filePath = path.join(uploadDir, encFileName);
-          
-          console.log('[VIDEO UPLOAD] Reading file from:', video.filepath || video.path);
-          
-          // Читаем файл через промисы для лучшей производительности
-          const fileBuffer = await fs.promises.readFile(video.filepath || video.path);
-          if (!fileBuffer || fileBuffer.length === 0) {
-              throw new Error('Empty video file buffer');
-          }
-          
-          // Отправляем частичный ответ клиенту пока идет шифрование
-          res.writeHead(202);
-          
-          console.log('[VIDEO UPLOAD] Encrypting file for chat:', chatId);
-          const encryptedBuffer = encryptFileBuffer(fileBuffer, chatId);
-          
-          // Асинхронная запись файла
-          await fs.promises.writeFile(filePath, encryptedBuffer);
-          
-          videoUrl = `/api/media/video/${encFileName}`;
-          console.log('[VIDEO UPLOAD] File saved as:', filePath);
+    try {
+      // Сохраняем видео в оригинальном виде (без шифрования)
+          const uploadDir = path.join(process.cwd(), 'storage', 'video');
+      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+      const fileName = `${Date.now()}-circle.webm`;
+          const filePath = path.join(uploadDir, fileName);
+
+      console.log('[VIDEO UPLOAD] Reading file from:', video.filepath || video.path);
+
+      const fileBuffer = await fs.promises.readFile(video.filepath || video.path);
+      if (!fileBuffer || fileBuffer.length === 0) {
+        throw new Error('Empty video file buffer');
+      }
+
+      // Отправляем частичный ответ клиенту пока идёт запись
+      res.writeHead(202);
+
+      await fs.promises.writeFile(filePath, fileBuffer);
+
+      videoUrl = `/api/media/video/${fileName}`;
+      console.log('[VIDEO UPLOAD] File saved as:', filePath);
       } catch (error: any) {
           console.error('[VIDEO UPLOAD] Error:', error);
           res.status(500).json({ error: 'Video processing failed', details: error.message || 'Unknown error' });
@@ -125,29 +119,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(500).json({ error: 'Upload failed', details: String(e) });
     }
   } else if (req.method === 'DELETE') {
-    // Удаление кружка
+    // Делегируем удаление сообщения на единый endpoint /api/messages/[id]
+    // Этот блок сохранлён для совместимости — перенаправляем на основной обработчик
     try {
       const { id } = req.query;
       if (!id || typeof id !== 'string') {
         res.status(400).json({ error: 'No message id provided' });
         return;
       }
-      // Найти сообщение
-      const message = await prisma.message.findUnique({ where: { id } });
-      if (!message || !message.videoUrl) {
-        res.status(404).json({ error: 'Message or video not found' });
-        return;
-      }
-      // Удалить файл
-      const filePath = path.join(process.cwd(), message.videoUrl.startsWith('/') ? message.videoUrl.slice(1) : message.videoUrl);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-      // Удалить сообщение
-      await prisma.message.delete({ where: { id } });
-      res.status(204).end();
+      // Переиспользуем основной обработчик: перенаправляем запрос
+      // Клиент ожидает 204 или ошибку
+      const fetch = require('node-fetch');
+      const serverRes = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/messages/${id}`, { method: 'DELETE', headers: { cookie: req.headers.cookie || '' } });
+      const text = await serverRes.text();
+      if (serverRes.status === 204) return res.status(204).end();
+      try { return res.status(serverRes.status).json(JSON.parse(text)); } catch { return res.status(serverRes.status).send(text); }
     } catch (e) {
-      console.error('Video delete error:', e);
+      console.error('Video delete proxy error:', e);
       res.status(500).json({ error: 'Delete failed', details: String(e) });
     }
   } else {

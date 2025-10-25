@@ -880,9 +880,8 @@ const ChatWithFriend: React.FC = () => {
                           <button
                             onClick={async () => {
                               try {
-                                const endpoint = msg.videoUrl 
-                                  ? `/api/messages/video-upload?id=${msg.id}`
-                                  : `/api/messages/${msg.id}`;
+                                // Use unified messages delete endpoint for all message types
+                                const endpoint = `/api/messages/${msg.id}`;
                                 
                                 const res = await fetch(endpoint, { 
                                   method: 'DELETE', 

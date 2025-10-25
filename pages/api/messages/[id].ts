@@ -9,10 +9,10 @@ import { pusher } from '../../../lib/pusher';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Проверяем наличие папки pages/api/.private_media
-const mediaRoot = path.join(process.cwd(), 'pages', 'api', '.private_media');
+// Наши медиа сейчас хранятся в storage/{voice,video}
+const mediaRoot = path.join(process.cwd(), 'storage');
 if (!fs.existsSync(mediaRoot)) {
-  console.error('[DELETE MESSAGE] Error: pages/api/.private_media folder not found');
+  console.error('[DELETE MESSAGE] Warning: storage folder not found');
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -96,13 +96,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         if (msg.audioUrl) {
           const audioFileName = path.basename(msg.audioUrl);
-          const fullPath = path.join(process.cwd(), 'pages', 'api', '.private_media', 'voice', audioFileName || '');
+          const fullPath = path.join(process.cwd(), 'storage', 'voice', audioFileName || '');
           await tryUnlink(fullPath);
         }
 
         if (msg.videoUrl) {
           const videoFileName = path.basename(msg.videoUrl);
-          const fullPath = path.join(process.cwd(), 'pages', 'api', '.private_media', 'video', videoFileName || '');
+          const fullPath = path.join(process.cwd(), 'storage', 'video', videoFileName || '');
           await tryUnlink(fullPath);
         }
 
