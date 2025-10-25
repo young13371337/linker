@@ -2,6 +2,14 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import prisma from '../../../lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
+import path from 'path';
+import fs from 'fs';
+
+// Проверяем наличие папки .private_media
+const mediaRoot = path.join(process.cwd(), '.private_media');
+if (!fs.existsSync(mediaRoot)) {
+  console.error('[DELETE MESSAGE] Error: .private_media folder not found');
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('[DELETE MESSAGE] Start handling delete request');
@@ -54,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('[DELETE MESSAGE] Attempting to delete audio file');
       try {
         const audioPath = msg.audioUrl.replace(/^\/api\/messages\/voice\//, '').replace(/^\/voice\//, '');
-        const fullPath = require('path').join(process.cwd(), 'storage', 'voice', audioPath);
+        const fullPath = require('path').join(process.cwd(), '.private_media', 'voice', audioPath);
         if (require('fs').existsSync(fullPath)) {
           require('fs').unlinkSync(fullPath);
           console.log('[DELETE MESSAGE] Audio file deleted:', fullPath);
@@ -70,7 +78,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('[DELETE MESSAGE] Attempting to delete video file');
       try {
         const videoPath = msg.videoUrl.replace(/^\//, '');
-        const fullPath = require('path').join(process.cwd(), 'storage', 'video', videoPath);
+        const fullPath = require('path').join(process.cwd(), '.private_media', 'video', videoPath);
         if (require('fs').existsSync(fullPath)) {
           require('fs').unlinkSync(fullPath);
           console.log('[DELETE MESSAGE] Video file deleted:', fullPath);
