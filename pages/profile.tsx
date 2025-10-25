@@ -620,11 +620,13 @@ export default function ProfilePage() {
             cursor: 'pointer',
             borderRadius: 12,
             overflow: 'hidden',
-            background: 'linear-gradient(135deg, #23242a 85%, #2a2d3a 100%)',
-            boxShadow: '0 1px 8px #0006',
+            // use same semi-transparent panel background so it's visually consistent
+            background: 'rgba(35,36,42,0.35)',
+            // lighter shadow to match other panels
+            boxShadow: '0 1px 8px #0003',
             marginBottom: 14,
             transition: 'box-shadow 0.22s, transform 0.14s',
-            border: '1px solid #23242a',
+            border: '1px solid rgba(0,0,0,0.18)',
             maxWidth: 260,
             marginLeft: 'auto',
             marginRight: 'auto',
