@@ -49,21 +49,22 @@ const ToastNotification: React.FC<ToastProps> = ({ type, message, duration = 400
       </div>
       <span style={{fontSize:17}}>{message}</span>
       {actions && actions.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, marginTop: 8, width: '100%' }}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8, width: '100%', justifyContent: actions.length === 1 ? 'flex-end' : 'space-between' }}>
           {actions.map((a, idx) => {
             const isTwo = actions.length === 2;
             const base: React.CSSProperties = {
-              padding: '6px 8px',
+              padding: '6px 10px',
               borderRadius: 8,
-              border: 'none',
+              border: '1px solid rgba(255,255,255,0.04)',
               cursor: 'pointer',
-              background: '#777',
-              color: '#fff',
-              fontWeight: 600,
+              background: 'rgba(28,30,32,0.65)',
+              color: '#e6e6e6',
+              fontWeight: 700,
               fontSize: 13,
               lineHeight: '1',
+              textAlign: 'center' as const,
             };
-            const style: React.CSSProperties = isTwo ? { ...base, flex: 1 } : base;
+            const style: React.CSSProperties = isTwo ? { ...base, flex: '0 0 48%' } : { ...base, minWidth: 92 };
             return (
               <button
                 key={idx}
@@ -76,7 +77,7 @@ const ToastNotification: React.FC<ToastProps> = ({ type, message, duration = 400
                   setVisible(false);
                   setTimeout(onClose, 200);
                 }}
-                style={style}
+                style={{ ...style, ...(a.style || {}) }}
               >
                 {a.label}
               </button>
