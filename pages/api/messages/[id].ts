@@ -66,66 +66,63 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(403).json({ error: 'You can only delete your own messages' });
     }
 
-    // Если у сообщения есть медиафайлы, пытаемся их удалить (без падений)
-    const tryUnlink = async (fullPath: string) => {
-      try {
-        if (fs.existsSync(fullPath)) {
-          await fs.promises.unlink(fullPath);
-          console.log('[DELETE MESSAGE] File deleted:', fullPath);
-        } else {
-          console.log('[DELETE MESSAGE] File not found (skip):', fullPath);
-        }
-      } catch (e) {
-        console.error('[DELETE MESSAGE] Error deleting file:', fullPath, e);
-      }
-    };
-
-    if (msg.audioUrl) {
-      console.log('[DELETE MESSAGE] Attempting to delete audio file (safe)');
-      const audioPath = msg.audioUrl.replace(/^\/api\/messages\/voice\//, '').replace(/^\/voice\//, '').replace(/^\//, '');
-  const fullPath = path.join(process.cwd(), 'pages', 'api', '.private_media', 'voice', audioPath || '');
-      await tryUnlink(fullPath);
-    }
-
-    if (msg.videoUrl) {
-      console.log('[DELETE MESSAGE] Attempting to delete video file (safe)');
-      const videoPath = msg.videoUrl.replace(/^\//, '');
-  const fullPath = path.join(process.cwd(), 'pages', 'api', '.private_media', 'video', videoPath || '');
-      await tryUnlink(fullPath);
-    }
-
-    // Пытаемся расшифровать сообщение для логов
-    if (msg.text && msg.chatId) {
-      try {
-        const decryptedText = decryptMessage(msg.text, msg.chatId);
-        console.log('[DELETE MESSAGE] Encrypted message content:', decryptedText);
-      } catch (e) {
-        console.error('[DELETE MESSAGE] Failed to decrypt message:', e);
-      }
-    }
-
-    // Добавляем еще небольшую задержку перед удалением
-    await sleep(100);
-
-    // Удаляем сообщение из базы данных после удаления файлов
+    // Удаляем сообщение из базы данных сразу — это основная операция
     console.log('[DELETE MESSAGE] Deleting message from database:', id);
-    await prisma.message.delete({ where: { id } });
-    console.log('[DELETE MESSAGE] Message successfully deleted');
-
-    // Уведомляем подписчиков через Pusher
+    let deleted;
     try {
-      if (msg.chatId) {
-        await pusher.trigger(`chat-${msg.chatId}`, 'message-deleted', {
-          messageId: id,
-          chatId: msg.chatId,
-          deletedBy: session.user.id
-        });
-        console.log('[DELETE MESSAGE] Pusher event sent for chat:', msg.chatId);
-      }
-    } catch (pErr) {
-      console.error('[DELETE MESSAGE] Pusher trigger error:', pErr);
-      // Не прерываем основной поток — удаление уже произошло
+      deleted = await prisma.message.delete({ where: { id } });
+      console.log('[DELETE MESSAGE] Message successfully deleted from DB:', id);
+    } catch (dbErr) {
+      console.error('[DELETE MESSAGE] Prisma delete error:', dbErr);
+      // Re-throw to be caught by outer catch and return 500
+      throw dbErr;
     }
+
+    // Файлы и Pusher выполняем в фоне — не блокируем ответ клиенту
+    (async () => {
+      try {
+        const tryUnlink = async (fullPath: string) => {
+          try {
+            if (fs.existsSync(fullPath)) {
+              await fs.promises.unlink(fullPath);
+              console.log('[DELETE MESSAGE][BG] File deleted:', fullPath);
+            } else {
+              console.log('[DELETE MESSAGE][BG] File not found (skip):', fullPath);
+            }
+          } catch (e) {
+            console.error('[DELETE MESSAGE][BG] Error deleting file:', fullPath, e);
+          }
+        };
+
+        if (msg.audioUrl) {
+          const audioFileName = path.basename(msg.audioUrl);
+          const fullPath = path.join(process.cwd(), 'pages', 'api', '.private_media', 'voice', audioFileName || '');
+          await tryUnlink(fullPath);
+        }
+
+        if (msg.videoUrl) {
+          const videoFileName = path.basename(msg.videoUrl);
+          const fullPath = path.join(process.cwd(), 'pages', 'api', '.private_media', 'video', videoFileName || '');
+          await tryUnlink(fullPath);
+        }
+
+        // Уведомляем подписчиков через Pusher
+        try {
+          if (msg.chatId) {
+            await pusher.trigger(`chat-${msg.chatId}`, 'message-deleted', {
+              messageId: id,
+              chatId: msg.chatId,
+              deletedBy: session.user.id
+            });
+            console.log('[DELETE MESSAGE][BG] Pusher event sent for chat:', msg.chatId);
+          }
+        } catch (pErr) {
+          console.error('[DELETE MESSAGE][BG] Pusher trigger error:', pErr);
+        }
+      } catch (bgErr) {
+        console.error('[DELETE MESSAGE][BG] Background cleanup error:', bgErr);
+      }
+    })();
 
     return res.status(204).end();
     
