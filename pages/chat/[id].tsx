@@ -517,6 +517,19 @@ const ChatWithFriend: React.FC = () => {
           }
 
           // Иначе добавляем в конец
+          // Обработка события "печатает"
+          const onTyping = (data: { userId: string, name: string }) => {
+            try {
+              if (!data || !data.userId) return;
+              if (data.userId === (session?.user as any)?.id) return; // не показываем себе
+              setIsTyping(data.name || 'Пользователь');
+              // Сбрасываем через 3 секунды
+              setTimeout(() => setIsTyping(null), 3000);
+            } catch (e) {
+              console.error('Error handling typing event:', e);
+            }
+          };
+          chatChannel.bind('typing', onTyping);
           return [...prev, newMsg];
         });
 
@@ -533,6 +546,7 @@ const ChatWithFriend: React.FC = () => {
         try {
           try { userChannel.unbind('status-changed', onStatus); } catch (e) {}
           try { chatChannel.unbind('new-message', onNewMessage); } catch (e) {}
+          try { chatChannel.unbind('typing', onTyping); } catch (e) {}
           try { pusherClient.unsubscribe(`user-${friend.id}`); } catch (e) {}
           try { pusherClient.unsubscribe(`chat-${chatId}`); } catch (e) {}
         } catch (e) {}
