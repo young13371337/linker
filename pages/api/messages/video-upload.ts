@@ -39,6 +39,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'POST') {
     // Публикация видео
     try {
+      // Verify session before parsing large multipart body
+      const sessionEarly = await getServerSession(req, res, authOptions);
+      if (!sessionEarly || !sessionEarly.user?.id) {
+        console.error('[VIDEO UPLOAD] Unauthorized: no session');
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
       const { fields, files } = await parseForm(req);
       console.log('[VIDEO UPLOAD] parsed fields:', fields);
       console.log('[VIDEO UPLOAD] parsed files keys:', Object.keys(files || {}));
@@ -59,37 +67,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       let videoUrl: string;
       try {
-        const tmpPath = (video as any)?.filepath || (video as any)?.path;
-        console.log('[VIDEO UPLOAD] video.tempPath:', tmpPath);
+        const tmpPath = (video as any)?.filepath || (video as any)?.path || (video as any)?.tempFilePath || (video as any)?.file?.path;
+        console.log('[VIDEO UPLOAD] video.tempPath candidates checked, using:', tmpPath);
         console.log('[VIDEO UPLOAD] video props:', {
           originalFilename: (video as any)?.originalFilename || (video as any)?.name || null,
-          newFilename: (video as any)?.newFilename || (video as any)?.newFilename || null,
           mimetype: (video as any)?.mimetype || (video as any)?.type || null,
           size: (video as any)?.size || null,
         });
-        // Check temp file is readable
+
         if (!tmpPath) throw new Error('Temporary upload path is missing on parsed file');
+
+        // ensure temp path is readable
         try {
           await fs.promises.access(tmpPath, fs.constants.R_OK);
         } catch (accessErr) {
           console.error('[VIDEO UPLOAD] Temp file is not accessible:', accessErr);
           throw accessErr;
         }
+
         // Сохраняем видео в оригинальном виде (без шифрования)
         const uploadDir = path.join(process.cwd(), 'storage', 'video');
         if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
         const fileName = `${Date.now()}-circle.webm`;
         const filePath = path.join(uploadDir, fileName);
 
-  console.log('[VIDEO UPLOAD] Reading file from:', tmpPath);
-
-  const fileBuffer = await fs.promises.readFile(tmpPath);
-        if (!fileBuffer || fileBuffer.length === 0) {
-          throw new Error('Empty video file buffer');
-        }
-
-  // Сохраняем файл
-  await fs.promises.writeFile(filePath, fileBuffer);
+        console.log('[VIDEO UPLOAD] Copying from temp to storage:', tmpPath, '->', filePath);
+        // Stream-copy temp -> destination to avoid high memory usage
+        await new Promise<void>((resolve, reject) => {
+          const rs = fs.createReadStream(tmpPath);
+          const ws = fs.createWriteStream(filePath);
+          rs.on('error', (err) => { console.error('[VIDEO UPLOAD] read error', err); reject(err); });
+          ws.on('error', (err) => { console.error('[VIDEO UPLOAD] write error', err); reject(err); });
+          ws.on('finish', () => resolve());
+          rs.pipe(ws);
+        });
 
         videoUrl = `/api/media/video/${fileName}`;
         console.log('[VIDEO UPLOAD] File saved as:', filePath);
@@ -98,7 +109,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           res.status(500).json({ error: 'Video processing failed', details: error.message || 'Unknown error' });
           return;
       }
-      const session = await getServerSession(req, res, authOptions);
+      const session = sessionEarly || await getServerSession(req, res, authOptions);
       const userId = session?.user?.id;
       if (!chatId) {
         res.status(400).json({ error: 'No chatId provided', fields });

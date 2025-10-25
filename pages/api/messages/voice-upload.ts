@@ -41,6 +41,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		return;
 	}
 	try {
+		// Verify session early
+		const sessionEarly = await getServerSession(req, res, authOptions);
+		if (!sessionEarly || !sessionEarly.user?.id) {
+			console.error('[VOICE UPLOAD] Unauthorized: no session');
+			res.status(401).json({ error: 'Unauthorized' });
+			return;
+		}
+
 		const { fields, files } = await parseForm(req);
 		console.log('[VOICE UPLOAD] parsed fields:', fields);
 		console.log('[VOICE UPLOAD] parsed files keys:', Object.keys(files || {}));
@@ -48,7 +56,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		   let audio = files.audio;
 		   console.log('[VOICE UPLOAD] audio.filepath:', (audio as any)?.filepath || (audio as any)?.path);
 		   if (Array.isArray(audio)) audio = audio[0];
-		   let file, fileType, fileExt, uploadDir, fileName, filePath, urlField, urlValue;
+		   let file: any, fileType: string | undefined, fileExt: string | undefined;
+		   let uploadDir: string, fileName: string, filePath: string, urlField: string, urlValue: string;
 		   let chatId = fields.chatId;
 		   if (Array.isArray(chatId)) chatId = chatId[0];
 
@@ -70,8 +79,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 					   filePath = path.join(uploadDir, fileName);
 					   console.log('[VOICE UPLOAD] target filePath:', filePath);
 
-					   const tmpPath = (file as any)?.filepath || (file as any)?.path;
-					   console.log('[VOICE UPLOAD] tmpPath:', tmpPath);
+					   const tmpPath = (file as any)?.filepath || (file as any)?.path || (file as any)?.tempFilePath || (file as any)?.file?.path;
+					   console.log('[VOICE UPLOAD] tmpPath candidates, using:', tmpPath);
 					   console.log('[VOICE UPLOAD] file props:', {
 						   originalFilename: (file as any)?.originalFilename || (file as any)?.name || null,
 						   mimetype: (file as any)?.mimetype || (file as any)?.type || null,
@@ -86,14 +95,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 						   throw accessErr;
 					   }
 
-					   // Читаем файл через промисы
-					   const fileBuffer = await fs.promises.readFile(tmpPath);
-					   if (!fileBuffer || fileBuffer.length === 0) {
-						   throw new Error('Empty file buffer');
-					   }
-
-					   // Сохраняем файл без шифрования
-					   await fs.promises.writeFile(filePath, fileBuffer);
+					   // Stream-copy temp -> destination
+					   await new Promise<void>((resolve, reject) => {
+						   const rs = fs.createReadStream(tmpPath);
+						   const ws = fs.createWriteStream(filePath);
+						   rs.on('error', (err) => { console.error('[VOICE UPLOAD] read error', err); reject(err); });
+						   ws.on('error', (err) => { console.error('[VOICE UPLOAD] write error', err); reject(err); });
+						   ws.on('finish', () => resolve());
+						   rs.pipe(ws);
+					   });
 
 					   urlField = 'audioUrl';
 					   urlValue = `/api/media/voice/${fileName}`;
