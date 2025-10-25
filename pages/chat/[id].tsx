@@ -353,6 +353,7 @@ const ChatWithFriend: React.FC = () => {
               try {
                 const res = await fetch('/api/messages/video-upload', {
                   method: 'POST',
+                  credentials: 'include',
                   body: formData,
                 });
                 const data = await res.json();
@@ -1281,6 +1282,7 @@ const ChatWithFriend: React.FC = () => {
                         try {
                           const res = await fetch('/api/messages/voice-upload', {
                             method: 'POST',
+                            credentials: 'include',
                             body: formData,
                           });
                           const data = await res.json();
