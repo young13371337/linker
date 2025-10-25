@@ -9,10 +9,10 @@ import { pusher } from '../../../lib/pusher';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Проверяем наличие папки .private_media
-const mediaRoot = path.join(process.cwd(), '.private_media');
+// Проверяем наличие папки pages/api/.private_media
+const mediaRoot = path.join(process.cwd(), 'pages', 'api', '.private_media');
 if (!fs.existsSync(mediaRoot)) {
-  console.error('[DELETE MESSAGE] Error: .private_media folder not found');
+  console.error('[DELETE MESSAGE] Error: pages/api/.private_media folder not found');
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -83,14 +83,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (msg.audioUrl) {
       console.log('[DELETE MESSAGE] Attempting to delete audio file (safe)');
       const audioPath = msg.audioUrl.replace(/^\/api\/messages\/voice\//, '').replace(/^\/voice\//, '').replace(/^\//, '');
-      const fullPath = path.join(process.cwd(), '.private_media', 'voice', audioPath || '');
+  const fullPath = path.join(process.cwd(), 'pages', 'api', '.private_media', 'voice', audioPath || '');
       await tryUnlink(fullPath);
     }
 
     if (msg.videoUrl) {
       console.log('[DELETE MESSAGE] Attempting to delete video file (safe)');
       const videoPath = msg.videoUrl.replace(/^\//, '');
-      const fullPath = path.join(process.cwd(), '.private_media', 'video', videoPath || '');
+  const fullPath = path.join(process.cwd(), 'pages', 'api', '.private_media', 'video', videoPath || '');
       await tryUnlink(fullPath);
     }
 

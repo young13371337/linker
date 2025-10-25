@@ -14,8 +14,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!filename || typeof filename !== 'string') {
     return res.status(400).json({ error: 'No filename' });
   }
-  // Файл должен лежать в storage/voice
-  const filePath = path.join(process.cwd(), '.private_media', 'voice', filename);
+  // Файл лежит в pages/api/.private_media/voice
+  const filePath = path.join(process.cwd(), 'pages', 'api', '.private_media', 'voice', filename);
   console.log('[VOICE API] filePath:', filePath);
   if (!fs.existsSync(filePath)) {
     console.error('[VOICE API] File not found:', filePath);

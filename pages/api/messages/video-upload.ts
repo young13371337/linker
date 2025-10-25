@@ -59,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let videoUrl: string;
       try {
           // --- Шифруем видеофайл и сохраняем с .enc ---
-          const uploadDir = path.join(process.cwd(), '.private_media', 'video');
+          const uploadDir = path.join(process.cwd(), 'pages', 'api', '.private_media', 'video');
           if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
           const fileName = `${Date.now()}-circle.webm`;
           const encFileName = fileName + '.enc';

@@ -60,13 +60,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			   file = audio;
 			   fileType = 'audio';
 			   fileExt = '.mp3';
-			   uploadDir = path.join(process.cwd(), '.private_media', 'voice');
+			   uploadDir = path.join(process.cwd(), 'pages', 'api', '.private_media', 'voice');
 			   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 			   fileName = `${Date.now()}-${file.originalFilename ? file.originalFilename.replace(/\.[^/.]+$/, fileExt) : 'voice.mp3'}`;
 			   
 			   try {
                    // Шифруем файл перед сохранением
-                   filePath = path.join(uploadDir, fileName + '.enc');
+				   filePath = path.join(uploadDir, fileName + '.enc');
                    console.log('[VOICE UPLOAD] filePath:', filePath);
                    
                    // Читаем файл через промисы
