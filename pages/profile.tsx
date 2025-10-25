@@ -641,8 +641,44 @@ export default function ProfilePage() {
 
       {/* Модальное окно настроек */}
       {showSettings && (
-        <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", animation: "fadeIn 0.3s" }}>
-          <div style={{ background: "#23242a", borderRadius: 18, padding: 32, minWidth: 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", transition: "box-shadow 0.3s, background 0.3s", maxHeight: "80vh", overflowY: "auto", scrollbarWidth: "none" }}>
+        <div
+          style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", animation: "fadeIn 0.3s" }}
+          onClick={e => {
+            // Закрытие по тапу вне модального окна на мобильных
+            if (e.target === e.currentTarget) setShowSettings(false);
+          }}
+        >
+          <div
+            style={{
+              background: "#23242a",
+              borderRadius: 18,
+              padding: 32,
+              minWidth: 320,
+              boxShadow: "0 2px 24px #0008",
+              color: "#fff",
+              position: "relative",
+              transition: "box-shadow 0.3s, background 0.3s",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              scrollbarWidth: "none",
+              minHeight: "60vh",
+              width: "90vw",
+              overscrollBehaviorY: "contain",
+              WebkitOverflowScrolling: "touch"
+            }}
+            onTouchStart={e => {
+              // Свайп вниз для закрытия на мобильных
+              const startY = e.touches[0].clientY;
+              const modal = e.currentTarget;
+              modal.setAttribute('data-touchstart', String(startY));
+            }}
+            onTouchEnd={e => {
+              const startY = Number(e.currentTarget.getAttribute('data-touchstart'));
+              const endY = e.changedTouches[0].clientY;
+              if (startY && endY - startY > 80) setShowSettings(false);
+            }}
+            onClick={e => e.stopPropagation()}
+          >
             <button onClick={() => setShowSettings(false)} style={{ position: "sticky", top: 0, right: 0, float: "right", zIndex: 100, background: "none", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", transition: "color 0.2s", marginLeft: "calc(100% - 40px)", marginBottom: 8 }} onMouseOver={e => {e.currentTarget.style.color="#4fc3f7"}} onMouseOut={e => {e.currentTarget.style.color="#fff"}}>✕</button>
             <h3 style={{ fontSize: 20, fontWeight: 600, marginBottom: 18 }}>Настройки профиля</h3>
             {/* Безопасность */}

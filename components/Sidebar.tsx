@@ -82,6 +82,31 @@ export default function Sidebar() {
 
   return (
     <>
+      {/* Оверлей для мобильного закрытия сайдбара */}
+      {isMobile && open && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0,0,0,0.15)',
+            zIndex: 999,
+            touchAction: 'none',
+          }}
+          onClick={() => setOpen(false)}
+          onTouchStart={e => {
+            const startY = e.touches[0].clientY;
+            (e.currentTarget as any).dataset.touchStart = startY;
+          }}
+          onTouchEnd={e => {
+            const startY = Number((e.currentTarget as any).dataset.touchStart);
+            const endY = e.changedTouches[0].clientY;
+            if (startY && endY - startY > 80) setOpen(false);
+          }}
+        />
+      )}
       <aside
         className={`${styles.sidebar} ${open ? styles.open : styles.closed}`}
         style={mounted && isMobile ? { width: open ? '80vw' : 0, minWidth: 0, maxWidth: '320px', zIndex: 1000 } : {}}
