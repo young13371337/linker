@@ -7,7 +7,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 // No encryption for voice files anymore — store raw files under pages/api/.private_media/voice
 import { pusher } from '../../../lib/pusher';
-// No external S3 usage when storing media directly in DB as data URLs
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 export const config = {
 	api: {
@@ -109,14 +110,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 						   throw accessErr;
 					   }
 
-					   // Read file into buffer and create a data URL so we can store the media directly in the message
+					   // Read file into buffer and store base64 in DB when no external storage configured
 					   const fileBuffer = await fs.promises.readFile(tmpPath);
 					   if (!fileBuffer || fileBuffer.length === 0) throw new Error('Empty audio file');
 					   const base64 = fileBuffer.toString('base64');
-					   const mime = (file as any)?.mimetype || 'audio/mpeg';
+					   (req as any)._audioBase64 = base64;
+					   (req as any)._audioMime = (file as any)?.mimetype || 'audio/mpeg';
+					   // set placeholder url which we'll replace after creating the message
 					   urlField = 'audioUrl';
-					   urlValue = `data:${mime};base64,${base64}`;
-					   console.log('[VOICE UPLOAD] Prepared audio data URL to store in DB');
+					   urlValue = '__DB_BASE64__';
+					   console.log('[VOICE UPLOAD] Prepared audio base64 to store in DB');
 				   } catch (error: any) {
 					   console.error('[VOICE UPLOAD] File processing error:', error);
 					   throw new Error(`File processing failed: ${error.message || 'Unknown error'}`);
@@ -136,7 +139,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			   res.status(401).json({ error: 'Unauthorized: no userId from session', session });
 			   return;
 		   }
-		   // Create message and store data URL in audioUrl so the client can fetch/play it directly
 		   const message = await prisma.message.create({
 			   data: {
 				   chatId,

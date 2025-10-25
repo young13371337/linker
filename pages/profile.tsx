@@ -603,7 +603,7 @@ export default function ProfilePage() {
           {removeFriendId && (
             <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <div style={{ background: "#23242a", borderRadius: 18, padding: 32, minWidth: 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", textAlign: "center" }}>
-                <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 18 }}>Вы уверены, что хотите удалить друга? Это приведет к удалению чата с ним.</div>
+                <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 18 }}>Вы уверены, что хотите удалить друга?</div>
                 <div style={{ display: "flex", gap: 18, justifyContent: "center" }}>
                   <button onClick={handleRemoveFriend} style={{ background: "#e74c3c", color: "#fff", border: "none", borderRadius: 8, padding: "8px 22px", fontSize: 16, fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 8px #e74c3f44" }}>Да</button>
                   <button onClick={() => setRemoveFriendId(null)} style={{ background: "#444", color: "#fff", border: "none", borderRadius: 8, padding: "8px 22px", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Отменить</button>
@@ -648,7 +648,7 @@ export default function ProfilePage() {
         >
           <img src="/news-images/update.jpg" alt="Новое обновление" style={{ width: '100%', height: 70, objectFit: 'cover', display: 'block', borderTopLeftRadius: 12, borderTopRightRadius: 12 }} />
           <div style={{ padding: '10px 12px 8px 12px', textAlign: 'center', width: '100%' }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', letterSpacing: 0.1 }}>v7.0</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', letterSpacing: 0.1 }}>Обновление v6.0</div>
           </div>
         </div>
         {/* Можно добавить другие новости ниже */}
@@ -663,12 +663,13 @@ export default function ProfilePage() {
             <button onClick={() => setShowNewsModal(false)} style={{ position: 'absolute', top: 10, right: 16, zIndex: 100, background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer', transition: 'color 0.2s' }} onMouseOver={e => {e.currentTarget.style.color="#4fc3f7"}} onMouseOut={e => {e.currentTarget.style.color="#fff"}}>✕</button>
             <img src="/news-images/update.jpg" alt="Новое обновление" style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block', borderTopLeftRadius: 18, borderTopRightRadius: 18 }} />
             <div style={{ padding: '24px 22px 18px 22px' }}>
-              <div style={{ fontSize: 19, fontWeight: 700, marginBottom: 10 }}>Linker Social v7.0</div>
+              <div style={{ fontSize: 19, fontWeight: 700, marginBottom: 10 }}>Linker Social v6.0</div>
               <div style={{ color: '#bbb', fontSize: 16, marginBottom: 8 }}>
                 Новая версия v6.0 в ней добавлено:
                 Новые статусы, Изменение отображения фона профиля, исправлены проблемы с UserID
                 Добавлены видеосообщения, Новая 2FA Через приложение Google Authenficator<br />
                 <br />
+                Открыта разработка системы групповых чатов, 1/3
               </div>
             </div>
           </div>
