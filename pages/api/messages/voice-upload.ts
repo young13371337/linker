@@ -6,6 +6,7 @@ import prisma from '../../../lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { encryptFileBuffer } from '../../../lib/encryption';
+import { pusher } from '../../../lib/pusher';
 
 export const config = {
 	api: {
@@ -112,7 +113,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 				   [urlField]: urlValue,
 			   },
 		   });
-		   res.status(200).json({ [urlField]: urlValue, message });
+		// Отправляем событие в Pusher
+		try {
+			await pusher.trigger(`chat-${chatId}`, 'new-message', {
+				id: message.id,
+				sender: userId,
+				text: '',
+				createdAt: message.createdAt,
+				audioUrl: urlValue,
+			});
+		} catch (pErr) {
+			console.error('[VOICE UPLOAD] Pusher trigger failed:', pErr);
+		}
+		res.status(200).json({ [urlField]: urlValue, message });
 	} catch (e) {
 		console.error('Voice upload error:', e);
 		res.status(500).json({ error: 'Upload failed', details: String(e) });

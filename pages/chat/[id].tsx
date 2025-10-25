@@ -6,6 +6,11 @@ import { useRouter } from 'next/router';
 import UserStatus, { statusLabels } from '../../components/UserStatus';
 import { useSession } from 'next-auth/react';
 
+// Инициализация Pusher
+const pusherClient = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+  cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+});
+
 // --- Кружок с overlay play/pause ---
 const VideoCircle: React.FC<{ src: string }> = ({ src }) => {
   const videoRef = React.useRef<HTMLVideoElement>(null);
@@ -276,8 +281,16 @@ const ChatWithFriend: React.FC = () => {
     }
   };
 
-  // TypingIndicator компонент-заглушка (реализуй по необходимости)
-  const TypingIndicator = () => <span>Печатает...</span>;
+  const TypingIndicator = ({ name }: { name: string }) => (
+    <div style={{ 
+      fontSize: '0.85em',
+      color: '#666',
+      padding: '4px 8px',
+      marginBottom: '8px'
+    }}>
+      {name} печатает...
+    </div>
+  );
 
   // --- Для видеокружков: объявить функции, если их нет ---
   // Остановить запись видео
@@ -287,6 +300,60 @@ const ChatWithFriend: React.FC = () => {
       setVideoRecording(false);
       if (videoTimer.current) clearInterval(videoTimer.current);
     }
+  };
+
+  // Подписка на события Pusher
+  useEffect(() => {
+    if (!chatId) return;
+
+    const chatChannel = pusherClient.subscribe(`chat-${chatId}`);
+
+    // Обработка нового сообщения
+    chatChannel.bind('new-message', (newMsg: Message) => {
+      setMessages(prev => [...prev, newMsg]);
+      // Прокрутка чата вниз при новом сообщении
+      if (chatScrollRef.current) {
+        chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+      }
+    });
+
+    // Обработка события "печатает"
+    chatChannel.bind('typing', (data: { userId: string, name: string }) => {
+      if (data.userId !== session?.user?.id) {
+        setIsTyping(data.name);
+        // Автоматически скрыть индикатор через 3 секунды
+        setTimeout(() => setIsTyping(null), 3000);
+      }
+    });
+
+    // Обработка удаления сообщения
+    chatChannel.bind('message-deleted', (payload: { messageId: string, chatId: string }) => {
+      try {
+        if (!payload || !payload.messageId) return;
+        setMessages(prev => prev.filter(m => m.id !== payload.messageId));
+        // Прокрутка в конец после удаления, чтобы UI оставался согласованным
+        if (chatScrollRef.current) {
+          chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+        }
+      } catch (e) {
+        console.error('Error handling message-deleted event:', e);
+      }
+    });
+
+    return () => {
+      chatChannel.unbind_all();
+      pusherClient.unsubscribe(`chat-${chatId}`);
+    };
+  }, [chatId, session?.user?.id]);
+
+  // Отправка события "печатает"
+  const sendTypingEvent = () => {
+    if (!chatId) return;
+    fetch('/api/messages/typing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chatId })
+    });
   };
 
   // При открытии превью — запросить камеру и начать live preview
@@ -468,22 +535,23 @@ const ChatWithFriend: React.FC = () => {
       // Подписка на канал чата для сообщений
       const chatChannel = pusherClient.subscribe(`chat-${chatId}`);
       const onNewMessage = (data: any) => {
-        if (!data.message) return;
-        
+        // Поддерживаем оба формата: { message: {...} } и прямой объект
+        const payload = data?.message ? data.message : data;
+        if (!payload || !payload.id) return;
         const newMsg = {
-          id: data.message.id,
-          sender: data.message.senderId,
-          text: data.message.text,
-          createdAt: data.message.createdAt,
-          audioUrl: data.message.audioUrl,
-          videoUrl: data.message.videoUrl
+          id: payload.id,
+          sender: payload.sender || payload.senderId,
+          text: payload.text || '',
+          createdAt: payload.createdAt || new Date().toISOString(),
+          audioUrl: payload.audioUrl,
+          videoUrl: payload.videoUrl
         };
         
         // Добавляем новое сообщение в список
         setMessages(prev => [...prev, newMsg]);
 
         // Устанавливаем анимацию для нового сообщения
-        setAnimatedMsgIds(prev => new Set([...prev, data.message.id]));
+  setAnimatedMsgIds(prev => new Set([...prev, payload.id]));
 
         // Автоматически прокручиваем к новому сообщению
         setTimeout(scrollToBottom, 50);
@@ -923,6 +991,7 @@ const ChatWithFriend: React.FC = () => {
               ));
             })()
           )}
+          {isTyping && <TypingIndicator name={isTyping} />}
         </div>
         <form
           onSubmit={handleSendMessage}
@@ -1116,15 +1185,9 @@ const ChatWithFriend: React.FC = () => {
             <>
               <input
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onInput={async () => {
-                  if (!chatId || !session) return;
-                  await fetch('/api/messages/typing', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ chatId })
-                  });
+                onChange={(e) => {
+                  setNewMessage(e.target.value);
+                  sendTypingEvent();
                 }}
                 placeholder="Сообщение..."
                 style={inputStyle}
@@ -1302,7 +1365,7 @@ const ChatWithFriend: React.FC = () => {
             fontWeight: 500,
             maxWidth: '60%',
           }}>
-            <TypingIndicator />
+            <TypingIndicator name={isTyping} />
           </div>
         )}
       </div>

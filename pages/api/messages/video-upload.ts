@@ -6,6 +6,7 @@ import prisma from '../../../lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { encryptFileBuffer } from '../../../lib/encryption';
+import { pusher } from '../../../lib/pusher';
 
 export const config = {
   api: {
@@ -106,6 +107,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           videoUrl,
         },
       });
+      // Уведомляем подписчиков через Pusher
+      try {
+        await pusher.trigger(`chat-${chatId}`, 'new-message', {
+          id: message.id,
+          sender: userId,
+          text: '',
+          createdAt: message.createdAt,
+          videoUrl,
+        });
+      } catch (pErr) {
+        console.error('[VIDEO UPLOAD] Pusher trigger failed:', pErr);
+      }
       res.status(200).json({ videoUrl, message });
     } catch (e) {
       console.error('Video upload error:', e);

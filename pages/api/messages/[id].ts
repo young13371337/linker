@@ -5,6 +5,7 @@ import { authOptions } from '../auth/[...nextauth]';
 import { decryptMessage } from '../../../lib/encryption';
 import path from 'path';
 import fs from 'fs';
+import { pusher } from '../../../lib/pusher';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -65,37 +66,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(403).json({ error: 'You can only delete your own messages' });
     }
 
-    // Если у сообщения есть медиафайлы, пытаемся их удалить
-    if (msg.audioUrl) {
-      console.log('[DELETE MESSAGE] Attempting to delete audio file');
+    // Если у сообщения есть медиафайлы, пытаемся их удалить (без падений)
+    const tryUnlink = async (fullPath: string) => {
       try {
-        const audioPath = msg.audioUrl.replace(/^\/api\/messages\/voice\//, '').replace(/^\/voice\//, '');
-        const fullPath = require('path').join(process.cwd(), '.private_media', 'voice', audioPath);
-        if (require('fs').existsSync(fullPath)) {
-          require('fs').unlinkSync(fullPath);
-          console.log('[DELETE MESSAGE] Audio file deleted:', fullPath);
+        if (fs.existsSync(fullPath)) {
+          await fs.promises.unlink(fullPath);
+          console.log('[DELETE MESSAGE] File deleted:', fullPath);
         } else {
-          console.log('[DELETE MESSAGE] Audio file not found:', fullPath);
+          console.log('[DELETE MESSAGE] File not found (skip):', fullPath);
         }
       } catch (e) {
-        console.error('[DELETE MESSAGE] Error deleting audio file:', e);
+        console.error('[DELETE MESSAGE] Error deleting file:', fullPath, e);
       }
+    };
+
+    if (msg.audioUrl) {
+      console.log('[DELETE MESSAGE] Attempting to delete audio file (safe)');
+      const audioPath = msg.audioUrl.replace(/^\/api\/messages\/voice\//, '').replace(/^\/voice\//, '').replace(/^\//, '');
+      const fullPath = path.join(process.cwd(), '.private_media', 'voice', audioPath || '');
+      await tryUnlink(fullPath);
     }
 
     if (msg.videoUrl) {
-      console.log('[DELETE MESSAGE] Attempting to delete video file');
-      try {
-        const videoPath = msg.videoUrl.replace(/^\//, '');
-        const fullPath = require('path').join(process.cwd(), '.private_media', 'video', videoPath);
-        if (require('fs').existsSync(fullPath)) {
-          require('fs').unlinkSync(fullPath);
-          console.log('[DELETE MESSAGE] Video file deleted:', fullPath);
-        } else {
-          console.log('[DELETE MESSAGE] Video file not found:', fullPath);
-        }
-      } catch (e) {
-        console.error('[DELETE MESSAGE] Error deleting video file:', e);
-      }
+      console.log('[DELETE MESSAGE] Attempting to delete video file (safe)');
+      const videoPath = msg.videoUrl.replace(/^\//, '');
+      const fullPath = path.join(process.cwd(), '.private_media', 'video', videoPath || '');
+      await tryUnlink(fullPath);
     }
 
     // Пытаемся расшифровать сообщение для логов
@@ -115,7 +111,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('[DELETE MESSAGE] Deleting message from database:', id);
     await prisma.message.delete({ where: { id } });
     console.log('[DELETE MESSAGE] Message successfully deleted');
-    
+
+    // Уведомляем подписчиков через Pusher
+    try {
+      if (msg.chatId) {
+        await pusher.trigger(`chat-${msg.chatId}`, 'message-deleted', {
+          messageId: id,
+          chatId: msg.chatId,
+          deletedBy: session.user.id
+        });
+        console.log('[DELETE MESSAGE] Pusher event sent for chat:', msg.chatId);
+      }
+    } catch (pErr) {
+      console.error('[DELETE MESSAGE] Pusher trigger error:', pErr);
+      // Не прерываем основной поток — удаление уже произошло
+    }
+
     return res.status(204).end();
     
   } catch (error) {
