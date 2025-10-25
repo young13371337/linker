@@ -47,7 +47,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    return res.status(200).json({ success: true, chat });
+  // Return success only. We intentionally do NOT return the chat object here
+  // to avoid accidental client-side navigation based on a chat in the response.
+  return res.status(200).json({ success: true });
   } catch (e: any) {
     return res.status(500).json({ error: e.message || "Internal server error" });
   }
