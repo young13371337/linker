@@ -4,6 +4,8 @@ import { getUser, clearUser } from "../lib/session";
 import { useRouter } from "next/router";
 import { FaComments, FaUser, FaSignOutAlt } from "react-icons/fa";
 import styles from "../styles/Sidebar.module.css"; // создадим CSS для hover и анимаций
+import Pusher from 'pusher-js';
+import ToastNotification from '../pages/chat/ToastNotification';
 
 export default function Sidebar() {
   const router = useRouter();
@@ -27,6 +29,7 @@ export default function Sidebar() {
   useEffect(() => {
     let mounted = true;
 
+    // helper to fetch pending count (extracted so we can call it from pusher handler)
     const fetchPending = async () => {
       try {
         const res = await fetch("/api/friends/pending");
@@ -36,7 +39,6 @@ export default function Sidebar() {
         console.error(err);
       }
     };
-
     fetchPending();
 
     const handleVisibility = () => {
@@ -53,6 +55,35 @@ export default function Sidebar() {
       window.removeEventListener("visibilitychange", handleVisibility);
     };
   }, []);
+
+  // Pusher: listen for incoming friend requests and show toast
+  useEffect(() => {
+    const u = getUser();
+    if (!u) return;
+    const channelName = `user-${u.id}`;
+    const pusherClient = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, { cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER! });
+    const channel = pusherClient.subscribe(channelName);
+    const onFriendRequest = (data: any) => {
+      try {
+        const from = data?.fromLogin || 'Пользователь';
+        // increment pending count optimistically
+        setPendingCount(prev => (typeof prev === 'number' ? prev + 1 : 1));
+        setToastMsg({ type: 'success', message: `${from} отправил вам заявку в друзья` });
+      } catch (e) {
+        console.error('Error handling friend-request pusher event', e);
+      }
+    };
+    channel.bind('friend-request', onFriendRequest);
+    return () => {
+      try {
+        channel.unbind('friend-request', onFriendRequest);
+        pusherClient.unsubscribe(channelName);
+        pusherClient.disconnect();
+      } catch (e) {}
+    };
+  }, []);
+
+  const [toastMsg, setToastMsg] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
     // Проверяем пользователя при монтировании
@@ -82,6 +113,14 @@ export default function Sidebar() {
 
   return (
     <>
+      {toastMsg && (
+        <ToastNotification
+          type={toastMsg.type}
+          message={toastMsg.message}
+          duration={4000}
+          onClose={() => setToastMsg(null)}
+        />
+      )}
       {/* Оверлей для мобильного закрытия сайдбара */}
       {isMobile && open && (
         <div
