@@ -302,49 +302,7 @@ const ChatWithFriend: React.FC = () => {
     }
   };
 
-  // Подписка на события Pusher
-  useEffect(() => {
-    if (!chatId) return;
-
-    const chatChannel = pusherClient.subscribe(`chat-${chatId}`);
-
-    // Обработка нового сообщения
-    chatChannel.bind('new-message', (newMsg: Message) => {
-      setMessages(prev => [...prev, newMsg]);
-      // Прокрутка чата вниз при новом сообщении
-      if (chatScrollRef.current) {
-        chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-      }
-    });
-
-    // Обработка события "печатает"
-    chatChannel.bind('typing', (data: { userId: string, name: string }) => {
-      if (data.userId !== session?.user?.id) {
-        setIsTyping(data.name);
-        // Автоматически скрыть индикатор через 3 секунды
-        setTimeout(() => setIsTyping(null), 3000);
-      }
-    });
-
-    // Обработка удаления сообщения
-    chatChannel.bind('message-deleted', (payload: { messageId: string, chatId: string }) => {
-      try {
-        if (!payload || !payload.messageId) return;
-        setMessages(prev => prev.filter(m => m.id !== payload.messageId));
-        // Прокрутка в конец после удаления, чтобы UI оставался согласованным
-        if (chatScrollRef.current) {
-          chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-        }
-      } catch (e) {
-        console.error('Error handling message-deleted event:', e);
-      }
-    });
-
-    return () => {
-      chatChannel.unbind_all();
-      pusherClient.unsubscribe(`chat-${chatId}`);
-    };
-  }, [chatId, session?.user?.id]);
+  // NOTE: single Pusher subscription is handled below (avoid double subscriptions)
 
   // Отправка события "печатает"
   const sendTypingEvent = () => {
@@ -520,9 +478,7 @@ const ChatWithFriend: React.FC = () => {
   useEffect(() => {
     if (!friend || !friend.id || !chatId) return;
     try {
-      const pusherClient = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY || '', {
-        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'mt1',
-      });
+      // use the shared pusherClient instance (initialized once at module top)
       
       // Подписка на канал пользователя для статуса
       const userChannel = pusherClient.subscribe(`user-${friend.id}`);
@@ -574,11 +530,10 @@ const ChatWithFriend: React.FC = () => {
       // cleanup
       return () => {
         try {
-          userChannel.unbind('status-changed', onStatus);
-          chatChannel.unbind('new-message', onNewMessage);
-          pusherClient.unsubscribe(`user-${friend.id}`);
-          pusherClient.unsubscribe(`chat-${chatId}`);
-          pusherClient.disconnect();
+          try { userChannel.unbind('status-changed', onStatus); } catch (e) {}
+          try { chatChannel.unbind('new-message', onNewMessage); } catch (e) {}
+          try { pusherClient.unsubscribe(`user-${friend.id}`); } catch (e) {}
+          try { pusherClient.unsubscribe(`chat-${chatId}`); } catch (e) {}
         } catch (e) {}
       };
     } catch (e) {
