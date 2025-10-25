@@ -209,7 +209,7 @@ export default function UserProfile() {
             </div>
             <div style={{ fontSize: 15, color: "#bbb", marginTop: 2 }}>{user.description}</div>
             {isFriend && (
-              <div style={{ fontSize: 14, color: '#1ed760', fontWeight: 500, marginTop: 4 }}>Ваш друг</div>
+              <div style={{ fontSize: 14, color: '#333434ff', fontWeight: 500, marginTop: 4 }}>Ваш друг</div>
             )}
           </div>
         </div>

@@ -443,31 +443,61 @@ const ChatWithFriend: React.FC = () => {
       });
   }, [session, id]);
 
-  // Подписка на Pusher для получения изменений статуса пользователя
+  // Подписка на Pusher для получения изменений статуса пользователя и сообщений
   useEffect(() => {
-    if (!friend || !friend.id) return;
+    if (!friend || !friend.id || !chatId) return;
     try {
       const pusherClient = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY || '', {
         cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'mt1',
       });
-      const channel = pusherClient.subscribe(`user-${friend.id}`);
+      
+      // Подписка на канал пользователя для статуса
+      const userChannel = pusherClient.subscribe(`user-${friend.id}`);
       const onStatus = (payload: any) => {
         if (!payload || !payload.userId) return;
         setFriend(prev => prev && prev.id === payload.userId ? { ...prev, status: payload.status } : prev);
       };
-      channel.bind('status-changed', onStatus);
+      userChannel.bind('status-changed', onStatus);
+
+      // Подписка на канал чата для сообщений
+      const chatChannel = pusherClient.subscribe(`chat-${chatId}`);
+      const onNewMessage = (data: any) => {
+        if (!data.message) return;
+        
+        const newMsg = {
+          id: data.message.id,
+          sender: data.message.senderId,
+          text: data.message.text,
+          createdAt: data.message.createdAt,
+          audioUrl: data.message.audioUrl,
+          videoUrl: data.message.videoUrl
+        };
+        
+        // Добавляем новое сообщение в список
+        setMessages(prev => [...prev, newMsg]);
+
+        // Устанавливаем анимацию для нового сообщения
+        setAnimatedMsgIds(prev => new Set([...prev, data.message.id]));
+
+        // Автоматически прокручиваем к новому сообщению
+        setTimeout(scrollToBottom, 50);
+      };
+      chatChannel.bind('new-message', onNewMessage);
+      
       // cleanup
       return () => {
         try {
-          channel.unbind('status-changed', onStatus);
+          userChannel.unbind('status-changed', onStatus);
+          chatChannel.unbind('new-message', onNewMessage);
           pusherClient.unsubscribe(`user-${friend.id}`);
+          pusherClient.unsubscribe(`chat-${chatId}`);
           pusherClient.disconnect();
         } catch (e) {}
       };
     } catch (e) {
       // ignore pusher errors on client
     }
-  }, [friend && friend.id]);
+  }, [friend?.id, chatId]);
 
   useEffect(() => {
     if (session) {
@@ -475,33 +505,67 @@ const ChatWithFriend: React.FC = () => {
     }
   }, [session]);
 
+  // Функция для автопрокрутки вниз
+  const scrollToBottom = (smooth = true) => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTo({
+        top: chatScrollRef.current.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      });
+    }
+  };
+
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !chatId || !session) return;
+    
+    // Создаем временный ID для сообщения
+    const tempId = 'temp-' + Date.now();
+    const messageText = newMessage.trim();
+    
+    // Немедленно добавляем сообщение в UI
+    const tempMessage = {
+      id: tempId,
+      sender: (session.user as any)?.id,
+      text: messageText,
+      createdAt: new Date().toISOString(),
+    };
+    
+    setMessages(prev => [...prev, tempMessage]);
+    setNewMessage(''); // Очищаем поле ввода сразу
+    
+    // Устанавливаем анимацию для нового сообщения
+    setAnimatedMsgIds(prev => {
+      const next = new Set(prev);
+      next.add(tempId);
+      return next;
+    });
+
+    // Прокручиваем чат вниз
+    setTimeout(scrollToBottom, 50);
+    
+    // Отправляем сообщение на сервер
     fetch('/api/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ chatId, text: newMessage })
+      body: JSON.stringify({ chatId, text: messageText })
     })
       .then(res => res.json())
       .then((data) => {
         if (data.message) {
-          setMessages([...messages, {
-            id: data.message.id,
-            sender: data.message.senderId,
-            text: data.message.text,
-            createdAt: data.message.createdAt,
-            videoUrl: data.message.videoUrl,
-            audioUrl: data.message.audioUrl,
-          }]);
-          setAnimatedMsgIds(prev => {
-            const next = new Set(prev);
-            next.add(data.message.id);
-            return next;
-          });
+          // Заменяем временное сообщение на реальное
+          setMessages(prev => prev.map(msg => 
+            msg.id === tempId ? {
+              id: data.message.id,
+              sender: data.message.senderId,
+              text: data.message.text,
+              createdAt: data.message.createdAt,
+              videoUrl: data.message.videoUrl,
+              audioUrl: data.message.audioUrl
+            } : msg
+          ));
         }
-        setNewMessage('');
       });
   };
 
