@@ -7,8 +7,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 // No encryption for video files — store raw files under pages/api/.private_media/video
 import { pusher } from '../../../lib/pusher';
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+// No external S3 usage when storing media directly in DB as data URLs
 
 export const config = {
   api: {
@@ -101,18 +100,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           throw accessErr;
         }
 
-        // Read file buffer and store as base64 in DB when external object storage is not configured.
-        // This keeps media persisted in the database (text column) so deployments without S3 still work.
-        const fileBuffer = await fs.promises.readFile(tmpPath);
-        if (!fileBuffer || fileBuffer.length === 0) throw new Error('Empty video file');
-        const base64 = fileBuffer.toString('base64');
-
-        // We'll create the message including base64 data below; set videoUrl to DB-serving endpoint placeholder
-        // videoUrl will point to an API route that serves media from DB by message id.
-        videoUrl = '__DB_BASE64__';
-        // store base64 later when creating the message
-        (req as any)._videoBase64 = base64;
-        (req as any)._videoMime = (video as any)?.mimetype || 'video/webm';
+  // Read file buffer and store as data URL in the message (no external storage required)
+  const fileBuffer = await fs.promises.readFile(tmpPath);
+  if (!fileBuffer || fileBuffer.length === 0) throw new Error('Empty video file');
+  const base64 = fileBuffer.toString('base64');
+  const mime = (video as any)?.mimetype || 'video/webm';
+  // Store a data URL directly in videoUrl so client can play without external storage
+  videoUrl = `data:${mime};base64,${base64}`;
     } catch (error: any) {
       console.error('[VIDEO UPLOAD] Error:', error && error.stack ? error.stack : String(error));
       res.status(500).json({ error: 'Video processing failed', details: error?.message || String(error), stack: error?.stack });
@@ -128,22 +122,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.status(401).json({ error: 'Unauthorized: no userId from session', session });
         return;
       }
-      // Create message and store base64 video in DB so it persists on Vercel
+      // Create message and store data URL in videoUrl so the client can fetch/play it directly
       const message = await prisma.message.create({
         data: {
           chatId,
           senderId: userId,
           text: '',
           videoUrl: videoUrl,
-          videoBase64: (req as any)._videoBase64 || null,
-          videoMime: (req as any)._videoMime || null,
         },
       });
-      // Update videoUrl to point to our DB-serving endpoint
-      const dbUrl = `/api/media/db/${message.id}/video`;
-      await prisma.message.update({ where: { id: message.id }, data: { videoUrl: dbUrl } });
-      // reflect change locally
-      message.videoUrl = dbUrl;
       // Уведомляем подписчиков через Pusher
       try {
         await pusher.trigger(`chat-${chatId}`, 'new-message', {

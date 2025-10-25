@@ -7,8 +7,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 // No encryption for voice files anymore — store raw files under pages/api/.private_media/voice
 import { pusher } from '../../../lib/pusher';
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+// No external S3 usage when storing media directly in DB as data URLs
 
 export const config = {
 	api: {
@@ -110,16 +109,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 						   throw accessErr;
 					   }
 
-					   // Read file into buffer and store base64 in DB when no external storage configured
+					   // Read file into buffer and create a data URL so we can store the media directly in the message
 					   const fileBuffer = await fs.promises.readFile(tmpPath);
 					   if (!fileBuffer || fileBuffer.length === 0) throw new Error('Empty audio file');
 					   const base64 = fileBuffer.toString('base64');
-					   (req as any)._audioBase64 = base64;
-					   (req as any)._audioMime = (file as any)?.mimetype || 'audio/mpeg';
-					   // set placeholder url which we'll replace after creating the message
+					   const mime = (file as any)?.mimetype || 'audio/mpeg';
 					   urlField = 'audioUrl';
-					   urlValue = '__DB_BASE64__';
-					   console.log('[VOICE UPLOAD] Prepared audio base64 to store in DB');
+					   urlValue = `data:${mime};base64,${base64}`;
+					   console.log('[VOICE UPLOAD] Prepared audio data URL to store in DB');
 				   } catch (error: any) {
 					   console.error('[VOICE UPLOAD] File processing error:', error);
 					   throw new Error(`File processing failed: ${error.message || 'Unknown error'}`);
@@ -139,21 +136,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			   res.status(401).json({ error: 'Unauthorized: no userId from session', session });
 			   return;
 		   }
-		   // Create message and save base64 audio into DB
+		   // Create message and store data URL in audioUrl so the client can fetch/play it directly
 		   const message = await prisma.message.create({
 			   data: {
 				   chatId,
 				   senderId: userId,
 				   text: '',
 				   [urlField]: urlValue,
-				   audioBase64: (req as any)._audioBase64 || null,
-				   audioMime: (req as any)._audioMime || null,
 			   },
 		   });
-		   // Update audioUrl to DB-serving endpoint
-		   const dbUrl = `/api/media/db/${message.id}/audio`;
-		   await prisma.message.update({ where: { id: message.id }, data: { audioUrl: dbUrl } });
-		   message.audioUrl = dbUrl;
 		// Отправляем событие в Pusher
 		try {
 			await pusher.trigger(`chat-${chatId}`, 'new-message', {
