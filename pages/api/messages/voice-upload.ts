@@ -65,27 +65,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 			   fileName = `${Date.now()}-${file.originalFilename ? file.originalFilename.replace(/\.[^/.]+$/, fileExt) : 'voice.mp3'}`;
 			   
-			   try {
-				   // Сохраняем оригинальный файл (без шифрования)
-				   filePath = path.join(uploadDir, fileName);
-                   console.log('[VOICE UPLOAD] filePath:', filePath);
-                   
-                   // Читаем файл через промисы
-				   const fileBuffer = await fs.promises.readFile(file.filepath || file.path);
-                   if (!fileBuffer || fileBuffer.length === 0) {
-                       throw new Error('Empty file buffer');
-                   }
+				   try {
+					   // Сохраняем оригинальный файл (без шифрования)
+					   filePath = path.join(uploadDir, fileName);
+					   console.log('[VOICE UPLOAD] target filePath:', filePath);
 
-				   // Сохраняем файл без шифрования
-				   await fs.promises.writeFile(filePath, fileBuffer);
-                   
-				   urlField = 'audioUrl';
-				   urlValue = `/api/media/voice/${fileName}`;
-                   console.log('[VOICE UPLOAD] urlValue:', urlValue, 'chatId:', chatId);
-               } catch (error: any) {
-                   console.error('[VOICE UPLOAD] Encryption error:', error);
-                   throw new Error(`File encryption failed: ${error.message || 'Unknown error'}`);
-               }
+					   const tmpPath = (file as any)?.filepath || (file as any)?.path;
+					   console.log('[VOICE UPLOAD] tmpPath:', tmpPath);
+					   console.log('[VOICE UPLOAD] file props:', {
+						   originalFilename: (file as any)?.originalFilename || (file as any)?.name || null,
+						   mimetype: (file as any)?.mimetype || (file as any)?.type || null,
+						   size: (file as any)?.size || null,
+					   });
+
+					   if (!tmpPath) throw new Error('Temporary upload path is missing on parsed file');
+					   try {
+						   await fs.promises.access(tmpPath, fs.constants.R_OK);
+					   } catch (accessErr) {
+						   console.error('[VOICE UPLOAD] Temp file is not accessible:', accessErr);
+						   throw accessErr;
+					   }
+
+					   // Читаем файл через промисы
+					   const fileBuffer = await fs.promises.readFile(tmpPath);
+					   if (!fileBuffer || fileBuffer.length === 0) {
+						   throw new Error('Empty file buffer');
+					   }
+
+					   // Сохраняем файл без шифрования
+					   await fs.promises.writeFile(filePath, fileBuffer);
+
+					   urlField = 'audioUrl';
+					   urlValue = `/api/media/voice/${fileName}`;
+					   console.log('[VOICE UPLOAD] urlValue:', urlValue, 'chatId:', chatId);
+				   } catch (error: any) {
+					   console.error('[VOICE UPLOAD] File processing error:', error);
+					   throw new Error(`File processing failed: ${error.message || 'Unknown error'}`);
+				   }
 		   } else {
 			   res.status(400).json({ error: 'No audio file', fields, files });
 			   return;

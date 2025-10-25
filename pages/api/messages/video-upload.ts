@@ -59,22 +59,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       let videoUrl: string;
       try {
-        console.log('[VIDEO UPLOAD] video.filepath:', (video as any)?.filepath || (video as any)?.path);
+        const tmpPath = (video as any)?.filepath || (video as any)?.path;
+        console.log('[VIDEO UPLOAD] video.tempPath:', tmpPath);
+        console.log('[VIDEO UPLOAD] video props:', {
+          originalFilename: (video as any)?.originalFilename || (video as any)?.name || null,
+          newFilename: (video as any)?.newFilename || (video as any)?.newFilename || null,
+          mimetype: (video as any)?.mimetype || (video as any)?.type || null,
+          size: (video as any)?.size || null,
+        });
+        // Check temp file is readable
+        if (!tmpPath) throw new Error('Temporary upload path is missing on parsed file');
+        try {
+          await fs.promises.access(tmpPath, fs.constants.R_OK);
+        } catch (accessErr) {
+          console.error('[VIDEO UPLOAD] Temp file is not accessible:', accessErr);
+          throw accessErr;
+        }
         // Сохраняем видео в оригинальном виде (без шифрования)
         const uploadDir = path.join(process.cwd(), 'storage', 'video');
         if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
         const fileName = `${Date.now()}-circle.webm`;
         const filePath = path.join(uploadDir, fileName);
 
-        console.log('[VIDEO UPLOAD] Reading file from:', video.filepath || video.path);
+  console.log('[VIDEO UPLOAD] Reading file from:', tmpPath);
 
-        const fileBuffer = await fs.promises.readFile(video.filepath || video.path);
+  const fileBuffer = await fs.promises.readFile(tmpPath);
         if (!fileBuffer || fileBuffer.length === 0) {
           throw new Error('Empty video file buffer');
         }
 
-        // Сохраняем файл
-        await fs.promises.writeFile(filePath, fileBuffer);
+  // Сохраняем файл
+  await fs.promises.writeFile(filePath, fileBuffer);
 
         videoUrl = `/api/media/video/${fileName}`;
         console.log('[VIDEO UPLOAD] File saved as:', filePath);
