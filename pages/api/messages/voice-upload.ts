@@ -16,20 +16,18 @@ export const config = {
 
 function parseForm(req: NextApiRequest): Promise<{ fields: any; files: any }> {
 	return new Promise((resolve, reject) => {
-	const { IncomingForm } = require('formidable');
-	const form = new IncomingForm({ 
-		multiples: false, 
-		allowEmptyFiles: false,
-		keepExtensions: true,
-		maxFileSize: 10 * 1024 * 1024, // 10MB максимум
-		filter: function ({mimetype}: {mimetype?: string}) {
-			return mimetype && mimetype.includes('audio');
-		}
-	});
-	form.parse(req, (err: any, fields: any, files: any) => {
-		if (err) reject(err);
-		else resolve({ fields, files });
-	});
+		// Use formidable v3+ API
+		const formidable = require('formidable');
+		const form = formidable({
+			multiples: false,
+			allowEmptyFiles: false,
+			keepExtensions: true,
+			maxFileSize: 10 * 1024 * 1024, // 10MB
+		});
+		form.parse(req, (err: any, fields: any, files: any) => {
+			if (err) reject(err);
+			else resolve({ fields, files });
+		});
 	});
 }
 
@@ -78,8 +76,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                        throw new Error('Empty file buffer');
                    }
 
-                   // Отправляем частичный ответ клиенту пока идет шифрование
-                   res.writeHead(202);
 				   // Сохраняем файл без шифрования
 				   await fs.promises.writeFile(filePath, fileBuffer);
                    

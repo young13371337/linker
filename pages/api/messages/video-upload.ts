@@ -16,20 +16,18 @@ export const config = {
 
 function parseForm(req: NextApiRequest): Promise<{ fields: any; files: any }> {
   return new Promise((resolve, reject) => {
-  const { IncomingForm } = require('formidable');
-  const form = new IncomingForm({ 
-    multiples: false, 
-    allowEmptyFiles: false,
-    keepExtensions: true,
-    maxFileSize: 50 * 1024 * 1024, // 50MB максимум для видео
-    filter: function ({mimetype}: {mimetype?: string}) {
-      return mimetype && mimetype.includes('video');
-    }
-  });
-  form.parse(req, (err: any, fields: any, files: any) => {
-    if (err) reject(err);
-    else resolve({ fields, files });
-  });
+    // Use formidable v3+ API (callable) instead of deprecated IncomingForm
+    const formidable = require('formidable');
+    const form = formidable({
+      multiples: false,
+      allowEmptyFiles: false,
+      keepExtensions: true,
+      maxFileSize: 50 * 1024 * 1024, // 50MB
+    });
+    form.parse(req, (err: any, fields: any, files: any) => {
+      if (err) reject(err);
+      else resolve({ fields, files });
+    });
   });
 }
 
@@ -62,26 +60,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let videoUrl: string;
       try {
         console.log('[VIDEO UPLOAD] video.filepath:', (video as any)?.filepath || (video as any)?.path);
-      // Сохраняем видео в оригинальном виде (без шифрования)
-          const uploadDir = path.join(process.cwd(), 'storage', 'video');
-      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-      const fileName = `${Date.now()}-circle.webm`;
-          const filePath = path.join(uploadDir, fileName);
+        // Сохраняем видео в оригинальном виде (без шифрования)
+        const uploadDir = path.join(process.cwd(), 'storage', 'video');
+        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+        const fileName = `${Date.now()}-circle.webm`;
+        const filePath = path.join(uploadDir, fileName);
 
-      console.log('[VIDEO UPLOAD] Reading file from:', video.filepath || video.path);
+        console.log('[VIDEO UPLOAD] Reading file from:', video.filepath || video.path);
 
-      const fileBuffer = await fs.promises.readFile(video.filepath || video.path);
-      if (!fileBuffer || fileBuffer.length === 0) {
-        throw new Error('Empty video file buffer');
-      }
+        const fileBuffer = await fs.promises.readFile(video.filepath || video.path);
+        if (!fileBuffer || fileBuffer.length === 0) {
+          throw new Error('Empty video file buffer');
+        }
 
-      // Отправляем частичный ответ клиенту пока идёт запись
-      res.writeHead(202);
+        // Сохраняем файл
+        await fs.promises.writeFile(filePath, fileBuffer);
 
-      await fs.promises.writeFile(filePath, fileBuffer);
-
-      videoUrl = `/api/media/video/${fileName}`;
-      console.log('[VIDEO UPLOAD] File saved as:', filePath);
+        videoUrl = `/api/media/video/${fileName}`;
+        console.log('[VIDEO UPLOAD] File saved as:', filePath);
       } catch (error: any) {
           console.error('[VIDEO UPLOAD] Error:', error);
           res.status(500).json({ error: 'Video processing failed', details: error.message || 'Unknown error' });
