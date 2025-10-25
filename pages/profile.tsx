@@ -253,8 +253,8 @@ export default function ProfilePage() {
       });
   }, [session, status]);
 
-  // If user has more than 2 friends, enable compact scroll for the friends list
-  const isFriendsScrollable = friends.length > 2;
+  // If user has 3 or more friends, enable compact scroll for the friends list
+  const isFriendsScrollable = Array.isArray(friends) && friends.length >= 3;
 
   // Включить 2FA
   // Включить 2FA через Google Authenticator
@@ -561,14 +561,15 @@ export default function ProfilePage() {
         <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>Список друзей</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div
-            style={isFriendsScrollable ? { maxHeight: 220, overflowY: 'auto', paddingRight: 4, scrollbarWidth: 'thin', scrollbarColor: 'rgba(187,187,187,0.35) #23242a' } : { paddingRight: 4 }}
+            className={isFriendsScrollable ? "custom-scrollbar" : undefined}
+            style={isFriendsScrollable ? { maxHeight: 220, overflowY: 'auto', paddingRight: 4, scrollbarWidth: 'thin', scrollbarColor: 'rgba(187,187,187,0.6) #23242a' } : { paddingRight: 4 }}
           >
             <style>{`
               .custom-scrollbar::-webkit-scrollbar { width: 8px; background: #23242a; }
-              .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(187,187,187,0.35); border-radius: 8px; }
-              .custom-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(187,187,187,0.35) #23242a; overflow-x: hidden; }
+              .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(187,187,187,0.6); border-radius: 8px; }
+              .custom-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(187,187,187,0.6) #23242a; overflow-x: hidden; }
             `}</style>
-            <div className={isFriendsScrollable ? "custom-scrollbar" : undefined} style={{ overflowX: 'hidden' }}>
+            <div style={{ overflowX: 'hidden' }}>
               {friends.length === 0 ? (
                 <div style={{ color: "#bbb", fontSize: 16 }}>У вас нет друзей</div>
               ) : friends.map(f => (
