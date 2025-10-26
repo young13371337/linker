@@ -512,6 +512,10 @@ const ChatWithFriend: React.FC = () => {
           videoUrl: payload.videoUrl
         };
 
+
+        // Проверим, есть ли временное сообщение, которое соответствует этому сообщению
+        const tempExists = messages.some(m => typeof m.id === 'string' && m.id.startsWith('temp-') && m.sender === newMsg.sender && m.text === newMsg.text);
+
         setMessages(prev => {
           // Если сообщение с таким id уже есть — игнорируем (дедупликация)
           if (prev.some(m => m.id === newMsg.id)) return prev;
@@ -528,8 +532,10 @@ const ChatWithFriend: React.FC = () => {
           return [...prev, newMsg];
         });
 
-        // Устанавливаем анимацию для нового сообщения
-        setAnimatedMsgIds(prev => new Set([...prev, payload.id]));
+        // Устанавливаем анимацию только если это реально новое сообщение (т.е. не замена temp->server)
+        if (!tempExists) {
+          setAnimatedMsgIds(prev => new Set([...prev, payload.id]));
+        }
 
         // Автоматически прокручиваем к новому сообщению
         setTimeout(scrollToBottom, 50);
@@ -738,14 +744,16 @@ const ChatWithFriend: React.FC = () => {
           .chat-messages-scroll:hover::-webkit-scrollbar-thumb {
             opacity: 0.8;
           }
-          /* Анимация появления сообщения */
+          /* Анимация появления сообщения — мягкая и не дергающаяся.
+             Предотвращаем резкий "подлет" при замене temp->server (см. onNewMessage ниже). */
           .chat-msg-appear {
-            animation: chatMsgFadeIn 0.38s cubic-bezier(.23,1.02,.36,1) both;
+            animation: chatMsgFadeIn 0.32s cubic-bezier(.2,.8,.2,1) both;
           }
           @keyframes chatMsgFadeIn {
             from {
               opacity: 0;
-              transform: translateY(18px) scale(0.98);
+              /* лёгкое смещение вниз и чуть уменьшенный scale для более мягкого эффекта */
+              transform: translateY(6px) scale(0.995);
             }
             to {
               opacity: 1;
