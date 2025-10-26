@@ -524,7 +524,18 @@ const ChatWithFriend: React.FC = () => {
           const tempIndex = prev.findIndex(m => typeof m.id === 'string' && m.id.startsWith('temp-') && m.sender === newMsg.sender && m.text === newMsg.text);
           if (tempIndex !== -1) {
             const copy = [...prev];
-            copy[tempIndex] = newMsg;
+            // Update temp message in-place: keep temp id (React key) to avoid remount
+            const temp = copy[tempIndex];
+            copy[tempIndex] = {
+              ...temp,
+              // store server id but keep the temp key
+              _serverId: newMsg.id,
+              sender: newMsg.sender || temp.sender,
+              text: newMsg.text || temp.text,
+              createdAt: newMsg.createdAt || temp.createdAt,
+              audioUrl: newMsg.audioUrl || temp.audioUrl,
+              videoUrl: newMsg.videoUrl || temp.videoUrl,
+            };
             return copy;
           }
 
