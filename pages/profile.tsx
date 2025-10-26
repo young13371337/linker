@@ -234,7 +234,7 @@ export default function ProfilePage() {
         setAvatar(data.user.avatar || "");
   setBackgroundUrl(data.user.backgroundUrl || "");
   // optional background description (may be undefined on backend)
-  setBackgroundDesc(data.user.backgroundDescription || data.user.backgroundDesc || "Фон увидят все ваши друзья, будет применен как фон в чатах, так и фон профиля>");
+  setBackgroundDesc(data.user.backgroundDescription || data.user.backgroundDesc || "");
   // Не трогаем bgOpacity из API, используем localStorage
         setFriends(data.user.friends || []);
         setSessions((data.user.sessions || []).filter((s: any) => s.isActive));
@@ -994,14 +994,13 @@ export default function ProfilePage() {
               >Сохранить аватарку</button>
             </div>
             <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s" }}>
-              <label style={{ fontSize: 15, fontWeight: 500 }}>Фон профиля</label><br />
+              <label style={{ fontSize: 15, fontWeight: 500 }}>Фон</label><br />
               <input type="text" value={backgroundUrl} onChange={e => setBackgroundUrl(e.target.value)} style={{ marginTop: 6, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #444", background: "#18191c", color: "#fff", fontSize: 15 }} placeholder="https://..." />
               <div style={{ marginTop: 10 }}>
-                <label style={{ fontSize: 14, fontWeight: 500 }}>Описание фона профиля (кратко):</label><br />
                 <textarea
                   value={backgroundDesc}
                   onChange={e => setBackgroundDesc(e.target.value)}
-                  placeholder="Введите описание фона (я сам его напишу)"
+                  placeholder="Фон будет выделять вас среди списка друзей, он виден как фон профиля, и фон чатов с друзьями."
                   style={{ marginTop: 6, width: '100%', minHeight: 64, padding: '8px 10px', borderRadius: 8, border: '1px solid #444', background: '#18191c', color: '#fff', fontSize: 14, resize: 'vertical' }}
                 />
               </div>
