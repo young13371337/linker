@@ -836,6 +836,29 @@ const ChatWithFriend: React.FC = () => {
               transform: translateY(0) scale(1);
             }
           }
+          /* Action menu animation and styles */
+          @keyframes actionPop {
+            from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+          }
+          .action-menu {
+            animation: actionPop 0.18s cubic-bezier(.2,.9,.2,1) both;
+          }
+          .action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #e6eef8;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 8px;
+            transition: background .12s, transform .12s;
+            font-size: 13px;
+          }
+          .action-btn:hover { background: rgba(255,255,255,0.03); transform: translateY(-1px); }
+          .action-btn.icon-only { gap: 0; padding: 6px; }
         `}</style>
       </Head>
       <div
@@ -1063,29 +1086,29 @@ const ChatWithFriend: React.FC = () => {
 
                             {/* Action menu: только для собственных сообщений */}
                             {isOwn && openActionMsgId === msg.id && (
-                              <div style={{
+                              <div className="action-menu" style={{
                                 position: 'absolute',
-                                top: isMobile ? -44 : -40,
-                                right: isOwn ? (isMobile ? 4 : 6) : 'auto',
-                                left: isOwn ? 'auto' : (isMobile ? 4 : 6),
+                                top: isMobile ? -46 : -44,
+                                right: isOwn ? (isMobile ? 6 : 8) : 'auto',
+                                left: isOwn ? 'auto' : (isMobile ? 6 : 8),
                                 background: '#0f1113',
                                 border: '1px solid rgba(255,255,255,0.04)',
-                                padding: isMobile ? '6px 8px' : '8px',
+                                padding: isMobile ? '6px 8px' : '8px 10px',
                                 borderRadius: isMobile ? 10 : 12,
                                 display: 'flex',
-                                gap: isMobile ? 8 : 10,
+                                gap: isMobile ? 8 : 12,
                                 alignItems: 'center',
-                                boxShadow: '0 6px 20px rgba(0,0,0,0.6)',
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
                                 zIndex: 60,
                                 transformOrigin: 'right top'
                               }} data-action-container={msg.id}>
-                                <button onClick={(e) => { try { e.stopPropagation(); } catch {} handleCopy(msg.text); }} title="Копировать" style={{ background: 'transparent', border: 'none', color: '#ddd', cursor: 'pointer', padding: isMobile ? 6 : 8, borderRadius: 8 }}>
-                                  {/* copy icon */}
-                                  <svg width={isMobile ? 16 : 18} height={isMobile ? 16 : 18} viewBox="0 0 24 24" fill="none"><path d="M16 1H4a2 2 0 00-2 2v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><rect x="8" y="5" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                <button className={"action-btn"} onClick={(e) => { try { e.stopPropagation(); } catch {} handleCopy(msg.text); }} title="Копировать">
+                                  <svg width={isMobile ? 14 : 16} height={isMobile ? 14 : 16} viewBox="0 0 24 24" fill="none" style={{ flex: '0 0 auto' }}><path d="M16 1H4a2 2 0 00-2 2v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><rect x="8" y="5" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                  <span style={{ fontSize: isMobile ? 12 : 13, color: '#e6eef8' }}>Копировать</span>
                                 </button>
-                                <button onClick={(e) => { try { e.stopPropagation(); } catch {} handleDeleteMessage(msg.id); }} title="Удалить" style={{ background: 'transparent', border: 'none', color: '#f66', cursor: 'pointer', padding: isMobile ? 6 : 8, borderRadius: 8 }}>
-                                  {/* trash icon */}
-                                  <svg width={isMobile ? 16 : 18} height={isMobile ? 16 : 18} viewBox="0 0 24 24" fill="none"><path d="M3 6h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 6v14a2 2 0 002 2h4a2 2 0 002-2V6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M10 11v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 11v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                <button className={"action-btn"} onClick={(e) => { try { e.stopPropagation(); } catch {} handleDeleteMessage(msg.id); }} title="Удалить">
+                                  <svg width={isMobile ? 14 : 16} height={isMobile ? 14 : 16} viewBox="0 0 24 24" fill="none" style={{ flex: '0 0 auto' }}><path d="M3 6h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 6v14a2 2 0 002 2h4a2 2 0 002-2V6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M10 11v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 11v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                  <span style={{ fontSize: isMobile ? 12 : 13, color: '#f88' }}>Удалить</span>
                                 </button>
                               </div>
                             )}
