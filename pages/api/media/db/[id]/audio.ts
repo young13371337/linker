@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]';
+import { authOptions } from '../../../auth/[...nextauth]';
 import prisma from '../../../../lib/prisma';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -30,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!b64) return res.status(404).json({ error: 'Audio not found in DB' });
 
     // Decode base64 and send
-    const buffer = Buffer.from(b64, 'base64');
+  const buffer = (globalThis as any).Buffer.from(b64, 'base64');
     res.setHeader('Content-Type', mime || 'audio/webm');
     res.setHeader('Content-Length', String(buffer.length));
     res.status(200).send(buffer);
