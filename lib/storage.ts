@@ -42,8 +42,15 @@ export function getStoragePath(subfolder: string) {
 
   // If operator explicitly set FORCE_REPO_STORAGE=1, prefer repo-local storage
   const forceRepo = !!process.env.FORCE_REPO_STORAGE;
+  // Prefer explicit UPLOAD_DIR unless forceRepo is set
   if (process.env.UPLOAD_DIR && !forceRepo) candidates.push(process.env.UPLOAD_DIR);
-  // Repo-local storage
+  // Prefer public/media in repo (web-accessible persistent folder)
+  try {
+    candidates.push(path.join(process.cwd(), 'public', 'media'));
+  } catch (e) {
+    // ignore
+  }
+  // Repo-local storage (fallback)
   try {
     candidates.push(path.join(process.cwd(), 'storage'));
   } catch (e) {
