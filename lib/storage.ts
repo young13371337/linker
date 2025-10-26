@@ -55,6 +55,7 @@ export function getStoragePath(subfolder: string) {
         fs.writeFileSync(probe, 'ok');
         fs.unlinkSync(probe);
         // successful write -> return this path
+        console.log(`[STORAGE] selected writable storage candidate: ${candidate}`);
         return candidate;
       } catch (writeErr) {
         // can't write here, continue to next candidate
@@ -71,6 +72,7 @@ export function getStoragePath(subfolder: string) {
   const fallback = path.join(os.tmpdir(), 'linker', subfolder);
   try {
     fs.mkdirSync(fallback, { recursive: true });
+    console.log(`[STORAGE] falling back to tmpdir storage: ${fallback}`);
   } catch (e) {
     console.error('[STORAGE] Failed to create fallback tmp dir', fallback, formatErr(e));
   }
