@@ -186,7 +186,6 @@ export default function ProfilePage() {
   const [desc, setDesc] = useState<string>("");
   const [avatar, setAvatar] = useState<string>("");
   const [backgroundUrl, setBackgroundUrl] = useState<string>("");
-  const [backgroundDesc, setBackgroundDesc] = useState<string>("");
   const [has2FA, setHas2FA] = useState<boolean>(false);
   const [bgOpacity, setBgOpacity] = useState<number>(() => {
     if (typeof window !== 'undefined') {
@@ -233,8 +232,6 @@ export default function ProfilePage() {
         setDesc(data.user.description || "");
         setAvatar(data.user.avatar || "");
   setBackgroundUrl(data.user.backgroundUrl || "");
-  // optional background description (may be undefined on backend)
-  setBackgroundDesc(data.user.backgroundDescription || data.user.backgroundDesc || "");
   // Не трогаем bgOpacity из API, используем localStorage
         setFriends(data.user.friends || []);
         setSessions((data.user.sessions || []).filter((s: any) => s.isActive));
@@ -994,17 +991,8 @@ export default function ProfilePage() {
               >Сохранить аватарку</button>
             </div>
             <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s" }}>
-              <label style={{ fontSize: 15, fontWeight: 500 }}>Фон</label><br />
-              <input type="text" value={backgroundUrl} onChange={e => setBackgroundUrl(e.target.value)} style={{ marginTop: 6, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #444", background: "#18191c", color: "#fff", fontSize: 15 }} placeholder="https://..." />
-              <div style={{ marginTop: 10 }}>
-                <label style={{ fontSize: 14, fontWeight: 500 }}>:</label><br />
-                <textarea
-                  value={backgroundDesc}
-                  onChange={e => setBackgroundDesc(e.target.value)}
-                  placeholder="Введите описание фона (я сам его напишу)"
-                  style={{ marginTop: 6, width: '100%', minHeight: 64, padding: '8px 10px', borderRadius: 8, border: '1px solid #444', background: '#18191c', color: '#fff', fontSize: 14, resize: 'vertical' }}
-                />
-              </div>
+              <label style={{ fontSize: 15, fontWeight: 500 }}>Фон профиля и чата</label><br />
+              <input type="text" value={backgroundUrl} onChange={e => setBackgroundUrl(e.target.value)} style={{ marginTop: 6, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #444", background: "#18191c", color: "#fff", fontSize: 15 }} placeholder="" />
               <div style={{ marginTop: 12 }}>
                 <label style={{ fontSize: 15, fontWeight: 500 }}>Выделенность фона: {bgOpacity}%</label><br />
                 <input
