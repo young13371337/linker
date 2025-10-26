@@ -2,6 +2,22 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs';
 
+function formatErr(err: unknown) {
+  if (!err) return String(err);
+  if (typeof err === 'string') return err;
+  try {
+    const anyErr = err as any;
+    if (anyErr && anyErr.message) return String(anyErr.message);
+    return JSON.stringify(err);
+  } catch (e) {
+    try {
+      return String(err);
+    } catch (ee) {
+      return '[unprintable error]';
+    }
+  }
+}
+
 /**
  * Returns a writable storage directory for uploads.
  * Preference order:
@@ -42,11 +58,11 @@ export function getStoragePath(subfolder: string) {
         return candidate;
       } catch (writeErr) {
         // can't write here, continue to next candidate
-        console.warn(`[STORAGE] Not writable: ${candidate}`, writeErr && writeErr.message ? writeErr.message : writeErr);
+        console.warn(`[STORAGE] Not writable: ${candidate}`, formatErr(writeErr));
         continue;
       }
     } catch (mkdirErr) {
-      console.warn(`[STORAGE] Cannot create candidate storage dir ${candidate}:`, mkdirErr && mkdirErr.message ? mkdirErr.message : mkdirErr);
+      console.warn(`[STORAGE] Cannot create candidate storage dir ${candidate}:`, formatErr(mkdirErr));
       continue;
     }
   }
@@ -56,7 +72,7 @@ export function getStoragePath(subfolder: string) {
   try {
     fs.mkdirSync(fallback, { recursive: true });
   } catch (e) {
-    console.error('[STORAGE] Failed to create fallback tmp dir', fallback, e);
+    console.error('[STORAGE] Failed to create fallback tmp dir', fallback, formatErr(e));
   }
   return fallback;
 }
