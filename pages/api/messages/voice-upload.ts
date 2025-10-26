@@ -128,18 +128,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 					   const fileBuffer = await fs.promises.readFile(tmpPath);
 					   if (!fileBuffer || fileBuffer.length === 0) throw new Error('Uploaded audio is empty');
-						   const b64 = fileBuffer.toString('base64');
-						   const mime = (file as any)?.mimetype || (file as any)?.type || 'audio/mpeg';
-
-						   // We'll prefer to store base64 in DB, but keep the raw buffer as fallback
+					   // Prefer storing raw audio file in storage and reference it by URL
+					   try {
+						   const uploadDirPrimary = getStoragePath('voice');
+						   if (!ensureDir(uploadDirPrimary)) throw new Error(`Unable to create upload dir: ${uploadDirPrimary}`);
+						   const extFromName = (file as any)?.originalFilename ? path.extname((file as any).originalFilename) : '';
+						   const ext = extFromName || '.webm';
+						   const fileNameSaved = `${Date.now()}-${Math.floor(Math.random() * 10000)}${ext}`;
+						   const finalPath = path.join(uploadDirPrimary, fileNameSaved);
+						   const tempWrite = `${finalPath}.tmp-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+						   await fs.promises.writeFile(tempWrite, fileBuffer);
+						   await fs.promises.rename(tempWrite, finalPath);
+						   // Expose via unified /media URL
 						   urlField = 'audioUrl';
-						   // create message with base64 payload below (after session check)
-						   (fields as any).__audioBase64 = b64;
-						   (fields as any).__audioMime = mime;
-						   // keep raw buffer and filename in outer scope for fallback
+						   urlValue = `/media/linker/voice/${fileNameSaved}`;
+						   // keep raw buffer in fields for potential fallback
 						   (fields as any).__rawBuffer = fileBuffer;
-						   urlValue = '__DB_BASE64_PLACEHOLDER__';
-						   console.log('[VOICE UPLOAD] Prepared base64 payload, mime:', mime);
+						   (fields as any).__audioMime = (file as any)?.mimetype || (file as any)?.type || 'audio/webm';
+						   console.log('[VOICE UPLOAD] Audio saved to storage:', finalPath);
+					   } catch (errSave: any) {
+						   console.error('[VOICE UPLOAD] Failed to save audio to storage primary path:', errSave);
+						   throw errSave;
+					   }
 				   } catch (error: any) {
 					   console.error('[VOICE UPLOAD] File processing error:', error);
 					   throw new Error(`File processing failed: ${error.message || 'Unknown error'}`);

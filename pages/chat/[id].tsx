@@ -527,20 +527,51 @@ const ChatWithFriend: React.FC = () => {
     }
   };
 
-  const handleDeleteMessage = async (msgId: string) => {
+  // Accept the whole message object so we can handle both persisted and temp-uploaded messages.
+  const handleDeleteMessage = async (msg: Message) => {
     // Optimistic removal: remove from UI immediately, try to delete on server.
-    setMessages(prev => prev.filter(m => m.id !== msgId));
+    setMessages(prev => prev.filter(m => m.id !== msg.id));
     setOpenActionMsgId(null);
     try {
-      const endpoint = `/api/messages/${msgId}`;
-      console.log('[CHAT] Deleting message:', msgId, '->', endpoint);
+      // If this is a temporary message (upload succeeded but DB create failed), the id may start with 'temp-'
+      // In that case, try to delete the uploaded file directly on the server.
+      if (typeof msg.id === 'string' && msg.id.startsWith('temp-')) {
+        const mediaUrl = msg.videoUrl || msg.audioUrl;
+        if (mediaUrl) {
+          const endpoint = '/api/messages/media-delete';
+          console.log('[CHAT] Deleting temp message media:', mediaUrl, '->', endpoint);
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: mediaUrl }),
+          });
+          console.log('[CHAT] Media-delete response:', res.status, res.statusText);
+          if (res.ok) {
+            try { (window as any).toast && (window as any).toast('Сообщение и файл удалены'); } catch {}
+            return;
+          }
+          const txt = await res.text().catch(() => '');
+          try { (window as any).toast && (window as any).toast('Не удалось удалить файл на сервере'); } catch {}
+          console.warn('[CHAT] media-delete failed:', res.status, txt);
+          return;
+        } else {
+          // No uploaded media associated; nothing server-side to delete.
+          try { (window as any).toast && (window as any).toast('Сообщение удалено'); } catch {}
+          return;
+        }
+      }
+
+      // Normal persisted message: call the main messages DELETE endpoint
+      const endpoint = `/api/messages/${msg.id}`;
+      console.log('[CHAT] Deleting message:', msg.id, '->', endpoint);
       const res = await fetch(endpoint, { method: 'DELETE', credentials: 'include' });
       console.log('[CHAT] Delete response:', res.status, res.statusText);
       if (res.ok) {
-        try { /* non-blocking */ (window as any).toast && (window as any).toast('Сообщение удалено'); } catch {}
+        try { (window as any).toast && (window as any).toast('Сообщение удалено'); } catch {}
         return;
       }
-      // If server responded but not OK, show non-blocking error toast (do not restore UI)
+      // If server responded but not OK, show non-blocking error toast
       const errorText = await res.text().catch(() => '');
       let errorMessage = 'Не удалось удалить сообщение';
       try {
@@ -1115,13 +1146,8 @@ const ChatWithFriend: React.FC = () => {
                                   className={"action-btn" + (isMobile ? ' icon-only' : '')}
                                   onClick={(e) => {
                                     try { e.stopPropagation(); } catch {}
-                                    // don't try to delete temporary messages (still being sent)
-                                    if (typeof msg.id === 'string' && msg.id.startsWith('temp-')) {
-                                      try { (window as any).toast && (window as any).toast('Подождите, сообщение ещё не отправлено'); } catch {}
-                                      setOpenActionMsgId(null);
-                                      return;
-                                    }
-                                    handleDeleteMessage(msg.id);
+                                    // Pass the whole message object so the handler can decide how to delete it (DB delete vs media delete)
+                                    handleDeleteMessage(msg);
                                   }}
                                   title="Удалить"
                                   aria-label="Удалить сообщение"
