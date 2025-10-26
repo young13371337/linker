@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import prisma from '../../lib/prisma';
+import { encryptMessage, decryptMessage } from '../../lib/encryption';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 import { pusher } from '../../lib/pusher';
@@ -27,8 +28,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { chatId },
         orderBy: { createdAt: 'asc' }
       });
-      // Temporarily return plain text (encryption is disabled)
-      const plainMessages = messages.map((msg: any) => ({ ...msg, text: msg.text || '' }));
+      // Decrypt message text for clients (stored encrypted in DB)
+      const plainMessages = messages.map((msg: any) => {
+        let decrypted = '';
+        try {
+          decrypted = msg.text ? decryptMessage(msg.text, String(msg.chatId || chatId)) : '';
+        } catch (e) {
+          console.error('[MESSAGES][GET] decrypt failed', e);
+          decrypted = '';
+        }
+        return { ...msg, text: decrypted };
+      });
       return res.status(200).json({ messages: plainMessages });
     } catch (err: any) {
       // If DB read fails, log error and return empty list so UI still works
@@ -55,12 +65,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let message: any = null;
       let dbError: any = null;
       let persisted = false;
+      // Encrypt text before storing
+      const encryptedText = encryptMessage(text, chatId);
       try {
         message = await prisma.message.create({
           data: {
             chatId,
             senderId: user.id,
-            text,
+            text: encryptedText,
             createdAt: new Date()
           }
         });
@@ -74,7 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           id: `temp-${Date.now()}`,
           chatId,
           senderId: user.id,
-          text,
+          text, // keep plaintext for ephemeral message
           createdAt: new Date().toISOString()
         };
         persisted = false;
@@ -106,7 +118,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Отправить новое сообщение через Pusher
-  const messageToSend = { ...message, text, persisted, dbError };
+    // Prepare payload to send: include decrypted text for client display
+    let displayText = text;
+    if (persisted && message && message.text) {
+      try {
+        displayText = decryptMessage(message.text, chatId);
+      } catch (e) {
+        console.error('[MESSAGES][POST] decrypt for send failed', e);
+      }
+    }
+    const messageToSend = { ...message, text: displayText, persisted, dbError };
     try {
       await pusher.trigger(`chat-${chatId}`, 'new-message', messageToSend);
     } catch (pErr) {
