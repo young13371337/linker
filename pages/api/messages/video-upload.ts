@@ -116,7 +116,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Verify file exists
       const exists = fs.existsSync(filePath);
       console.log('[VIDEO UPLOAD] File saved (atomic):', filePath, 'exists:', exists, 'host:', os.hostname(), 'pid:', process.pid);
-      videoUrl = `/api/media/video/${fileName}`;
+      // If the file was written into the public folder, expose it as a static /media URL
+      try {
+        const publicPrefix = path.join(process.cwd(), 'public');
+        const normalizedFilePath = path.normalize(filePath);
+        const normalizedPublic = path.normalize(publicPrefix);
+        if (normalizedFilePath.startsWith(normalizedPublic)) {
+          let webPath = normalizedFilePath.slice(normalizedPublic.length).replace(/\\/g, '/');
+          if (!webPath.startsWith('/')) webPath = '/' + webPath;
+          videoUrl = webPath;
+        } else {
+          videoUrl = `/api/media/video/${fileName}`;
+        }
+      } catch (e) {
+        videoUrl = `/api/media/video/${fileName}`;
+      }
       } catch (error: any) {
           console.error('[VIDEO UPLOAD] Error:', error);
           res.status(500).json({ error: 'Video processing failed', details: error.message || 'Unknown error' });

@@ -204,8 +204,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 								await fs.promises.writeFile(tempFallback, rawBuffer);
 								await fs.promises.rename(tempFallback, fallbackPath);
 								console.log('[VOICE UPLOAD] Fallback file written to:', fallbackPath, 'host:', os.hostname(), 'pid:', process.pid);
-								const publicUrl = `/api/media/voice/${fallbackFileName}`;
-									 urlValue = publicUrl;
+								// If fallbackPath is in public/, expose it as static /media URL, otherwise use API path
+								let publicUrl = `/api/media/voice/${fallbackFileName}`;
+								try {
+									const publicPrefix = path.join(process.cwd(), 'public');
+									const normalizedFallback = path.normalize(fallbackPath);
+									const normalizedPublic = path.normalize(publicPrefix);
+									if (normalizedFallback.startsWith(normalizedPublic)) {
+										let webPath = normalizedFallback.slice(normalizedPublic.length).replace(/\\\\/g, '/');
+										if (!webPath.startsWith('/')) webPath = '/' + webPath;
+										publicUrl = webPath;
+									}
+								} catch (e) {
+									// keep default
+								}
+								 urlValue = publicUrl;
 									 // attempt to persist message referencing file URL
 									 try {
 										 const persistedMsg = await prisma.message.create({ data: { chatId, senderId: userId, text: '', audioUrl: publicUrl } });
