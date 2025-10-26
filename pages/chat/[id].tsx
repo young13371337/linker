@@ -528,27 +528,50 @@ const ChatWithFriend: React.FC = () => {
   };
 
   const handleDeleteMessage = async (msgId: string) => {
+    // Optimistic removal: remove from UI immediately, try to delete on server.
+    const msgIndex = messages.findIndex(m => m.id === msgId);
+    const msgItem = messages.find(m => m.id === msgId) || null;
+    // Remove optimistically
+    setMessages(prev => prev.filter(m => m.id !== msgId));
+    setOpenActionMsgId(null);
     try {
       const endpoint = `/api/messages/${msgId}`;
       const res = await fetch(endpoint, { method: 'DELETE', credentials: 'include' });
-      if (res.status === 204) {
-        setMessages(prev => prev.filter(m => m.id !== msgId));
+      if (res.ok) {
+        try { /* non-blocking */ (window as any).toast && (window as any).toast('Сообщение удалено'); } catch {}
         return;
       }
-      if (!res.ok) {
-        const errorText = await res.text();
-        let errorMessage = 'Не удалось удалить сообщение';
-        try {
-          const errData = JSON.parse(errorText);
-          if (errData && errData.error) errorMessage = errData.error;
-        } catch {}
-        throw new Error(errorMessage);
+      // If server responded but not OK, try to parse error
+      const errorText = await res.text().catch(() => '');
+      let errorMessage = 'Не удалось удалить сообщение';
+      try {
+        const errData = JSON.parse(errorText || '{}');
+        if (errData && errData.error) errorMessage = errData.error;
+      } catch {}
+      // restore message in UI if possible
+      if (msgItem) {
+        setMessages(prev => {
+          if (prev.find(m => m.id === msgId)) return prev;
+          const copy = [...prev];
+          const insertAt = Math.min(Math.max(0, msgIndex), copy.length);
+          copy.splice(insertAt, 0, msgItem);
+          return copy;
+        });
       }
+      try { (window as any).toast && (window as any).toast(errorMessage); } catch {}
     } catch (err) {
       console.error('Error deleting message:', err);
-      alert(err instanceof Error ? err.message : 'Не удалось удалить сообщение');
-    } finally {
-      setOpenActionMsgId(null);
+      // restore message in UI if possible
+      if (msgItem) {
+        setMessages(prev => {
+          if (prev.find(m => m.id === msgId)) return prev;
+          const copy = [...prev];
+          const insertAt = Math.min(Math.max(0, msgIndex), copy.length);
+          copy.splice(insertAt, 0, msgItem);
+          return copy;
+        });
+      }
+      try { (window as any).toast && (window as any).toast('Ошибка при удалении сообщения'); } catch {}
     }
   };
 
@@ -1109,9 +1132,20 @@ const ChatWithFriend: React.FC = () => {
                                   <svg width={isMobile ? 14 : 16} height={isMobile ? 14 : 16} viewBox="0 0 24 24" fill="none" style={{ flex: '0 0 auto' }}><path d="M16 1H4a2 2 0 00-2 2v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><rect x="8" y="5" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                   <span style={{ fontSize: isMobile ? 12 : 13, color: '#e6eef8' }}>Копировать</span>
                                 </button>
-                                <button className={"action-btn"} onClick={(e) => { try { e.stopPropagation(); } catch {} handleDeleteMessage(msg.id); }} title="Удалить">
-                                  <svg width={isMobile ? 14 : 16} height={isMobile ? 14 : 16} viewBox="0 0 24 24" fill="none" style={{ flex: '0 0 auto' }}><path d="M3 6h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 6v14a2 2 0 002 2h4a2 2 0 002-2V6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M10 11v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 11v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                  <span style={{ fontSize: isMobile ? 12 : 13, color: '#f88' }}>Удалить</span>
+                                <button
+                                  className={"action-btn" + (isMobile ? ' icon-only' : '')}
+                                  onClick={(e) => { try { e.stopPropagation(); } catch {} handleDeleteMessage(msg.id); }}
+                                  title="Удалить"
+                                  aria-label="Удалить сообщение"
+                                >
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: isMobile ? 28 : 34, height: isMobile ? 28 : 34, borderRadius: 9, background: 'rgba(248,100,100,0.12)', flex: '0 0 auto' }}>
+                                    <svg width={isMobile ? 14 : 16} height={isMobile ? 14 : 16} viewBox="0 0 24 24" fill="none">
+                                      <path d="M9 3h6l1 2h4v2H4V5h4l1-2z" fill="none" stroke="#ff6b6b" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                                      <path d="M10 11v6" stroke="#ff6b6b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                                      <path d="M14 11v6" stroke="#ff6b6b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                  </span>
+                                  {!isMobile && <span style={{ fontSize: 13, color: '#f88' }}>Удалить</span>}
                                 </button>
                               </div>
                             )}

@@ -997,10 +997,11 @@ export default function ProfilePage() {
               <label style={{ fontSize: 15, fontWeight: 500 }}>Фон</label><br />
               <input type="text" value={backgroundUrl} onChange={e => setBackgroundUrl(e.target.value)} style={{ marginTop: 6, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #444", background: "#18191c", color: "#fff", fontSize: 15 }} placeholder="https://..." />
               <div style={{ marginTop: 10 }}>
+                <label style={{ fontSize: 14, fontWeight: 500 }}>:</label><br />
                 <textarea
                   value={backgroundDesc}
                   onChange={e => setBackgroundDesc(e.target.value)}
-                  placeholder="Фон будет выделять вас среди списка друзей, он виден как фон профиля, и фон чатов с друзьями."
+                  placeholder="Введите описание фона (я сам его напишу)"
                   style={{ marginTop: 6, width: '100%', minHeight: 64, padding: '8px 10px', borderRadius: 8, border: '1px solid #444', background: '#18191c', color: '#fff', fontSize: 14, resize: 'vertical' }}
                 />
               </div>
