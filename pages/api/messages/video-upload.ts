@@ -16,25 +16,56 @@ export const config = {
 
 function parseForm(req: NextApiRequest): Promise<{ fields: any; files: any }> {
   return new Promise((resolve, reject) => {
-    // Use formidable v3+ API (callable) instead of deprecated IncomingForm
-    const formidable = require('formidable');
-    const form = formidable({
-      multiples: false,
-      allowEmptyFiles: false,
-      keepExtensions: true,
-      maxFileSize: 50 * 1024 * 1024, // 50MB
-    });
-    form.parse(req, (err: any, fields: any, files: any) => {
-      if (err) reject(err);
-      else resolve({ fields, files });
-    });
+    // Support several possible `formidable` shapes (callable default, .default, or IncomingForm)
+    try {
+      const formidableLib = require('formidable');
+      let createForm: any = null;
+      if (typeof formidableLib === 'function') {
+        createForm = formidableLib;
+      } else if (formidableLib && typeof formidableLib.default === 'function') {
+        createForm = formidableLib.default;
+      } else if (formidableLib && typeof formidableLib.IncomingForm === 'function') {
+        createForm = (opts: any) => new formidableLib.IncomingForm(opts);
+      }
+      if (!createForm) {
+        return reject(new Error('Formidable module has unexpected shape'));
+      }
+      const form = createForm({
+        multiples: false,
+        allowEmptyFiles: false,
+        keepExtensions: true,
+        maxFileSize: 50 * 1024 * 1024, // 50MB
+      });
+      if (typeof form.parse === 'function') {
+        form.parse(req, (err: any, fields: any, files: any) => {
+          if (err) reject(err);
+          else resolve({ fields, files });
+        });
+      } else if (typeof (form as any).parse === 'undefined' && typeof (form as any).then === 'function') {
+        // In case some versions return a promise-like API
+        (form as any).then((parsed: any) => resolve(parsed)).catch(reject);
+      } else {
+        reject(new Error('Formidable parse method not available'));
+      }
+    } catch (err) {
+      reject(err);
+    }
   });
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Enable CORS for faster response
   res.setHeader('Access-Control-Allow-Origin', '*');
+  // Allow credentials so browser can send cookies when needed
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Access-Control-Allow-Methods', 'POST, DELETE');
+
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
   
   if (req.method === 'POST') {
     // Публикация видео

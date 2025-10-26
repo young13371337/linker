@@ -16,18 +16,37 @@ export const config = {
 
 function parseForm(req: NextApiRequest): Promise<{ fields: any; files: any }> {
 	return new Promise((resolve, reject) => {
-		// Use formidable v3+ API
-		const formidable = require('formidable');
-		const form = formidable({
-			multiples: false,
-			allowEmptyFiles: false,
-			keepExtensions: true,
-			maxFileSize: 10 * 1024 * 1024, // 10MB
-		});
-		form.parse(req, (err: any, fields: any, files: any) => {
-			if (err) reject(err);
-			else resolve({ fields, files });
-		});
+		// Robustly support several possible `formidable` shapes
+		try {
+			const formidableLib = require('formidable');
+			let createForm: any = null;
+			if (typeof formidableLib === 'function') {
+				createForm = formidableLib;
+			} else if (formidableLib && typeof formidableLib.default === 'function') {
+				createForm = formidableLib.default;
+			} else if (formidableLib && typeof formidableLib.IncomingForm === 'function') {
+				createForm = (opts: any) => new formidableLib.IncomingForm(opts);
+			}
+			if (!createForm) return reject(new Error('Formidable module has unexpected shape'));
+			const form = createForm({
+				multiples: false,
+				allowEmptyFiles: false,
+				keepExtensions: true,
+				maxFileSize: 10 * 1024 * 1024, // 10MB
+			});
+			if (typeof form.parse === 'function') {
+				form.parse(req, (err: any, fields: any, files: any) => {
+					if (err) reject(err);
+					else resolve({ fields, files });
+				});
+			} else if (typeof (form as any).then === 'function') {
+				(form as any).then((parsed: any) => resolve(parsed)).catch(reject);
+			} else {
+				reject(new Error('Formidable parse method not available'));
+			}
+		} catch (err) {
+			reject(err);
+		}
 	});
 }
 
