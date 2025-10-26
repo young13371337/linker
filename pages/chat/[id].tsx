@@ -227,6 +227,7 @@ interface Message {
   createdAt: string;
   audioUrl?: string;
   videoUrl?: string;
+  _key?: string;
 }
 
 const ChatWithFriend: React.FC = () => {
@@ -513,40 +514,33 @@ const ChatWithFriend: React.FC = () => {
         };
 
 
-        // Проверим, есть ли временное сообщение, которое соответствует этому сообщению
-        const tempExists = messages.some(m => typeof m.id === 'string' && m.id.startsWith('temp-') && m.sender === newMsg.sender && m.text === newMsg.text);
-
         setMessages(prev => {
           // Если сообщение с таким id уже есть — игнорируем (дедупликация)
           if (prev.some(m => m.id === newMsg.id)) return prev;
 
-          // Если есть временное сообщение (temp-...) с тем же текстом и отправителем — заменим его
+          // Если есть временное сообщение (temp-...) с тем же текстом и отправителем — заменим его,
+          // но сохраним внутренний _key, чтобы React не ремонтировал DOM элемент (избегаем дергания).
           const tempIndex = prev.findIndex(m => typeof m.id === 'string' && m.id.startsWith('temp-') && m.sender === newMsg.sender && m.text === newMsg.text);
           if (tempIndex !== -1) {
             const copy = [...prev];
-            // Update temp message in-place: keep temp id (React key) to avoid remount
-            const temp = copy[tempIndex];
+            const existing = copy[tempIndex];
             copy[tempIndex] = {
-              ...temp,
-              // store server id but keep the temp key
-              _serverId: newMsg.id,
-              sender: newMsg.sender || temp.sender,
-              text: newMsg.text || temp.text,
-              createdAt: newMsg.createdAt || temp.createdAt,
-              audioUrl: newMsg.audioUrl || temp.audioUrl,
-              videoUrl: newMsg.videoUrl || temp.videoUrl,
+              ...existing,
+              id: newMsg.id,
+              text: newMsg.text,
+              createdAt: newMsg.createdAt,
+              audioUrl: newMsg.audioUrl,
+              videoUrl: newMsg.videoUrl,
             };
             return copy;
           }
 
-          // Иначе добавляем в конец
-          return [...prev, newMsg];
+          // Иначе добавляем в конец — добавляем _key равный id, и запускаем анимацию для этого нового сообщения
+          const toAdd = { ...newMsg, _key: newMsg.id };
+          // помечаем для анимации
+          setAnimatedMsgIds(prevAnim => new Set([...prevAnim, newMsg.id]));
+          return [...prev, toAdd];
         });
-
-        // Устанавливаем анимацию только если это реально новое сообщение (т.е. не замена temp->server)
-        if (!tempExists) {
-          setAnimatedMsgIds(prev => new Set([...prev, payload.id]));
-        }
 
         // Автоматически прокручиваем к новому сообщению
         setTimeout(scrollToBottom, 50);
@@ -608,6 +602,7 @@ const ChatWithFriend: React.FC = () => {
     // Немедленно добавляем сообщение в UI
     const tempMessage = {
       id: tempId,
+      _key: tempId,
       sender: (session.user as any)?.id,
       text: messageText,
       createdAt: new Date().toISOString(),
@@ -657,20 +652,18 @@ const ChatWithFriend: React.FC = () => {
           // mark temp message as failed visually
           setMessages((prev: any[]) => prev.map((msg: any) => msg.id === tempId ? { ...msg, _failed: true } : msg));
         }
-        // Update the temporary message in-place (keep its key) and attach server id/info
-        // This prevents React from remounting the DOM node (no layout jump).
+        // Replace temporary message with server-provided message data,
+        // but preserve the internal _key so the DOM node/key stays stable
         setMessages((prev: any[]) => prev.map((msg: any) => 
           msg.id === tempId ? {
-            // keep the temp id so React key doesn't change
-            id: msg.id,
-            // store server id separately for future reference
-            _serverId: serverMsg.id,
-            sender: serverMsg.senderId || serverMsg.sender || msg.sender,
-            text: serverMsg.text || messageText || msg.text,
-            createdAt: serverMsg.createdAt || msg.createdAt || new Date().toISOString(),
-            videoUrl: serverMsg.videoUrl || msg.videoUrl,
-            audioUrl: serverMsg.audioUrl || msg.audioUrl,
-            _persisted: serverMsg.persisted !== false
+            ...msg,
+            id: serverMsg.id,
+            sender: serverMsg.senderId || serverMsg.sender,
+            text: serverMsg.text || messageText,
+            createdAt: serverMsg.createdAt || new Date().toISOString(),
+            videoUrl: serverMsg.videoUrl,
+            audioUrl: serverMsg.audioUrl,
+            _persisted: serverMsg.persisted !== false,
           } : msg
         ));
       })
@@ -915,7 +908,7 @@ const ChatWithFriend: React.FC = () => {
                     };
                     return (
                       <div
-                        key={msg.id}
+                        key={msg._key || msg.id}
                         ref={getMsgRef}
                         className={animatedMsgIds.has(msg.id) ? 'chat-msg-appear' : ''}
                         style={{
