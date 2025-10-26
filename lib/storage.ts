@@ -143,3 +143,32 @@ export function ensureDir(dir: string) {
     return false;
   }
 }
+
+// Initialize repo-local storage on module import to make the app usable out of the box.
+// This will prefer a repo-local `./storage` folder unless UPLOAD_DIR is explicitly set.
+try {
+  const uploadDirEnv = process.env.UPLOAD_DIR;
+  if (uploadDirEnv) {
+    // Respect explicit override but ensure dirs exist
+    const video = path.join(uploadDirEnv, 'linker', 'video');
+    const voice = path.join(uploadDirEnv, 'linker', 'voice');
+    try { fs.mkdirSync(video, { recursive: true }); } catch (e) { /* ignore */ }
+    try { fs.mkdirSync(voice, { recursive: true }); } catch (e) { /* ignore */ }
+    (getStoragePath as any)._selectedBase = uploadDirEnv;
+    console.log('[STORAGE INIT] UPLOAD_DIR set, using:', uploadDirEnv);
+  } else {
+    const repoBase = path.join(process.cwd(), 'storage');
+    const video = path.join(repoBase, 'linker', 'video');
+    const voice = path.join(repoBase, 'linker', 'voice');
+    try {
+      fs.mkdirSync(video, { recursive: true });
+      fs.mkdirSync(voice, { recursive: true });
+      (getStoragePath as any)._selectedBase = repoBase;
+      console.log('[STORAGE INIT] Using repo-local storage base:', repoBase);
+    } catch (e) {
+      console.warn('[STORAGE INIT] Failed to prepare repo-local storage, will fallback later:', formatErr(e));
+    }
+  }
+} catch (e) {
+  console.warn('[STORAGE INIT] Unexpected init error:', formatErr(e));
+}
