@@ -7,8 +7,6 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 // No encryption for voice files anymore — store raw files under pages/api/.private_media/voice
 import { pusher } from '../../../lib/pusher';
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 export const config = {
 	api: {
@@ -90,10 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			   fileName = `${Date.now()}-${file.originalFilename ? file.originalFilename.replace(/\.[^/.]+$/, fileExt) : 'voice.mp3'}`;
 			   
 				   try {
-					   // Сохраняем оригинальный файл (без шифрования)
-					   filePath = path.join(uploadDir, fileName);
-					   console.log('[VOICE UPLOAD] target filePath:', filePath);
-
+					   // Read temp file into buffer and store as base64 in DB (safer on serverless platforms)
 					   const tmpPath = (file as any)?.filepath || (file as any)?.path || (file as any)?.tempFilePath || (file as any)?.file?.path;
 					   console.log('[VOICE UPLOAD] tmpPath candidates, using:', tmpPath);
 					   console.log('[VOICE UPLOAD] file props:', {
@@ -110,16 +105,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 						   throw accessErr;
 					   }
 
-					   // Read file into buffer and store base64 in DB when no external storage configured
 					   const fileBuffer = await fs.promises.readFile(tmpPath);
-					   if (!fileBuffer || fileBuffer.length === 0) throw new Error('Empty audio file');
-					   const base64 = fileBuffer.toString('base64');
-					   (req as any)._audioBase64 = base64;
-					   (req as any)._audioMime = (file as any)?.mimetype || 'audio/mpeg';
-					   // set placeholder url which we'll replace after creating the message
+					   if (!fileBuffer || fileBuffer.length === 0) throw new Error('Uploaded audio is empty');
+					   const b64 = fileBuffer.toString('base64');
+					   const mime = (file as any)?.mimetype || (file as any)?.type || 'audio/mpeg';
+
+					   // We'll store base64 in DB and serve via /api/media/db/:id/audio
 					   urlField = 'audioUrl';
-					   urlValue = '__DB_BASE64__';
-					   console.log('[VOICE UPLOAD] Prepared audio base64 to store in DB');
+					   // create message with base64 payload below (after session check)
+					   (fields as any).__audioBase64 = b64;
+					   (fields as any).__audioMime = mime;
+					   urlValue = '__DB_BASE64_PLACEHOLDER__';
+					   console.log('[VOICE UPLOAD] Prepared base64 payload, mime:', mime);
 				   } catch (error: any) {
 					   console.error('[VOICE UPLOAD] File processing error:', error);
 					   throw new Error(`File processing failed: ${error.message || 'Unknown error'}`);
@@ -139,14 +136,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			   res.status(401).json({ error: 'Unauthorized: no userId from session', session });
 			   return;
 		   }
-		   const message = await prisma.message.create({
-			   data: {
-				   chatId,
-				   senderId: userId,
-				   text: '',
-				   [urlField]: urlValue,
-			   },
-		   });
+		   // If we prepared base64 payload, include it in the DB create
+		   const createData: any = {
+			   chatId,
+			   senderId: userId,
+			   text: '',
+		   };
+		   if ((fields as any).__audioBase64) {
+			   createData.audioBase64 = (fields as any).__audioBase64;
+			   createData.audioMime = (fields as any).__audioMime || 'audio/mpeg';
+		   } else if (urlValue && urlValue !== '__DB_BASE64_PLACEHOLDER__') {
+			   createData[urlField] = urlValue;
+		   }
+
+		   const message = await prisma.message.create({ data: createData });
+
+		   // If we stored base64 in DB, set audioUrl to DB-serving endpoint for convenience
+		   if (createData.audioBase64) {
+			   const dbUrl = `/api/media/db/${message.id}/audio`;
+			   await prisma.message.update({ where: { id: message.id }, data: { audioUrl: dbUrl } });
+			   urlValue = dbUrl;
+		   }
 		// Отправляем событие в Pusher
 		try {
 			await pusher.trigger(`chat-${chatId}`, 'new-message', {
