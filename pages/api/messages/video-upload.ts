@@ -56,24 +56,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       let videoUrl: string;
     try {
-    // Read uploaded temp file into buffer and store as base64 in DB (serverless-friendly)
+      // Сохраняем видео в оригинальном виде (без шифрования)
+          const uploadDir = path.join(process.cwd(), 'storage', 'video');
+      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+      const fileName = `${Date.now()}-circle.webm`;
+          const filePath = path.join(uploadDir, fileName);
+
       console.log('[VIDEO UPLOAD] Reading file from:', video.filepath || video.path);
+
       const fileBuffer = await fs.promises.readFile(video.filepath || video.path);
       if (!fileBuffer || fileBuffer.length === 0) {
-      throw new Error('Empty video file buffer');
+        throw new Error('Empty video file buffer');
       }
-      const b64 = fileBuffer.toString('base64');
-      const mime = video.mimetype || 'video/webm';
-      // We'll create DB message with base64 payload below (after session check)
-      (fields as any).__videoBase64 = b64;
-      (fields as any).__videoMime = mime;
-      videoUrl = '__DB_BASE64_PLACEHOLDER__';
-      console.log('[VIDEO UPLOAD] Prepared base64 payload, mime:', mime);
-    } catch (error: any) {
-      console.error('[VIDEO UPLOAD] Error:', error);
-      res.status(500).json({ error: 'Video processing failed', details: error.message || 'Unknown error' });
-      return;
-    }
+
+      // Отправляем частичный ответ клиенту пока идёт запись
+      res.writeHead(202);
+
+      await fs.promises.writeFile(filePath, fileBuffer);
+
+      videoUrl = `/api/media/video/${fileName}`;
+      console.log('[VIDEO UPLOAD] File saved as:', filePath);
+      } catch (error: any) {
+          console.error('[VIDEO UPLOAD] Error:', error);
+          res.status(500).json({ error: 'Video processing failed', details: error.message || 'Unknown error' });
+          return;
+      }
       const session = await getServerSession(req, res, authOptions);
       const userId = session?.user?.id;
       if (!chatId) {
@@ -84,36 +91,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.status(401).json({ error: 'Unauthorized: no userId from session', session });
         return;
       }
-      // Prepare create data — include base64 if prepared
-      const createData: any = { chatId, senderId: userId, text: '' };
-      if ((fields as any).__videoBase64) {
-        createData.videoBase64 = (fields as any).__videoBase64;
-        createData.videoMime = (fields as any).__videoMime || 'video/webm';
-      } else if (videoUrl && videoUrl !== '__DB_BASE64_PLACEHOLDER__') {
-        createData.videoUrl = videoUrl;
-      }
-
-      const message = await prisma.message.create({ data: createData });
-
-      // If base64 was stored in DB, set videoUrl to DB-serving endpoint
-      if (createData.videoBase64) {
-        const dbUrl = `/api/media/db/${message.id}/video`;
-        await prisma.message.update({ where: { id: message.id }, data: { videoUrl: dbUrl } });
-        videoUrl = dbUrl;
+      let message: any = null;
+      let dbError: any = null;
+      let persisted = false;
+      try {
+        message = await prisma.message.create({
+          data: {
+            chatId,
+            senderId: userId,
+            text: '',
+            videoUrl,
+          },
+        });
+        persisted = !!(message && message.id);
+      } catch (err: any) {
+        console.error('[VIDEO UPLOAD] Prisma create failed', err);
+        dbError = { message: err?.message || String(err), stack: err?.stack };
+        message = { id: `temp-${Date.now()}`, chatId, senderId: userId, text: '', createdAt: new Date().toISOString() };
+        persisted = false;
       }
       // Уведомляем подписчиков через Pusher
       try {
-        await pusher.trigger(`chat-${chatId}`, 'new-message', {
-          id: message.id,
-          sender: userId,
-          text: '',
-          createdAt: message.createdAt,
-          videoUrl,
-        });
+        const payload = { id: message.id, sender: userId, text: '', createdAt: message.createdAt, videoUrl, persisted, dbError };
+        await pusher.trigger(`chat-${chatId}`, 'new-message', payload);
       } catch (pErr) {
         console.error('[VIDEO UPLOAD] Pusher trigger failed:', pErr);
       }
-      res.status(200).json({ videoUrl, message });
+      res.status(200).json({ videoUrl, message, persisted, dbError });
     } catch (e) {
       console.error('Video upload error:', e);
       res.status(500).json({ error: 'Upload failed', details: String(e) });

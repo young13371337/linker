@@ -149,27 +149,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			   createData[urlField] = urlValue;
 		   }
 
-		   const message = await prisma.message.create({ data: createData });
-
-		   // If we stored base64 in DB, set audioUrl to DB-serving endpoint for convenience
-		   if (createData.audioBase64) {
-			   const dbUrl = `/api/media/db/${message.id}/audio`;
-			   await prisma.message.update({ where: { id: message.id }, data: { audioUrl: dbUrl } });
-			   urlValue = dbUrl;
+		   let message: any = null;
+		   let dbError: any = null;
+		   let persisted = false;
+		   try {
+			   message = await prisma.message.create({ data: createData });
+			   persisted = !!(message && message.id);
+			   // If we stored base64 in DB, set audioUrl to DB-serving endpoint for convenience
+			   if (createData.audioBase64) {
+				   const dbUrl = `/api/media/db/${message.id}/audio`;
+				   await prisma.message.update({ where: { id: message.id }, data: { audioUrl: dbUrl } });
+				   urlValue = dbUrl;
+			   }
+		   } catch (err: any) {
+			   console.error('[VOICE UPLOAD] Prisma create failed', err);
+			   dbError = { message: err?.message || String(err), stack: err?.stack };
+			   // Fallback ephemeral message object
+			   message = { id: `temp-${Date.now()}`, chatId, senderId: userId, text: '', createdAt: new Date().toISOString() };
+			   persisted = false;
 		   }
 		// Отправляем событие в Pusher
 		try {
-			await pusher.trigger(`chat-${chatId}`, 'new-message', {
-				id: message.id,
-				sender: userId,
-				text: '',
-				createdAt: message.createdAt,
-				audioUrl: urlValue,
-			});
+			const payload = { id: message.id, sender: userId, text: '', createdAt: message.createdAt, audioUrl: urlValue, persisted, dbError };
+			await pusher.trigger(`chat-${chatId}`, 'new-message', payload);
 		} catch (pErr) {
 			console.error('[VOICE UPLOAD] Pusher trigger failed:', pErr);
 		}
-		res.status(200).json({ [urlField]: urlValue, message });
+		res.status(200).json({ [urlField]: urlValue, message, persisted, dbError });
 	} catch (e) {
 		console.error('Voice upload error:', e);
 		res.status(500).json({ error: 'Upload failed', details: String(e) });
