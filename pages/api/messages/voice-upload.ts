@@ -127,16 +127,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 					   const fileBuffer = await fs.promises.readFile(tmpPath);
 					   if (!fileBuffer || fileBuffer.length === 0) throw new Error('Uploaded audio is empty');
-					   const b64 = fileBuffer.toString('base64');
-					   const mime = (file as any)?.mimetype || (file as any)?.type || 'audio/mpeg';
+						   const b64 = fileBuffer.toString('base64');
+						   const mime = (file as any)?.mimetype || (file as any)?.type || 'audio/mpeg';
 
-					   // We'll store base64 in DB and serve via /api/media/db/:id/audio
-					   urlField = 'audioUrl';
-					   // create message with base64 payload below (after session check)
-					   (fields as any).__audioBase64 = b64;
-					   (fields as any).__audioMime = mime;
-					   urlValue = '__DB_BASE64_PLACEHOLDER__';
-					   console.log('[VOICE UPLOAD] Prepared base64 payload, mime:', mime);
+						   // We'll prefer to store base64 in DB, but keep the raw buffer as fallback
+						   urlField = 'audioUrl';
+						   // create message with base64 payload below (after session check)
+						   (fields as any).__audioBase64 = b64;
+						   (fields as any).__audioMime = mime;
+						   // keep raw buffer and filename in outer scope for fallback
+						   (fields as any).__rawBuffer = fileBuffer;
+						   urlValue = '__DB_BASE64_PLACEHOLDER__';
+						   console.log('[VOICE UPLOAD] Prepared base64 payload, mime:', mime);
 				   } catch (error: any) {
 					   console.error('[VOICE UPLOAD] File processing error:', error);
 					   throw new Error(`File processing failed: ${error.message || 'Unknown error'}`);
@@ -169,7 +171,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			   createData[urlField] = urlValue;
 		   }
 
-		   let message: any = null;
+					 let message: any = null;
 		   let dbError: any = null;
 		   let persisted = false;
 		   try {
@@ -185,8 +187,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			   console.error('[VOICE UPLOAD] Prisma create failed', err);
 			   dbError = { message: err?.message || String(err), stack: err?.stack };
 			   // Fallback ephemeral message object
-			   message = { id: `temp-${Date.now()}`, chatId, senderId: userId, text: '', createdAt: new Date().toISOString() };
-			   persisted = false;
+							 // Try fallback: write raw buffer to disk and create DB record with audioUrl
+							 const tempId = `temp-${Date.now()}`;
+							 message = { id: tempId, chatId, senderId: userId, text: '', createdAt: new Date().toISOString() };
+							 persisted = false;
+							 try {
+								 const rawBuffer: Buffer | undefined = (fields as any).__rawBuffer;
+								 const uploadDirFallback = getStoragePath('voice');
+								 if (rawBuffer && uploadDirFallback) {
+									 // ensure dir exists (already ensured earlier)
+									 const fallbackFileName = `${Date.now()}-fallback-voice.webm`;
+									 const fallbackPath = path.join(uploadDirFallback, fallbackFileName);
+									 await fs.promises.writeFile(fallbackPath, rawBuffer);
+									 const publicUrl = `/api/media/voice/${fallbackFileName}`;
+									 urlValue = publicUrl;
+									 // attempt to persist message referencing file URL
+									 try {
+										 const persistedMsg = await prisma.message.create({ data: { chatId, senderId: userId, text: '', audioUrl: publicUrl } });
+										 message = persistedMsg;
+										 persisted = true;
+									 } catch (createErr) {
+										 console.error('[VOICE UPLOAD] Fallback DB create failed', createErr);
+									 }
+								 }
+							 } catch (fbErr) {
+								 console.error('[VOICE UPLOAD] Fallback file write failed', fbErr);
+							 }
 		   }
 		// Отправляем событие в Pusher
 		try {
