@@ -53,6 +53,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!chatId || !text) return res.status(400).json({ error: 'chatId and text required' });
       // Store plain text for now (no encryption)
       let message: any = null;
+      let dbError: any = null;
+      let persisted = false;
       try {
         message = await prisma.message.create({
           data: {
@@ -62,17 +64,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             createdAt: new Date()
           }
         });
+        // mark persisted when DB returned an id
+        persisted = !!(message && message.id && !String(message.id).startsWith('temp-'));
       } catch (dbErr: any) {
         // DB write failed — log and fall back to an ephemeral message so chat continues
         console.error('[MESSAGES][POST] DB create failed, falling back', dbErr?.message || dbErr, dbErr?.stack || 'no-stack');
+        dbError = { message: dbErr?.message || String(dbErr), stack: dbErr?.stack };
         message = {
           id: `temp-${Date.now()}`,
           chatId,
           senderId: user.id,
           text,
-          createdAt: new Date().toISOString(),
-          _persisted: false
+          createdAt: new Date().toISOString()
         };
+        persisted = false;
       }
 
     // Получить всех участников чата — если чтение чата упало, всё равно продолжаем и уведомим через Pusher
@@ -101,7 +106,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Отправить новое сообщение через Pusher
-    const messageToSend = { ...message, text };
+  const messageToSend = { ...message, text, persisted, dbError };
     try {
       await pusher.trigger(`chat-${chatId}`, 'new-message', messageToSend);
     } catch (pErr) {
