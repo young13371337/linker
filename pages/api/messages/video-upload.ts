@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
 import fs from 'fs';
+import { getStoragePath, ensureDir } from '../../../lib/storage';
 
 import prisma from '../../../lib/prisma';
 import { getServerSession } from 'next-auth/next';
@@ -88,9 +89,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let videoUrl: string;
     try {
       // Сохраняем видео в оригинальном виде (без шифрования)
-          const uploadDir = path.join(process.cwd(), 'storage', 'video');
-      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-      const fileName = `${Date.now()}-circle.webm`;
+          const uploadDir = getStoragePath('video');
+          if (!ensureDir(uploadDir)) {
+            throw new Error(`Unable to create upload dir: ${uploadDir}`);
+          }
+          const fileName = `${Date.now()}-circle.webm`;
           const filePath = path.join(uploadDir, fileName);
 
       console.log('[VIDEO UPLOAD] Reading file from:', video.filepath || video.path);
@@ -105,7 +108,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       await fs.promises.writeFile(filePath, fileBuffer);
 
-      videoUrl = `/api/media/video/${fileName}`;
+  videoUrl = `/api/media/video/${fileName}`;
       console.log('[VIDEO UPLOAD] File saved as:', filePath);
       } catch (error: any) {
           console.error('[VIDEO UPLOAD] Error:', error);

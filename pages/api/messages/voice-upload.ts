@@ -5,6 +5,7 @@ import fs from 'fs';
 import prisma from '../../../lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
+import { getStoragePath, ensureDir } from '../../../lib/storage';
 // No encryption for voice files anymore — store raw files under pages/api/.private_media/voice
 import { pusher } from '../../../lib/pusher';
 
@@ -101,9 +102,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			   file = audio;
 			   fileType = 'audio';
 			   fileExt = '.mp3';
-			   // Save media under storage/voice (outside pages) to avoid direct listing
-			   uploadDir = path.join(process.cwd(), 'storage', 'voice');
-			   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+			   // Save media under writable storage path (supports serverless /tmp fallback)
+			   uploadDir = getStoragePath('voice');
+			   if (!ensureDir(uploadDir)) throw new Error(`Unable to create upload dir: ${uploadDir}`);
 			   fileName = `${Date.now()}-${file.originalFilename ? file.originalFilename.replace(/\.[^/.]+$/, fileExt) : 'voice.mp3'}`;
 			   
 				   try {

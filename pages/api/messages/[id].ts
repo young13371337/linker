@@ -9,11 +9,9 @@ import { pusher } from '../../../lib/pusher';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Наши медиа сейчас хранятся в storage/{voice,video}
-const mediaRoot = path.join(process.cwd(), 'storage');
-if (!fs.existsSync(mediaRoot)) {
-  console.error('[DELETE MESSAGE] Warning: storage folder not found');
-}
+import { getStoragePath } from '../../../lib/storage';
+
+// Our media storage is located under getStoragePath('voice'|'video')
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('[DELETE MESSAGE] Start handling delete request');
@@ -96,13 +94,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         if (msg.audioUrl) {
           const audioFileName = path.basename(msg.audioUrl);
-          const fullPath = path.join(process.cwd(), 'storage', 'voice', audioFileName || '');
+          const fullPath = path.join(getStoragePath('voice'), audioFileName || '');
           await tryUnlink(fullPath);
         }
 
         if (msg.videoUrl) {
           const videoFileName = path.basename(msg.videoUrl);
-          const fullPath = path.join(process.cwd(), 'storage', 'video', videoFileName || '');
+          const fullPath = path.join(getStoragePath('video'), videoFileName || '');
           await tryUnlink(fullPath);
         }
 

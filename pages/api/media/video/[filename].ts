@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
 import fs from 'fs';
+import { getStoragePath } from '../../../../lib/storage';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
 import prisma from '../../../../lib/prisma';
@@ -24,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!isParticipant) return res.status(403).json({ error: 'Forbidden' });
     }
 
-    const fullPath = path.join(process.cwd(), 'storage', 'video', safeName);
+  const fullPath = path.join(getStoragePath('video'), safeName);
     if (!fs.existsSync(fullPath)) return res.status(404).json({ error: 'File not found' });
     const stat = fs.statSync(fullPath);
     const stream = fs.createReadStream(fullPath);
