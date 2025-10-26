@@ -107,10 +107,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Отправляем частичный ответ клиенту пока идёт запись
       res.writeHead(202);
 
-      await fs.promises.writeFile(filePath, fileBuffer);
+      // Atomic write: write to temp file then rename to final path
+      const tempPath = `${filePath}.tmp-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+      await fs.promises.writeFile(tempPath, fileBuffer);
+      // Rename is atomic on most filesystems
+      await fs.promises.rename(tempPath, filePath);
 
-  videoUrl = `/api/media/video/${fileName}`;
-  console.log('[VIDEO UPLOAD] File saved as:', filePath, 'host:', os.hostname(), 'pid:', process.pid);
+      // Verify file exists
+      const exists = fs.existsSync(filePath);
+      console.log('[VIDEO UPLOAD] File saved (atomic):', filePath, 'exists:', exists, 'host:', os.hostname(), 'pid:', process.pid);
+      videoUrl = `/api/media/video/${fileName}`;
       } catch (error: any) {
           console.error('[VIDEO UPLOAD] Error:', error);
           res.status(500).json({ error: 'Video processing failed', details: error.message || 'Unknown error' });

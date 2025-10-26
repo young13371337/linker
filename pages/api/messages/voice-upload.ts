@@ -199,9 +199,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 									 // ensure dir exists (already ensured earlier)
 									 const fallbackFileName = `${Date.now()}-fallback-voice.webm`;
 									 const fallbackPath = path.join(uploadDirFallback, fallbackFileName);
-									 await fs.promises.writeFile(fallbackPath, rawBuffer);
-									 console.log('[VOICE UPLOAD] Fallback file written to:', fallbackPath);
-									 const publicUrl = `/api/media/voice/${fallbackFileName}`;
+								// Atomic write for fallback: write to temp then rename
+								const tempFallback = `${fallbackPath}.tmp-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+								await fs.promises.writeFile(tempFallback, rawBuffer);
+								await fs.promises.rename(tempFallback, fallbackPath);
+								console.log('[VOICE UPLOAD] Fallback file written to:', fallbackPath, 'host:', os.hostname(), 'pid:', process.pid);
+								const publicUrl = `/api/media/voice/${fallbackFileName}`;
 									 urlValue = publicUrl;
 									 // attempt to persist message referencing file URL
 									 try {
