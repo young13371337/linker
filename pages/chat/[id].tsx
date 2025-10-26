@@ -364,14 +364,15 @@ const ChatWithFriend: React.FC = () => {
                 } else {
                   const data = await res.json();
                   if (data.videoUrl && data.message && data.message.id) {
-                    setMessages((prev) => [...prev, {
+                    const newMsg = {
                       id: data.message.id,
                       sender: (session.user as any)?.id,
                       text: '',
                       createdAt: data.message.createdAt || new Date().toISOString(),
                       audioUrl: undefined,
                       videoUrl: data.videoUrl,
-                    }]);
+                    };
+                    setMessages((prev) => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
                   }
                 }
               } catch (err) {
@@ -1336,14 +1337,15 @@ const ChatWithFriend: React.FC = () => {
                           } else {
                             const data = await res.json();
                             if (data.audioUrl && data.message && data.message.id) {
-                              setMessages((prev) => [...prev, {
+                              const newMsg = {
                                 id: data.message.id,
                                 sender: (session?.user as any)?.id,
                                 text: '',
                                 createdAt: data.message.createdAt || new Date().toISOString(),
                                 audioUrl: data.audioUrl,
                                 videoUrl: undefined,
-                              }]);
+                              };
+                              setMessages((prev) => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
                             }
                           }
                         } catch (err) {
