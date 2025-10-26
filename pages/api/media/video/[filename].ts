@@ -25,8 +25,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!isParticipant) return res.status(403).json({ error: 'Forbidden' });
     }
 
-  const fullPath = path.join(getStoragePath('video'), safeName);
-    if (!fs.existsSync(fullPath)) return res.status(404).json({ error: 'File not found' });
+  const storageDir = getStoragePath('video');
+  const fullPath = path.join(storageDir, safeName);
+    console.log('[MEDIA][VIDEO] serving path:', fullPath, 'storageDir:', storageDir);
+    if (!fs.existsSync(fullPath)) {
+      console.warn('[MEDIA][VIDEO] File not found at expected path:', fullPath);
+      return res.status(404).json({ error: 'File not found' });
+    }
     const stat = fs.statSync(fullPath);
     const stream = fs.createReadStream(fullPath);
     const ext = path.extname(safeName).toLowerCase();
