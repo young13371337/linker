@@ -991,7 +991,7 @@ export default function ProfilePage() {
               >Сохранить аватарку</button>
             </div>
             <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s" }}>
-              <label style={{ fontSize: 15, fontWeight: 500 }}>Фон профиля и чата</label><br />
+              <label style={{ fontSize: 15, fontWeight: 500 }}>Фон чата и профиля</label><br />
               <input type="text" value={backgroundUrl} onChange={e => setBackgroundUrl(e.target.value)} style={{ marginTop: 6, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #444", background: "#18191c", color: "#fff", fontSize: 15 }} placeholder="" />
               <div style={{ marginTop: 12 }}>
                 <label style={{ fontSize: 15, fontWeight: 500 }}>Выделенность фона: {bgOpacity}%</label><br />
