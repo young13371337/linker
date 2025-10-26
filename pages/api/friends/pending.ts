@@ -5,7 +5,8 @@ import { authOptions } from "../auth/[...nextauth]";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Prefer getServerSession on server-side API routes — more explicit and reliable
-  const session = await getServerSession(req, res, authOptions as any);
+  // getServerSession's inferred types can be strict in some TS configs — cast to `any` to avoid build-time errors
+  const session = (await getServerSession(req, res, authOptions as any)) as any;
   if (!session || !session.user?.name) {
     try {
       console.warn('[FRIENDS/PENDING] Unauthorized — missing session. Request cookies/header:', { cookieHeader: req.headers.cookie || null, host: req.headers.host || null });
