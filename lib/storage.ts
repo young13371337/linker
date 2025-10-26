@@ -38,6 +38,43 @@ export function getStoragePath(subfolder: string) {
     return path.join(base, 'linker', subfolder);
   }
 
+  // Ensure repository-local `storage` exists and prefer it as a stable,
+  // writable location for uploads. This is useful when `public/media` is
+  // not present or not writable on the host.
+  try {
+    const repoStorageBase = path.join(process.cwd(), 'storage');
+    const repoCandidate = path.join(repoStorageBase, 'linker', subfolder);
+    fs.mkdirSync(repoCandidate, { recursive: true });
+    // quick probe
+    const probe = path.join(repoCandidate, `.probe-${Date.now()}.tmp`);
+    fs.writeFileSync(probe, 'ok');
+    fs.unlinkSync(probe);
+    (getStoragePath as any)._selectedBase = repoStorageBase;
+    console.log('[STORAGE] using repo-local storage for uploads:', repoCandidate);
+    return repoCandidate;
+  } catch (e) {
+    console.warn('[STORAGE] repo-local storage not usable, will try other candidates:', formatErr(e));
+  }
+
+  // Try to proactively create and use public/media if possible (makes files
+  // directly served by Next.js static server). This helps ensure uploads
+  // persist and are immediately accessible.
+  try {
+    const publicMediaBase = path.join(process.cwd(), 'public', 'media');
+    const publicCandidate = path.join(publicMediaBase, 'linker', subfolder);
+    fs.mkdirSync(publicCandidate, { recursive: true });
+    // quick writability probe
+    const probe = path.join(publicCandidate, `.probe-${Date.now()}.tmp`);
+    fs.writeFileSync(probe, 'ok');
+    fs.unlinkSync(probe);
+    (getStoragePath as any)._selectedBase = publicMediaBase;
+    console.log('[STORAGE] using public/media for uploads:', publicCandidate);
+    return publicCandidate;
+  } catch (e) {
+    // if public/media cannot be created or written, fall back to normal candidates
+    console.warn('[STORAGE] public/media not usable, falling back to candidates:', formatErr(e));
+  }
+
   const candidates = [] as string[];
 
   // If operator explicitly set FORCE_REPO_STORAGE=1, prefer repo-local storage
