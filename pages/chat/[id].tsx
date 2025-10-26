@@ -228,6 +228,10 @@ interface Message {
   audioUrl?: string;
   videoUrl?: string;
   _key?: string;
+  // internal flags used by UI (optional)
+  _serverId?: string;
+  _persisted?: boolean;
+  _failed?: boolean;
 }
 
 const ChatWithFriend: React.FC = () => {
