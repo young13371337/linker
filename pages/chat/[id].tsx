@@ -244,6 +244,8 @@ const ChatWithFriend: React.FC = () => {
   const [friend, setFriend] = useState<{id: string, login?: string, name?: string, avatar?: string | null, role?: string, status?: string} | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
+  const [openActionMsgId, setOpenActionMsgId] = useState<string | null>(null);
+  const touchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isTyping, setIsTyping] = useState<string | null>(null);
   const [isSpeaking, setIsSpeaking] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
@@ -285,6 +287,20 @@ const ChatWithFriend: React.FC = () => {
       if (recordInterval.current) clearInterval(recordInterval.current);
     }
   };
+
+  // Закрываем меню действий при клике вне
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!openActionMsgId) return;
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      // если клик внутри контейнера действия — не закрываем
+      if (target.closest(`[data-action-container="${openActionMsgId}"]`)) return;
+      setOpenActionMsgId(null);
+    };
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, [openActionMsgId]);
 
   const TypingIndicator = ({ name }: { name?: string }) => (
     <div style={{
@@ -487,6 +503,54 @@ const ChatWithFriend: React.FC = () => {
         }
       });
   }, [session, id]);
+
+  // Копирование текста в буфер и удаление — вынесенные хелперы
+  const handleCopy = async (text: string | undefined) => {
+    try {
+      if (!text) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      }
+      // небольшая обратная связь
+      try { /* non-blocking */ (window as any).toast && (window as any).toast('Скопировано'); } catch {}
+    } catch (err) {
+      console.error('Copy failed', err);
+    } finally {
+      setOpenActionMsgId(null);
+    }
+  };
+
+  const handleDeleteMessage = async (msgId: string) => {
+    try {
+      const endpoint = `/api/messages/${msgId}`;
+      const res = await fetch(endpoint, { method: 'DELETE', credentials: 'include' });
+      if (res.status === 204) {
+        setMessages(prev => prev.filter(m => m.id !== msgId));
+        return;
+      }
+      if (!res.ok) {
+        const errorText = await res.text();
+        let errorMessage = 'Не удалось удалить сообщение';
+        try {
+          const errData = JSON.parse(errorText);
+          if (errData && errData.error) errorMessage = errData.error;
+        } catch {}
+        throw new Error(errorMessage);
+      }
+    } catch (err) {
+      console.error('Error deleting message:', err);
+      alert(err instanceof Error ? err.message : 'Не удалось удалить сообщение');
+    } finally {
+      setOpenActionMsgId(null);
+    }
+  };
 
   // Подписка на Pusher для получения изменений статуса пользователя и сообщений
   useEffect(() => {
@@ -927,104 +991,106 @@ const ChatWithFriend: React.FC = () => {
                         onMouseEnter={() => setHoveredMsgId(msg.id)}
                         onMouseLeave={() => setHoveredMsgId(null)}
                       >
-                        {isOwn && hoveredMsgId === msg.id && (
-                          <button
-                            onClick={async () => {
-                              try {
-                                // Use unified messages delete endpoint for all message types
-                                const endpoint = `/api/messages/${msg.id}`;
-                                
-                                const res = await fetch(endpoint, { 
-                                  method: 'DELETE', 
-                                  credentials: 'include' 
-                                });
-
-                                // Успешное удаление (204 No Content)
-                                if (res.status === 204) {
-                                  setMessages(prev => prev.filter(m => m.id !== msg.id));
-                                  return;
-                                }
-
-                                // Любой другой статус считаем ошибкой
-                                if (!res.ok) {
-                                  // Пробуем получить текст ошибки, если есть
-                                  const errorText = await res.text();
-                                  let errorMessage = 'Не удалось удалить сообщение';
-                                  
-                                  try {
-                                    const errorData = JSON.parse(errorText);
-                                    if (errorData.error) {
-                                      errorMessage = errorData.error;
+                        {/* Оборачиваем контент сообщения в контейнер с поддержкой клика (ПК) и долгого нажатия (моб)
+                            Меню действий появляется для собственных сообщений (Copy / Delete). */}
+                        <div
+                          data-action-container={msg.id}
+                          style={{ position: 'relative', display: 'inline-flex' }}
+                        >
+                          <div
+                            onClick={(e) => {
+                              // ПК: открываем/закрываем меню по клику
+                              try { e.stopPropagation(); } catch {}
+                              if (isMobile) return;
+                              setOpenActionMsgId(prev => prev === msg.id ? null : msg.id);
+                            }}
+                            onTouchStart={() => {
+                              // Моб: старт таймера для long-press
+                              if (!isMobile) return;
+                              if (touchTimerRef.current) clearTimeout(touchTimerRef.current);
+                              touchTimerRef.current = setTimeout(() => setOpenActionMsgId(msg.id), 700);
+                            }}
+                            onTouchEnd={() => {
+                              if (touchTimerRef.current) { clearTimeout(touchTimerRef.current); touchTimerRef.current = null; }
+                            }}
+                            onTouchMove={() => {
+                              if (touchTimerRef.current) { clearTimeout(touchTimerRef.current); touchTimerRef.current = null; }
+                            }}
+                            style={{ display: 'inline-block' }}
+                          >
+                            {msg.videoUrl ? (
+                              <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: isOwn ? 'flex-end' : 'flex-start',
+                                gap: 2,
+                                margin: '2px 0',
+                                marginLeft: 0,
+                              }}>
+                                <VideoCircle src={msg.videoUrl.startsWith('/') ? msg.videoUrl : '/' + msg.videoUrl} />
+                                <span style={{ fontSize: 13, color: '#bbb', marginTop: 2 }}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                            ) : msg.audioUrl ? (
+                              <VoiceMessage audioUrl={msg.audioUrl} isOwn={isOwn} />
+                            ) : (
+                              <span
+                                data-msg-id={msg.id}
+                                style={isOwn
+                                  ? {
+                                      ...messageStyle,
+                                      display: 'inline-block',
+                                      background: '#229ed9',
+                                      color: '#fff',
+                                      borderRadius: '16px',
+                                      minWidth: 48,
+                                      wordBreak: 'break-word',
+                                      padding: '7px 14px',
+                                      fontSize: '15px',
+                                      boxShadow: '0 2px 6px #2222',
                                     }
-                                  } catch {
-                                    // Если не удалось распарсить JSON, используем статус
-                                    errorMessage = `Ошибка удаления: ${res.status} ${res.statusText}`;
-                                  }
-                                  
-                                  throw new Error(errorMessage);
-                                }
-                              } catch (err) {
-                                console.error('Error deleting message:', err);
-                                alert(err instanceof Error ? err.message : 'Не удалось удалить сообщение');
-                              }
-                            }}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: '#888',
-                              cursor: 'pointer',
-                              fontSize: 16,
-                              padding: 0,
-                              marginRight: 8,
-                              transition: 'color .15s',
-                              alignSelf: 'center',
-                            }}
-                            title="Удалить сообщение"
-                          >
-                            ×
-                          </button>
-                        )}
-                        {msg.videoUrl ? (
-                          <div style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: isOwn ? 'flex-end' : 'flex-start',
-                            gap: 2,
-                            margin: '2px 0',
-                            marginLeft: 0,
-                          }}>
-                            <VideoCircle src={msg.videoUrl.startsWith('/') ? msg.videoUrl : '/' + msg.videoUrl} />
-                            <span style={{ fontSize: 13, color: '#bbb', marginTop: 2 }}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                  : { ...messageStyle, background: '#222', display: 'inline-block', wordBreak: 'break-word', borderRadius: '16px', fontSize: '15px', padding: '7px 14px' }}
+                              >
+                                <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                                  <span style={{}}>{msg.text}</span>
+                                  {isOwn && (
+                                    <>
+                                      <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', marginLeft: 4, marginRight: 2, minWidth: 32, textAlign: 'right', letterSpacing: 0 }}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </>
+                                  )}
+                                </span>
+                              </span>
+                            )}
+
+                            {/* Action menu: только для собственных сообщений */}
+                            {isOwn && openActionMsgId === msg.id && (
+                              <div style={{
+                                position: 'absolute',
+                                top: isMobile ? -44 : -40,
+                                right: isOwn ? (isMobile ? 4 : 6) : 'auto',
+                                left: isOwn ? 'auto' : (isMobile ? 4 : 6),
+                                background: '#0f1113',
+                                border: '1px solid rgba(255,255,255,0.04)',
+                                padding: isMobile ? '6px 8px' : '8px',
+                                borderRadius: isMobile ? 10 : 12,
+                                display: 'flex',
+                                gap: isMobile ? 8 : 10,
+                                alignItems: 'center',
+                                boxShadow: '0 6px 20px rgba(0,0,0,0.6)',
+                                zIndex: 60,
+                                transformOrigin: 'right top'
+                              }} data-action-container={msg.id}>
+                                <button onClick={(e) => { try { e.stopPropagation(); } catch {} handleCopy(msg.text); }} title="Копировать" style={{ background: 'transparent', border: 'none', color: '#ddd', cursor: 'pointer', padding: isMobile ? 6 : 8, borderRadius: 8 }}>
+                                  {/* copy icon */}
+                                  <svg width={isMobile ? 16 : 18} height={isMobile ? 16 : 18} viewBox="0 0 24 24" fill="none"><path d="M16 1H4a2 2 0 00-2 2v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><rect x="8" y="5" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                </button>
+                                <button onClick={(e) => { try { e.stopPropagation(); } catch {} handleDeleteMessage(msg.id); }} title="Удалить" style={{ background: 'transparent', border: 'none', color: '#f66', cursor: 'pointer', padding: isMobile ? 6 : 8, borderRadius: 8 }}>
+                                  {/* trash icon */}
+                                  <svg width={isMobile ? 16 : 18} height={isMobile ? 16 : 18} viewBox="0 0 24 24" fill="none"><path d="M3 6h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 6v14a2 2 0 002 2h4a2 2 0 002-2V6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M10 11v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 11v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                </button>
+                              </div>
+                            )}
                           </div>
-                        ) : msg.audioUrl ? (
-                          <VoiceMessage audioUrl={msg.audioUrl} isOwn={isOwn} />
-                        ) : (
-                          <span
-                            style={isOwn
-                              ? {
-                                  ...messageStyle,
-                                  display: 'inline-block',
-                                  background: '#229ed9',
-                                  color: '#fff',
-                                  borderRadius: '16px',
-                                  minWidth: 48,
-                                  wordBreak: 'break-word',
-                                  padding: '7px 14px',
-                                  fontSize: '15px',
-                                  boxShadow: '0 2px 6px #2222',
-                                }
-                              : { ...messageStyle, background: '#222', display: 'inline-block', wordBreak: 'break-word', borderRadius: '16px', fontSize: '15px', padding: '7px 14px' }}
-                          >
-                            <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                              <span style={{}}>{msg.text}</span>
-                              {isOwn && (
-                                <>
-                                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', marginLeft: 4, marginRight: 2, minWidth: 32, textAlign: 'right', letterSpacing: 0 }}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                </>
-                              )}
-                            </span>
-                          </span>
-                        )}
+                        </div>
                       </div>
                     );
                   })}
