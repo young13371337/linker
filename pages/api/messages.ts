@@ -21,16 +21,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Получить сообщения по chatId
     const { chatId } = req.query;
     if (!chatId || typeof chatId !== 'string') return res.status(400).json({ error: 'chatId required' });
-    const messages = await prisma.message.findMany({
-      where: { chatId },
-      orderBy: { createdAt: 'asc' }
-    });
-    // Расшифровываем текст сообщений
-    const decryptedMessages = messages.map((msg: any) => ({
-      ...msg,
-      text: msg.text ? decryptMessage(msg.text, chatId) : ''
-    }));
-    return res.status(200).json({ messages: decryptedMessages });
+    try {
+      const messages = await prisma.message.findMany({
+        where: { chatId },
+        orderBy: { createdAt: 'asc' }
+      });
+      // Расшифровываем текст сообщений
+      const decryptedMessages = messages.map((msg: any) => ({
+        ...msg,
+        text: msg.text ? decryptMessage(msg.text, chatId) : ''
+      }));
+      return res.status(200).json({ messages: decryptedMessages });
+    } catch (err: any) {
+      console.error('Failed to fetch messages for chatId', chatId, err);
+      const payload: any = { error: 'Failed to fetch messages' };
+      if (process.env.NODE_ENV !== 'production') {
+        payload.details = err instanceof Error ? err.message : String(err);
+        payload.stack = err instanceof Error && err.stack ? err.stack : undefined;
+      }
+      return res.status(500).json(payload);
+    }
   }
 
   if (req.method === 'PUT') {
