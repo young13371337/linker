@@ -16,20 +16,18 @@ export const config = {
 
 function parseForm(req: NextApiRequest): Promise<{ fields: any; files: any }> {
   return new Promise((resolve, reject) => {
-  const { IncomingForm } = require('formidable');
-  const form = new IncomingForm({ 
-    multiples: false, 
-    allowEmptyFiles: false,
-    keepExtensions: true,
-    maxFileSize: 50 * 1024 * 1024, // 50MB максимум для видео
-    filter: function ({mimetype}: {mimetype?: string}) {
-      return mimetype && mimetype.includes('video');
-    }
-  });
-  form.parse(req, (err: any, fields: any, files: any) => {
-    if (err) reject(err);
-    else resolve({ fields, files });
-  });
+    // Use formidable v3+ API (callable) instead of deprecated IncomingForm
+    const formidable = require('formidable');
+    const form = formidable({
+      multiples: false,
+      allowEmptyFiles: false,
+      keepExtensions: true,
+      maxFileSize: 50 * 1024 * 1024, // 50MB
+    });
+    form.parse(req, (err: any, fields: any, files: any) => {
+      if (err) reject(err);
+      else resolve({ fields, files });
+    });
   });
 }
 
@@ -93,27 +91,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.status(401).json({ error: 'Unauthorized: no userId from session', session });
         return;
       }
-      const message = await prisma.message.create({
-        data: {
-          chatId,
-          senderId: userId,
-          text: '',
-          videoUrl,
-        },
-      });
+      let message: any = null;
+      let dbError: any = null;
+      let persisted = false;
+      try {
+        message = await prisma.message.create({
+          data: {
+            chatId,
+            senderId: userId,
+            text: '',
+            videoUrl,
+          },
+        });
+        persisted = !!(message && message.id);
+      } catch (err: any) {
+        console.error('[VIDEO UPLOAD] Prisma create failed', err);
+        dbError = { message: err?.message || String(err), stack: err?.stack };
+        message = { id: `temp-${Date.now()}`, chatId, senderId: userId, text: '', createdAt: new Date().toISOString() };
+        persisted = false;
+      }
       // Уведомляем подписчиков через Pusher
       try {
-        await pusher.trigger(`chat-${chatId}`, 'new-message', {
-          id: message.id,
-          sender: userId,
-          text: '',
-          createdAt: message.createdAt,
-          videoUrl,
-        });
+        const payload = { id: message.id, sender: userId, text: '', createdAt: message.createdAt, videoUrl, persisted, dbError };
+        await pusher.trigger(`chat-${chatId}`, 'new-message', payload);
       } catch (pErr) {
         console.error('[VIDEO UPLOAD] Pusher trigger failed:', pErr);
       }
-      res.status(200).json({ videoUrl, message });
+      res.status(200).json({ videoUrl, message, persisted, dbError });
     } catch (e) {
       console.error('Video upload error:', e);
       res.status(500).json({ error: 'Upload failed', details: String(e) });

@@ -5,6 +5,11 @@ import { getSession } from "next-auth/react";
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getSession({ req });
   if (!session || !session.user?.name) {
+    try {
+      console.warn('[FRIENDS/PENDING] Unauthorized — missing session. Request cookies/header:', { cookieHeader: req.headers.cookie || null, host: req.headers.host || null });
+    } catch (e) {
+      console.warn('[FRIENDS/PENDING] Failed to log headers for unauthorized request', e);
+    }
     return res.status(401).json({ error: "Unauthorized" });
   }
   const login = String(session.user.name);

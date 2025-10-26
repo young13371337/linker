@@ -8,7 +8,14 @@ type Body = { status?: 'online' | 'offline' | 'dnd' } | undefined;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions);
-  if (!session || !session.user?.id) return res.status(401).json({ error: 'Unauthorized' });
+  if (!session || !session.user?.id) {
+    try {
+      console.warn('[STATUS API] Unauthorized — missing session. Request cookies/header:', { cookieHeader: req.headers.cookie || null, host: req.headers.host || null });
+    } catch (e) {
+      console.warn('[STATUS API] Failed to log headers for unauthorized request', e);
+    }
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const body = req.body as Body;
@@ -31,3 +38,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: e.message || 'Internal server error' });
   }
 }
+ 

@@ -358,16 +358,21 @@ const ChatWithFriend: React.FC = () => {
                   credentials: 'include',
                   body: formData,
                 });
-                const data = await res.json();
-                if (data.videoUrl && data.message && data.message.id) {
-                  setMessages((prev) => [...prev, {
-                    id: data.message.id,
-                    sender: (session.user as any)?.id,
-                    text: '',
-                    createdAt: data.message.createdAt || new Date().toISOString(),
-                    audioUrl: undefined,
-                    videoUrl: data.videoUrl,
-                  }]);
+                if (!res.ok) {
+                  const txt = await res.text();
+                  alert('Ошибка отправки видео: ' + txt);
+                } else {
+                  const data = await res.json();
+                  if (data.videoUrl && data.message && data.message.id) {
+                    setMessages((prev) => [...prev, {
+                      id: data.message.id,
+                      sender: (session.user as any)?.id,
+                      text: '',
+                      createdAt: data.message.createdAt || new Date().toISOString(),
+                      audioUrl: undefined,
+                      videoUrl: data.videoUrl,
+                    }]);
+                  }
                 }
               } catch (err) {
                 alert('Ошибка отправки видео: ' + err);
@@ -610,21 +615,46 @@ const ChatWithFriend: React.FC = () => {
       credentials: 'include',
       body: JSON.stringify({ chatId, text: messageText })
     })
-      .then(res => res.json())
-      .then((data) => {
-        if (data.message) {
-          // Заменяем временное сообщение на реальное
-          setMessages(prev => prev.map(msg => 
-            msg.id === tempId ? {
-              id: data.message.id,
-              sender: data.message.senderId,
-              text: data.message.text,
-              createdAt: data.message.createdAt,
-              videoUrl: data.message.videoUrl,
-              audioUrl: data.message.audioUrl
-            } : msg
-          ));
+      .then(async res => {
+        const txt = await res.text();
+        let data: any = null;
+        try {
+          data = txt ? JSON.parse(txt) : {};
+        } catch (e) {
+          console.error('[SEND] Failed to parse response as JSON', txt, e);
+          throw new Error('Invalid JSON from /api/messages');
         }
+        return data;
+      })
+      .then((data) => {
+        if (!data || !data.message) {
+          console.error('[SEND] Unexpected response from /api/messages', data);
+          // mark temp message as failed
+          setMessages((prev: any[]) => prev.map((msg: any) => msg.id === tempId ? { ...msg, _failed: true } : msg));
+          return;
+        }
+        const serverMsg = data.message;
+        if (serverMsg.dbError || serverMsg.persisted === false) {
+          console.error('[SEND] DB write failed for message', serverMsg.dbError || serverMsg);
+          // mark temp message as failed visually
+          setMessages((prev: any[]) => prev.map((msg: any) => msg.id === tempId ? { ...msg, _failed: true } : msg));
+        }
+        // Replace temporary message with server-provided message data
+        setMessages((prev: any[]) => prev.map((msg: any) => 
+          msg.id === tempId ? {
+            id: serverMsg.id,
+            sender: serverMsg.senderId || serverMsg.sender,
+            text: serverMsg.text || messageText,
+            createdAt: serverMsg.createdAt || new Date().toISOString(),
+            videoUrl: serverMsg.videoUrl,
+            audioUrl: serverMsg.audioUrl,
+            _persisted: serverMsg.persisted !== false
+          } : msg
+        ));
+      })
+      .catch(err => {
+        console.error('[SEND] Network or parse error sending message', err);
+  setMessages((prev: any[]) => prev.map((msg: any) => msg.id === tempId ? { ...msg, _failed: true } : msg));
       });
   };
 
@@ -1300,16 +1330,21 @@ const ChatWithFriend: React.FC = () => {
                             credentials: 'include',
                             body: formData,
                           });
-                          const data = await res.json();
-                          if (data.audioUrl && data.message && data.message.id) {
-                            setMessages((prev) => [...prev, {
-                              id: data.message.id,
-                              sender: (session?.user as any)?.id,
-                              text: '',
-                              createdAt: data.message.createdAt || new Date().toISOString(),
-                              audioUrl: data.audioUrl,
-                              videoUrl: undefined,
-                            }]);
+                          if (!res.ok) {
+                            const txt = await res.text();
+                            alert('Ошибка отправки голосового: ' + txt);
+                          } else {
+                            const data = await res.json();
+                            if (data.audioUrl && data.message && data.message.id) {
+                              setMessages((prev) => [...prev, {
+                                id: data.message.id,
+                                sender: (session?.user as any)?.id,
+                                text: '',
+                                createdAt: data.message.createdAt || new Date().toISOString(),
+                                audioUrl: data.audioUrl,
+                                videoUrl: undefined,
+                              }]);
+                            }
                           }
                         } catch (err) {
                           alert('Ошибка отправки голосового: ' + err);
