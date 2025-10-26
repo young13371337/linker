@@ -358,16 +358,21 @@ const ChatWithFriend: React.FC = () => {
                   credentials: 'include',
                   body: formData,
                 });
-                const data = await res.json();
-                if (data.videoUrl && data.message && data.message.id) {
-                  setMessages((prev) => [...prev, {
-                    id: data.message.id,
-                    sender: (session.user as any)?.id,
-                    text: '',
-                    createdAt: data.message.createdAt || new Date().toISOString(),
-                    audioUrl: undefined,
-                    videoUrl: data.videoUrl,
-                  }]);
+                if (!res.ok) {
+                  const txt = await res.text();
+                  alert('Ошибка отправки видео: ' + txt);
+                } else {
+                  const data = await res.json();
+                  if (data.videoUrl && data.message && data.message.id) {
+                    setMessages((prev) => [...prev, {
+                      id: data.message.id,
+                      sender: (session.user as any)?.id,
+                      text: '',
+                      createdAt: data.message.createdAt || new Date().toISOString(),
+                      audioUrl: undefined,
+                      videoUrl: data.videoUrl,
+                    }]);
+                  }
                 }
               } catch (err) {
                 alert('Ошибка отправки видео: ' + err);
@@ -1300,16 +1305,21 @@ const ChatWithFriend: React.FC = () => {
                             credentials: 'include',
                             body: formData,
                           });
-                          const data = await res.json();
-                          if (data.audioUrl && data.message && data.message.id) {
-                            setMessages((prev) => [...prev, {
-                              id: data.message.id,
-                              sender: (session?.user as any)?.id,
-                              text: '',
-                              createdAt: data.message.createdAt || new Date().toISOString(),
-                              audioUrl: data.audioUrl,
-                              videoUrl: undefined,
-                            }]);
+                          if (!res.ok) {
+                            const txt = await res.text();
+                            alert('Ошибка отправки голосового: ' + txt);
+                          } else {
+                            const data = await res.json();
+                            if (data.audioUrl && data.message && data.message.id) {
+                              setMessages((prev) => [...prev, {
+                                id: data.message.id,
+                                sender: (session?.user as any)?.id,
+                                text: '',
+                                createdAt: data.message.createdAt || new Date().toISOString(),
+                                audioUrl: data.audioUrl,
+                                videoUrl: undefined,
+                              }]);
+                            }
                           }
                         } catch (err) {
                           alert('Ошибка отправки голосового: ' + err);

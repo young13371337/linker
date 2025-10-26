@@ -143,27 +143,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           sender: userId,
           text: '',
           createdAt: message.createdAt,
-          videoUrl,
-        });
-      } catch (pErr) {
-        console.error('[VIDEO UPLOAD] Pusher trigger failed:', pErr);
-      }
-      res.status(200).json({ videoUrl, message });
-    } catch (e) {
-      console.error('Video upload error:', e);
-      res.status(500).json({ error: 'Upload failed', details: String(e) });
-    }
-  } else if (req.method === 'DELETE') {
-    // Делегируем удаление сообщения на единый endpoint /api/messages/[id]
-    // Этот блок сохранлён для совместимости — перенаправляем на основной обработчик
-    try {
-      const { id } = req.query;
-      if (!id || typeof id !== 'string') {
-        res.status(400).json({ error: 'No message id provided' });
-        return;
-      }
-      // Переиспользуем основной обработчик: перенаправляем запрос
-      // Клиент ожидает 204 или ошибку
+              let message;
+              try {
+                message = await prisma.message.create({
+                  data: {
+                    chatId,
+                    senderId: userId,
+                    text: '',
+                    videoUrl: videoUrl,
+                    videoBase64: (req as any)._videoBase64 || null,
+                    videoMime: (req as any)._videoMime || null,
+                  },
+                });
+                // Update videoUrl to point to our DB-serving endpoint
+                const dbUrl = `/api/media/db/${message.id}/video`;
+                await prisma.message.update({ where: { id: message.id }, data: { videoUrl: dbUrl } });
+                message.videoUrl = dbUrl;
+              } catch (prismaErr) {
+                console.error('[VIDEO UPLOAD] Prisma create with base64 failed, falling back:', prismaErr);
+                // Fallback: create the message without base64 fields so it won't crash on older schema
+                message = await prisma.message.create({
+                  data: {
+                    chatId,
+                    senderId: userId,
+                    text: '',
+                    videoUrl,
+                  },
+                });
+              }
       const fetch = require('node-fetch');
       const serverRes = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/messages/${id}`, { method: 'DELETE', headers: { cookie: req.headers.cookie || '' } });
       const text = await serverRes.text();
