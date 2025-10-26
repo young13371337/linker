@@ -646,15 +646,19 @@ const ChatWithFriend: React.FC = () => {
           // mark temp message as failed visually
           setMessages((prev: any[]) => prev.map((msg: any) => msg.id === tempId ? { ...msg, _failed: true } : msg));
         }
-        // Replace temporary message with server-provided message data
+        // Update the temporary message in-place (keep its key) and attach server id/info
+        // This prevents React from remounting the DOM node (no layout jump).
         setMessages((prev: any[]) => prev.map((msg: any) => 
           msg.id === tempId ? {
-            id: serverMsg.id,
-            sender: serverMsg.senderId || serverMsg.sender,
-            text: serverMsg.text || messageText,
-            createdAt: serverMsg.createdAt || new Date().toISOString(),
-            videoUrl: serverMsg.videoUrl,
-            audioUrl: serverMsg.audioUrl,
+            // keep the temp id so React key doesn't change
+            id: msg.id,
+            // store server id separately for future reference
+            _serverId: serverMsg.id,
+            sender: serverMsg.senderId || serverMsg.sender || msg.sender,
+            text: serverMsg.text || messageText || msg.text,
+            createdAt: serverMsg.createdAt || msg.createdAt || new Date().toISOString(),
+            videoUrl: serverMsg.videoUrl || msg.videoUrl,
+            audioUrl: serverMsg.audioUrl || msg.audioUrl,
             _persisted: serverMsg.persisted !== false
           } : msg
         ));
