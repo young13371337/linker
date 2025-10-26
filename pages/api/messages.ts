@@ -22,13 +22,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Получить сообщения по chatId
     const { chatId } = req.query;
     if (!chatId || typeof chatId !== 'string') return res.status(400).json({ error: 'chatId required' });
-    const messages = await prisma.message.findMany({
-      where: { chatId },
-      orderBy: { createdAt: 'asc' }
-    });
-    // Temporarily return plain text (encryption is disabled)
-    const plainMessages = messages.map((msg: any) => ({ ...msg, text: msg.text || '' }));
-    return res.status(200).json({ messages: plainMessages });
+    try {
+      const messages = await prisma.message.findMany({
+        where: { chatId },
+        orderBy: { createdAt: 'asc' }
+      });
+      // Temporarily return plain text (encryption is disabled)
+      const plainMessages = messages.map((msg: any) => ({ ...msg, text: msg.text || '' }));
+      return res.status(200).json({ messages: plainMessages });
+    } catch (err: any) {
+      console.error('[MESSAGES][GET] failed', err);
+      const payload: any = { error: 'Failed to fetch messages' };
+      if (process.env.NODE_ENV !== 'production') {
+        payload.details = err?.message;
+        payload.stack = err?.stack;
+      }
+      return res.status(500).json(payload);
+    }
   }
 
   if (req.method === 'PUT') {
@@ -42,41 +52,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ ok: true });
   }
   if (req.method === 'POST') {
-    const { chatId, text } = req.body;
-    if (!chatId || !text) return res.status(400).json({ error: 'chatId and text required' });
-    // Store plain text for now (no encryption)
-    const message = await prisma.message.create({
-      data: {
-        chatId,
-        senderId: user.id,
-        text,
-        createdAt: new Date()
-      }
-    });
+    try {
+      const { chatId, text } = req.body;
+      if (!chatId || !text) return res.status(400).json({ error: 'chatId and text required' });
+      // Store plain text for now (no encryption)
+      const message = await prisma.message.create({
+        data: {
+          chatId,
+          senderId: user.id,
+          text,
+          createdAt: new Date()
+        }
+      });
 
     // Получить всех участников чата
     const chat = await prisma.chat.findUnique({
       where: { id: chatId },
       include: { users: true }
     });
-    if (chat) {
-      for (const u of chat.users) {
-        if (u.id !== user.id) {
-          // Увеличить счетчик непрочитанных для каждого пользователя, кроме отправителя
-          await prisma.chatUnread.upsert({
-            where: { chatId_userId: { chatId, userId: u.id } },
-            update: { count: { increment: 1 } },
-            create: { chatId, userId: u.id, count: 1 }
-          });
+      if (chat) {
+        for (const u of chat.users) {
+          if (u.id !== user.id) {
+            // Увеличить счетчик непрочитанных для каждого пользователя, кроме отправителя
+            await prisma.chatUnread.upsert({
+              where: { chatId_userId: { chatId, userId: u.id } },
+              update: { count: { increment: 1 } },
+              create: { chatId, userId: u.id, count: 1 }
+            });
+          }
         }
       }
-    }
 
-    // Отправить новое сообщение через Pusher
-  // Для Pusher и ответа расшифровываем текст
-  const messageToSend = { ...message, text };
-  await pusher.trigger(`chat-${chatId}`, 'new-message', messageToSend);
-  return res.status(200).json({ message: messageToSend });
+      // Отправить новое сообщение через Pusher
+      const messageToSend = { ...message, text };
+      await pusher.trigger(`chat-${chatId}`, 'new-message', messageToSend);
+      return res.status(200).json({ message: messageToSend });
+    } catch (err: any) {
+      console.error('[MESSAGES][POST] failed', err);
+      const payload: any = { error: 'Failed to send message' };
+      if (process.env.NODE_ENV !== 'production') {
+        payload.details = err?.message;
+        payload.stack = err?.stack;
+      }
+      return res.status(500).json(payload);
+    }
   }
 }
 
