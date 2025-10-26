@@ -32,8 +32,8 @@ export default function Sidebar() {
     // helper to fetch pending count (extracted so we can call it from pusher handler)
     const fetchPending = async () => {
       try {
-  const res = await fetch("/api/friends/pending", { credentials: 'include' });
-  const data = await res.json().catch(() => ({}));
+        const res = await fetch("/api/friends/pending");
+        const data = await res.json();
         if (mounted) setPendingCount(data.count || 0);
       } catch (err) {
         console.error(err);

@@ -35,9 +35,9 @@ const ChatPage: React.FC = () => {
     setChats(chatsList);
     console.log('chatsList', chatsList);
     // Получить последние сообщения для каждого чата
-  for (const chat of chatsList) {
-  const msgRes = await fetch(`/api/messages?chatId=${chat.id}`, { credentials: 'include' });
-  const msgData = await msgRes.json().catch(() => ({ messages: [] }));
+    for (const chat of chatsList) {
+      const msgRes = await fetch(`/api/messages?chatId=${chat.id}`);
+      const msgData = await msgRes.json();
       if (Array.isArray(msgData.messages) && msgData.messages.length > 0) {
         const lastMsg = msgData.messages[msgData.messages.length - 1];
         setLastMessages(prev => ({ ...prev, [chat.id]: {

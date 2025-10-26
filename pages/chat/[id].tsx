@@ -358,21 +358,16 @@ const ChatWithFriend: React.FC = () => {
                   credentials: 'include',
                   body: formData,
                 });
-                if (!res.ok) {
-                  const txt = await res.text();
-                  alert('Ошибка отправки видео: ' + txt);
-                } else {
-                  const data = await res.json();
-                  if (data.videoUrl && data.message && data.message.id) {
-                    setMessages((prev) => [...prev, {
-                      id: data.message.id,
-                      sender: (session.user as any)?.id,
-                      text: '',
-                      createdAt: data.message.createdAt || new Date().toISOString(),
-                      audioUrl: undefined,
-                      videoUrl: data.videoUrl,
-                    }]);
-                  }
+                const data = await res.json();
+                if (data.videoUrl && data.message && data.message.id) {
+                  setMessages((prev) => [...prev, {
+                    id: data.message.id,
+                    sender: (session.user as any)?.id,
+                    text: '',
+                    createdAt: data.message.createdAt || new Date().toISOString(),
+                    audioUrl: undefined,
+                    videoUrl: data.videoUrl,
+                  }]);
                 }
               } catch (err) {
                 alert('Ошибка отправки видео: ' + err);
@@ -448,34 +443,28 @@ const ChatWithFriend: React.FC = () => {
           setChatId(data.chat.id);
           // Получить сообщения
           fetch(`/api/messages?chatId=${data.chat.id}`, { credentials: 'include' })
-            .then(async res => {
-              const text = await res.text();
-              try {
-                const json = JSON.parse(text || '{}');
-                if (Array.isArray(json.messages)) {
-                  const msgs = json.messages.map((msg: any) => ({
-                    id: msg.id,
-                    sender: msg.senderId,
-                    text: msg.text,
-                    createdAt: msg.createdAt,
-                    audioUrl: msg.audioUrl || undefined,
-                    videoUrl: msg.videoUrl || undefined
-                  }));
-                  setMessages(msgs);
-                  // Прокручиваем в конец после загрузки сообщений
-                  setTimeout(() => {
-                    if (chatScrollRef.current) {
-                      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-                    }
-                  }, 100);
-                  try { localStorage.setItem('chat-messages', JSON.stringify(msgs)); } catch {}
-                } else {
-                  console.error('[messages] unexpected JSON', json);
-                  setMessages([]);
-                  try { localStorage.removeItem('chat-messages'); } catch {}
-                }
-              } catch (e) {
-                console.error('[messages] non-json response', text);
+            .then(res => res.json())
+            .then(data => {
+              if (Array.isArray(data.messages)) {
+                const msgs = data.messages.map((msg: any) => ({
+                  id: msg.id,
+                  sender: msg.senderId,
+                  text: msg.text,
+                  createdAt: msg.createdAt,
+                  audioUrl: msg.audioUrl || undefined,
+                  videoUrl: msg.videoUrl || undefined
+                }));
+                setMessages(msgs);
+                // Прокручиваем в конец после загрузки сообщений
+                setTimeout(() => {
+                  if (chatScrollRef.current) {
+                    chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+                  }
+                }, 100);
+                try {
+                  localStorage.setItem('chat-messages', JSON.stringify(msgs));
+                } catch {}
+              } else {
                 setMessages([]);
                 try { localStorage.removeItem('chat-messages'); } catch {}
               }
@@ -1311,21 +1300,16 @@ const ChatWithFriend: React.FC = () => {
                             credentials: 'include',
                             body: formData,
                           });
-                          if (!res.ok) {
-                            const txt = await res.text();
-                            alert('Ошибка отправки голосового: ' + txt);
-                          } else {
-                            const data = await res.json();
-                            if (data.audioUrl && data.message && data.message.id) {
-                              setMessages((prev) => [...prev, {
-                                id: data.message.id,
-                                sender: (session?.user as any)?.id,
-                                text: '',
-                                createdAt: data.message.createdAt || new Date().toISOString(),
-                                audioUrl: data.audioUrl,
-                                videoUrl: undefined,
-                              }]);
-                            }
+                          const data = await res.json();
+                          if (data.audioUrl && data.message && data.message.id) {
+                            setMessages((prev) => [...prev, {
+                              id: data.message.id,
+                              sender: (session?.user as any)?.id,
+                              text: '',
+                              createdAt: data.message.createdAt || new Date().toISOString(),
+                              audioUrl: data.audioUrl,
+                              videoUrl: undefined,
+                            }]);
                           }
                         } catch (err) {
                           alert('Ошибка отправки голосового: ' + err);
