@@ -1,9 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import prisma from "../../../lib/prisma";
-import { getSession } from "next-auth/react";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getSession({ req });
+  // Prefer getServerSession on server-side API routes — more explicit and reliable
+  const session = await getServerSession(req, res, authOptions as any);
   if (!session || !session.user?.name) {
     try {
       console.warn('[FRIENDS/PENDING] Unauthorized — missing session. Request cookies/header:', { cookieHeader: req.headers.cookie || null, host: req.headers.host || null });
