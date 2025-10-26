@@ -109,7 +109,7 @@ const ChatWithFriend: React.FC = () => {
     const userId = (session.user as any)?.id;
     if (!id || !userId) return;
 
-    fetch(`/api/profile?userId=${id}`)
+    fetch(`/api/profile?userId=${id}`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => setFriend(data?.user ? {
         id: data.user.id,
@@ -118,12 +118,12 @@ const ChatWithFriend: React.FC = () => {
         role: data.user.role || undefined
       } : null));
 
-    fetch(`/api/chats?userIds=${userId},${id}`)
+    fetch(`/api/chats?userIds=${userId},${id}`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         if (data?.chat?.id) {
           setChatId(data.chat.id);
-          fetch(`/api/messages?chatId=${data.chat.id}`)
+          fetch(`/api/messages?chatId=${data.chat.id}`, { credentials: 'include' })
             .then(res => res.json())
             .then(data => setMessages(Array.isArray(data.messages) ? data.messages : []));
         }
