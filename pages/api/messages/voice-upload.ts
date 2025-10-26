@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 
 import prisma from '../../../lib/prisma';
 import { getServerSession } from 'next-auth/next';

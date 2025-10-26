@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import { getStoragePath } from '../../../../lib/storage';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
@@ -27,9 +28,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const storageDir = getStoragePath('video');
   const fullPath = path.join(storageDir, safeName);
-    console.log('[MEDIA][VIDEO] serving path:', fullPath, 'storageDir:', storageDir);
+    console.log('[MEDIA][VIDEO] serving path:', fullPath, 'storageDir:', storageDir, 'host:', os.hostname(), 'pid:', process.pid);
     if (!fs.existsSync(fullPath)) {
-      console.warn('[MEDIA][VIDEO] File not found at expected path:', fullPath);
+      console.warn('[MEDIA][VIDEO] File not found at expected path:', fullPath, 'host:', os.hostname(), 'pid:', process.pid);
       return res.status(404).json({ error: 'File not found' });
     }
     const stat = fs.statSync(fullPath);

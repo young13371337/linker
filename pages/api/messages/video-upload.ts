@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import { getStoragePath, ensureDir } from '../../../lib/storage';
 
 import prisma from '../../../lib/prisma';
@@ -109,7 +110,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await fs.promises.writeFile(filePath, fileBuffer);
 
   videoUrl = `/api/media/video/${fileName}`;
-      console.log('[VIDEO UPLOAD] File saved as:', filePath);
+  console.log('[VIDEO UPLOAD] File saved as:', filePath, 'host:', os.hostname(), 'pid:', process.pid);
       } catch (error: any) {
           console.error('[VIDEO UPLOAD] Error:', error);
           res.status(500).json({ error: 'Video processing failed', details: error.message || 'Unknown error' });
