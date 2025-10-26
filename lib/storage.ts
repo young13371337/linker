@@ -31,10 +31,19 @@ function formatErr(err: unknown) {
  * to be created (in which case, the tmpdir will still be returned as last resort).
  */
 export function getStoragePath(subfolder: string) {
+  // Cache the selected base directory per-process so repeated calls are consistent
+  // and we don't race selecting different candidates across requests.
+  if ((getStoragePath as any)._selectedBase) {
+    const base = (getStoragePath as any)._selectedBase as string;
+    return path.join(base, 'linker', subfolder);
+  }
+
   const candidates = [] as string[];
 
-  if (process.env.UPLOAD_DIR) candidates.push(process.env.UPLOAD_DIR);
-  // Try repository-local storage folder next (useful on VPS / Docker with a mounted volume)
+  // If operator explicitly set FORCE_REPO_STORAGE=1, prefer repo-local storage
+  const forceRepo = !!process.env.FORCE_REPO_STORAGE;
+  if (process.env.UPLOAD_DIR && !forceRepo) candidates.push(process.env.UPLOAD_DIR);
+  // Repo-local storage
   try {
     candidates.push(path.join(process.cwd(), 'storage'));
   } catch (e) {
@@ -54,8 +63,9 @@ export function getStoragePath(subfolder: string) {
       try {
         fs.writeFileSync(probe, 'ok');
         fs.unlinkSync(probe);
-        // successful write -> return this path
+        // successful write -> select this path and cache base
         console.log(`[STORAGE] selected writable storage candidate: ${candidate}`);
+        (getStoragePath as any)._selectedBase = base;
         return candidate;
       } catch (writeErr) {
         // can't write here, continue to next candidate
@@ -73,6 +83,7 @@ export function getStoragePath(subfolder: string) {
   try {
     fs.mkdirSync(fallback, { recursive: true });
     console.log(`[STORAGE] falling back to tmpdir storage: ${fallback}`);
+    (getStoragePath as any)._selectedBase = os.tmpdir();
   } catch (e) {
     console.error('[STORAGE] Failed to create fallback tmp dir', fallback, formatErr(e));
   }
