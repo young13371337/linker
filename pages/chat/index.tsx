@@ -91,8 +91,9 @@ const ChatPage: React.FC = () => {
     let title = chat.name;
     let avatar = '/window.svg';
     let role;
+    // find other participant once and reuse
+    const other = !isGroup ? chat.users.find(u => u.id !== (session?.user as any)?.id) : null;
     if (!isGroup) {
-      const other = chat.users.find(u => u.id !== (session?.user as any)?.id);
       if (other) {
         title = other.login;
         avatar = other.avatar || '/window.svg';
@@ -103,13 +104,18 @@ const ChatPage: React.FC = () => {
       const me = chat.users.find(u => u.id === (session?.user as any)?.id);
       role = me?.role;
     }
+  const bgUrl = (other as any)?.backgroundUrl || undefined;
+    const itemBackground = bgUrl
+      ? `linear-gradient(rgba(10,11,13,0.6), rgba(10,11,13,0.6)), url(${bgUrl}) center/cover no-repeat`
+      : '#191a1e';
+
     return (
       <a
         key={chat.id}
         href={`/chat/${isGroup ? chat.id : chat.users.find(u => u.id !== (session?.user as any)?.id)?.id}`}
         style={{
           display: 'flex', alignItems: 'center', gap: 18, padding: '18px 28px', borderRadius: 14,
-          background: '#191a1e', boxShadow: '0 2px 8px #2222',
+          background: itemBackground, boxShadow: '0 2px 8px #2222',
           transition: 'background 0.2s', textDecoration: 'none', cursor: 'pointer'
         }}
       >

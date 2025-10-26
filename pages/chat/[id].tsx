@@ -245,7 +245,7 @@ const ChatWithFriend: React.FC = () => {
   const [chatId, setChatId] = useState<string | null>(null);
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
   const [openActionMsgId, setOpenActionMsgId] = useState<string | null>(null);
-  const touchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTapRef = useRef<number | null>(null);
   const [isTyping, setIsTyping] = useState<string | null>(null);
   const [isSpeaking, setIsSpeaking] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
@@ -1027,17 +1027,20 @@ const ChatWithFriend: React.FC = () => {
                               if (isMobile) return;
                               setOpenActionMsgId(prev => prev === msg.id ? null : msg.id);
                             }}
-                            onTouchStart={() => {
-                              // Моб: старт таймера для long-press
+                            onTouchEnd={(e) => {
+                              // Моб: открываем меню по двойному тапу (2 клика)
                               if (!isMobile) return;
-                              if (touchTimerRef.current) clearTimeout(touchTimerRef.current);
-                              touchTimerRef.current = setTimeout(() => setOpenActionMsgId(msg.id), 700);
-                            }}
-                            onTouchEnd={() => {
-                              if (touchTimerRef.current) { clearTimeout(touchTimerRef.current); touchTimerRef.current = null; }
-                            }}
-                            onTouchMove={() => {
-                              if (touchTimerRef.current) { clearTimeout(touchTimerRef.current); touchTimerRef.current = null; }
+                              try { e.stopPropagation(); } catch {}
+                              const now = Date.now();
+                              const last = lastTapRef.current;
+                              const DOUBLE_TAP_MS = 350;
+                              if (last && (now - last) <= DOUBLE_TAP_MS) {
+                                // double tap — toggle menu
+                                setOpenActionMsgId(prev => prev === msg.id ? null : msg.id);
+                                lastTapRef.current = null;
+                              } else {
+                                lastTapRef.current = now;
+                              }
                             }}
                             style={{ display: 'inline-block' }}
                           >
