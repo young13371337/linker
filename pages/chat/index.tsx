@@ -17,6 +17,7 @@ interface LastMessage {
   createdAt: string;
   senderId: string;
   audioUrl?: string;
+  videoUrl?: string;
 }
 
 const ChatPage: React.FC = () => {
@@ -45,7 +46,8 @@ const ChatPage: React.FC = () => {
           text: lastMsg.text || '',
           createdAt: lastMsg.createdAt,
           senderId: lastMsg.senderId,
-          audioUrl: lastMsg.audioUrl
+          audioUrl: lastMsg.audioUrl,
+          videoUrl: lastMsg.videoUrl
         }}));
       } else {
         setLastMessages(prev => ({ ...prev, [chat.id]: null }));
@@ -151,7 +153,12 @@ const ChatPage: React.FC = () => {
               `}</style>
             </span>
           ) : lastMessages[chat.id] && (
-            lastMessages[chat.id]?.audioUrl ? (
+            lastMessages[chat.id]?.videoUrl ? (
+              <span style={{fontSize: 13, color: '#4fc3f7', display:'flex',alignItems:'center',gap:6}}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{display:'inline'}} xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="14" rx="2" fill="#4fc3f7"/><polygon points="10,9 16,12 10,15" fill="#0b1116"/></svg>
+                Видеосообщение
+              </span>
+            ) : lastMessages[chat.id]?.audioUrl ? (
               <span style={{fontSize: 13, color: '#4fc3f7', display:'flex',alignItems:'center',gap:6}}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{display:'inline'}} xmlns="http://www.w3.org/2000/svg"><path d="M8 5v14l11-7z" fill="#4fc3f7"/></svg>
                 Голосовое сообщение

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import prisma from "../../lib/prisma";
+import { pusher } from "../../lib/pusher";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Получить профиль пользователя, друзей, устройства
@@ -36,19 +37,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             where: { id: fr.friendId },
             include: { sessions: true }
           });
-          return friend ? {
+          if (!friend) return null;
+          const savedF = (friend as any).status;
+          const allowedF = ['online', 'offline', 'dnd'];
+          const friendStatus = (typeof savedF === 'string' && allowedF.includes(savedF))
+            ? savedF
+            : ((friend.sessions || []).some((s: any) => {
+                if (!s.isActive) return false;
+                const created = new Date(s.createdAt).getTime();
+                const now = Date.now();
+                return now - created < 2 * 60 * 1000; // 2 минуты
+              }) ? 'online' : 'offline');
+          return {
             id: friend.id,
             login: friend.login,
             avatar: friend.avatar,
             role: friend.role,
-            // Статус всегда вычисляется только по сессиям
-            status: (friend.sessions || []).some((s: any) => {
-              if (!s.isActive) return false;
-              const created = new Date(s.createdAt).getTime();
-              const now = Date.now();
-              return now - created < 2 * 60 * 1000; // 2 минуты
-            }) ? 'online' : 'offline'
-          } : null;
+            status: friendStatus
+          };
         })
       );
       // Получить входящие заявки (FriendRequest), показать login, role, isOnline
@@ -75,17 +81,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
       // verified: удалено полностью
       if (!user) return res.status(404).json({ error: "User not found" });
-      // Normalize main user: include status field if available, otherwise compute from sessions
-      // Статус всегда вычисляется только по сессиям
-      // Если статус явно установлен (например, 'dnd'), используем его, иначе вычисляем по сессиям
-      const mainStatus = (user as any).status && ['dnd'].includes((user as any).status)
-        ? (user as any).status
-        : (user.sessions || []).some((s: any) => {
+      // If user has an explicit saved status (online/offline/dnd), use it.
+      // Otherwise compute online/offline from active sessions.
+      const saved = (user as any).status;
+      const allowed = ['online', 'offline', 'dnd'];
+      const mainStatus = (typeof saved === 'string' && allowed.includes(saved))
+        ? saved
+        : ((user.sessions || []).some((s: any) => {
             if (!s.isActive) return false;
             const created = new Date(s.createdAt).getTime();
             const now = Date.now();
             return now - created < 2 * 60 * 1000;
-          }) ? 'online' : 'offline';
+          }) ? 'online' : 'offline');
       return res.status(200).json({ user: {
         ...(user as any),
         status: mainStatus,
@@ -100,7 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Ошибочный дублирующийся код удалён. Всё внутри handler.
   // Обновить профиль (описание, аватар)
   if (req.method === "POST") {
-  const { userId, description, avatar, twoFactorToken, password, backgroundUrl, bgOpacity, favoriteTrackUrl, login: newLogin } = req.body;
+  const { userId, description, avatar, twoFactorToken, password, backgroundUrl, bgOpacity, favoriteTrackUrl, login: newLogin, status } = req.body;
     if (!userId) return res.status(400).json({ error: "userId required" });
     try {
       const data: any = {};
@@ -110,6 +117,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (typeof backgroundUrl === "string" || backgroundUrl === null) data.backgroundUrl = backgroundUrl;
   if (typeof bgOpacity === "number") data.bgOpacity = bgOpacity;
       if (typeof favoriteTrackUrl === "string" || favoriteTrackUrl === null) data.favoriteTrackUrl = favoriteTrackUrl;
+      // Persist explicit user status if provided (online/offline/dnd)
+      if (typeof status === 'string') {
+        const allowed = ['online', 'offline', 'dnd'];
+        if (allowed.includes(status)) data.status = status;
+      }
       if (typeof password === "string" && password.length > 0) {
         const { forbiddenPasswords } = require('../../lib/forbidden-passwords');
         if (forbiddenPasswords.includes(password)) {
@@ -126,10 +138,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
         data.login = newLogin;
       }
+      // If status is being updated, check previous value so we can broadcast change
+      let prevStatus: string | null = null;
+      if (typeof data.status !== 'undefined') {
+        const prev = await prisma.user.findUnique({ where: { id: userId } }) as any;
+        prevStatus = prev?.status || null;
+      }
       const user = await prisma.user.update({
         where: { id: userId },
         data,
       });
+
+      // Broadcast status change if it was updated and actually changed
+      try {
+        if (typeof data.status !== 'undefined') {
+          const newStatus = (user as any).status || null;
+          if (newStatus !== prevStatus) {
+            try {
+              await pusher.trigger(`user-${userId}`, 'status-changed', { userId, status: newStatus });
+            } catch (pErr) {
+              console.error('[PROFILE] Failed to trigger pusher status-changed:', String(pErr));
+            }
+          }
+        }
+      } catch (bErr) {
+        console.error('[PROFILE] Broadcast error:', String(bErr));
+      }
+
       return res.status(200).json({ user });
     } catch (e: any) {
       return res.status(500).json({ error: e.message || "Internal server error" });

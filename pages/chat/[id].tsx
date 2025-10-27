@@ -1,7 +1,7 @@
 import Pusher from 'pusher-js';
 import React, { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
-import { FaPaperPlane, FaCheck, FaCheckDouble } from 'react-icons/fa';
+import { FaPaperPlane } from 'react-icons/fa';
 import { useRouter } from 'next/router';
 import UserStatus, { statusLabels } from '../../components/UserStatus';
 import { useSession } from 'next-auth/react';
@@ -244,6 +244,7 @@ const ChatWithFriend: React.FC = () => {
   const [friend, setFriend] = useState<{id: string, login?: string, name?: string, avatar?: string | null, role?: string, status?: string} | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
+  const [viewers, setViewers] = useState<Set<string>>(new Set());
   const [openActionMsgId, setOpenActionMsgId] = useState<string | null>(null);
   const lastTapRef = useRef<number | null>(null);
   const [isTyping, setIsTyping] = useState<string | null>(null);
@@ -660,6 +661,7 @@ const ChatWithFriend: React.FC = () => {
         // Автоматически прокручиваем к новому сообщению
         setTimeout(scrollToBottom, 50);
       };
+      // mark-read/unread handlers removed (feature disabled)
       // Обработка события "печатает"
       const onTyping = (data: { userId: string, name: string }) => {
         try {
@@ -672,8 +674,23 @@ const ChatWithFriend: React.FC = () => {
           console.error('Error handling typing event:', e);
         }
       };
-      chatChannel.bind('new-message', onNewMessage);
-      chatChannel.bind('typing', onTyping);
+    chatChannel.bind('new-message', onNewMessage);
+    chatChannel.bind('typing', onTyping);
+      // viewer-state: { userId, action: 'enter' | 'leave' }
+      const onViewer = (data: any) => {
+        try {
+          if (!data || !data.userId) return;
+          setViewers(prev => {
+            const next = new Set(prev);
+            if (data.action === 'enter') next.add(data.userId);
+            else if (data.action === 'leave') next.delete(data.userId);
+            return next;
+          });
+        } catch (e) {
+          console.error('[PUSHER] viewer-state handler error', e);
+        }
+      };
+      chatChannel.bind('viewer-state', onViewer);
 
       // cleanup
       return () => {
@@ -681,6 +698,7 @@ const ChatWithFriend: React.FC = () => {
           try { userChannel.unbind('status-changed', onStatus); } catch (e) {}
           try { chatChannel.unbind('new-message', onNewMessage); } catch (e) {}
           try { chatChannel.unbind('typing', onTyping); } catch (e) {}
+          try { chatChannel.unbind('viewer-state', onViewer); } catch (e) {}
           try { pusherClient.unsubscribe(`user-${friend.id}`); } catch (e) {}
           try { pusherClient.unsubscribe(`chat-${chatId}`); } catch (e) {}
         } catch (e) {}
@@ -891,6 +909,8 @@ const ChatWithFriend: React.FC = () => {
           .action-menu {
             animation: actionPop 0.18s cubic-bezier(.2,.9,.2,1) both;
           }
+
+  // Read/delivered feature removed — no client-side mark-read/mark-unread behavior
           .action-btn {
             display: inline-flex;
             align-items: center;
@@ -1179,6 +1199,7 @@ const ChatWithFriend: React.FC = () => {
                             )}
                           </div>
                         </div>
+
                       </div>
                     );
                   })}

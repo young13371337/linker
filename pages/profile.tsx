@@ -648,7 +648,7 @@ export default function ProfilePage() {
         >
           <img src="/news-images/update.jpg" alt="Новое обновление" style={{ width: '100%', height: 70, objectFit: 'cover', display: 'block', borderTopLeftRadius: 12, borderTopRightRadius: 12 }} />
           <div style={{ padding: '10px 12px 8px 12px', textAlign: 'center', width: '100%' }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', letterSpacing: 0.1 }}>Обновление v6.0</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', letterSpacing: 0.1 }}>v7.0</div>
           </div>
         </div>
         {/* Можно добавить другие новости ниже */}

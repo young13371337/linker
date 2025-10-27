@@ -38,6 +38,7 @@ model User {
   twoFactorEnabled Boolean @default(false)
   role           String       @default("user")
   backgroundUrl  String?
+  status         String?
   chatUnreads    ChatUnread[]
   friends        Friend[]     @relation("UserFriends")
   sentMessages   Message[]    @relation("UserSentMessages")
@@ -76,6 +77,10 @@ model Message {
   createdAt DateTime @default(now())
   audioUrl  String?
   videoUrl  String?
+   audioBase64 String?   // new
+  audioMime   String?   // new
+  videoBase64 String?   // new
+  videoMime   String?   // new
   chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
   sender    User     @relation("UserSentMessages", fields: [senderId], references: [id], onDelete: Cascade)
 }
