@@ -134,7 +134,7 @@ export default function FriendsPage() {
           </div>
           {loading && <div style={{ color: "#bbb", marginTop: 12, fontSize: 16 }}>Поиск...</div>}
           {Array.isArray(searchResult) && searchResult.length === 0 && !loading && (
-            <div style={{ background: "none", borderRadius: 0, padding: "12px 18px", marginTop: 22, textAlign: "center", color: "#bbb", fontSize: 17, boxShadow: "none" }}>Нет пользователя с таким логином</div>
+            <div style={{ background: "none", borderRadius: 0, padding: "12px 18px", marginTop: 22, textAlign: "center", color: "#bbb", fontSize: 17, boxShadow: "none" }}></div>
           )}
           {Array.isArray(searchResult) && searchResult.length > 0 && (
             <div style={{ marginTop: 14 }}>
