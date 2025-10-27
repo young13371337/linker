@@ -255,7 +255,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		} catch (pErr) {
 			console.error('[VOICE UPLOAD] Pusher trigger failed:', pErr);
 		}
-		res.status(200).json({ [urlField]: urlValue, message, persisted, dbError });
+		// Include debug info so client/dev can verify the file on disk
+		try {
+			const savedPath = path.join(getStoragePath('voice'), path.basename(urlValue));
+			const fileSaved = fs.existsSync(savedPath);
+			res.status(200).json({ [urlField]: urlValue, message, persisted, dbError, fileName: path.basename(savedPath), fileSaved });
+		} catch (err) {
+			console.error('[VOICE UPLOAD] Error checking saved file existence:', err);
+			res.status(200).json({ [urlField]: urlValue, message, persisted, dbError });
+		}
 	} catch (e) {
 		console.error('Voice upload error:', e);
 		res.status(500).json({ error: 'Upload failed', details: String(e) });

@@ -38,8 +38,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const fullPath = path.join(storageDir, safeName);
     console.log('[MEDIA][VIDEO] serving path:', fullPath, 'storageDir:', storageDir, 'host:', os.hostname(), 'pid:', process.pid);
     if (!fs.existsSync(fullPath)) {
-      console.warn('[MEDIA][VIDEO] File not found at expected path:', fullPath, 'host:', os.hostname(), 'pid:', process.pid);
-      return res.status(404).json({ error: 'File not found' });
+      let listing: string[] = [];
+      try {
+        listing = fs.readdirSync(storageDir);
+      } catch (re) {
+        console.warn('[MEDIA][VIDEO] Failed to read storageDir listing:', storageDir, String(re));
+      }
+      console.warn('[MEDIA][VIDEO] File not found at expected path:', fullPath, 'storageDir listing:', listing, 'host:', os.hostname(), 'pid:', process.pid);
+      return res.status(404).json({ error: 'File not found', storageDirListing: listing });
     }
     const stat = fs.statSync(fullPath);
     const stream = fs.createReadStream(fullPath);

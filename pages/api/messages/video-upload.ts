@@ -173,7 +173,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } catch (pErr) {
         console.error('[VIDEO UPLOAD] Pusher trigger failed:', pErr);
       }
-      res.status(200).json({ videoUrl, message, persisted, dbError });
+      // Include debug fields so the client/dev can verify file was actually saved
+      const savedFilePath = path.join(getStoragePath('video'), path.basename(videoUrl));
+      const fileSaved = fs.existsSync(savedFilePath);
+      res.status(200).json({ videoUrl, message, persisted, dbError, fileName: path.basename(savedFilePath), fileSaved });
     } catch (e) {
       console.error('Video upload error:', e);
       res.status(500).json({ error: 'Upload failed', details: String(e) });
