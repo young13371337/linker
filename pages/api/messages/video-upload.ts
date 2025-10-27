@@ -88,41 +88,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       let videoUrl: string;
-    try {
-      // Сохраняем видео в оригинальном виде (без шифрования)
-          const uploadDir = getStoragePath('video');
-          if (!ensureDir(uploadDir)) {
-            throw new Error(`Unable to create upload dir: ${uploadDir}`);
-          }
-          const fileName = `${Date.now()}-circle.webm`;
-          const filePath = path.join(uploadDir, fileName);
+      try {
+        // Save the uploaded video file (no encryption) into our writable storage
+        const uploadDir = getStoragePath('video');
+        if (!ensureDir(uploadDir)) {
+          throw new Error(`Unable to create upload dir: ${uploadDir}`);
+        }
+        const fileName = `${Date.now()}-circle.webm`;
+        const filePath = path.join(uploadDir, fileName);
 
-      console.log('[VIDEO UPLOAD] Reading file from:', video.filepath || video.path);
+        const tmpPath = (video as any)?.filepath || (video as any)?.path || (video as any)?.tempFilePath || (video as any)?.file?.path;
+        console.log('[VIDEO UPLOAD] tmpPath candidates, using:', tmpPath);
+        if (!tmpPath) {
+          throw new Error('Temporary upload path is missing on parsed file');
+        }
+        try {
+          await fs.promises.access(tmpPath, fs.constants.R_OK);
+        } catch (accessErr) {
+          console.error('[VIDEO UPLOAD] Temp file is not accessible:', accessErr);
+          throw accessErr;
+        }
 
-      const fileBuffer = await fs.promises.readFile(video.filepath || video.path);
-      if (!fileBuffer || fileBuffer.length === 0) {
-        throw new Error('Empty video file buffer');
-      }
+        const fileBuffer = await fs.promises.readFile(tmpPath);
+        if (!fileBuffer || fileBuffer.length === 0) throw new Error('Uploaded video is empty');
 
-      // Отправляем частичный ответ клиенту пока идёт запись
-      res.writeHead(202);
+        // Atomic write: write to temp file then rename to final path
+        const tempPath = `${filePath}.tmp-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+        await fs.promises.writeFile(tempPath, fileBuffer);
+        // Rename is atomic on most filesystems
+        await fs.promises.rename(tempPath, filePath);
 
-      // Atomic write: write to temp file then rename to final path
-      const tempPath = `${filePath}.tmp-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-      await fs.promises.writeFile(tempPath, fileBuffer);
-      // Rename is atomic on most filesystems
-      await fs.promises.rename(tempPath, filePath);
+        // Verify file exists
+        const exists = fs.existsSync(filePath);
+        console.log('[VIDEO UPLOAD] File saved (atomic):', filePath, 'exists:', exists, 'host:', os.hostname(), 'pid:', process.pid);
 
-      // Verify file exists
-      const exists = fs.existsSync(filePath);
-      console.log('[VIDEO UPLOAD] File saved (atomic):', filePath, 'exists:', exists, 'host:', os.hostname(), 'pid:', process.pid);
-      // Expose media via unified /media/* URL that maps to storage
-      // Use /media/linker/video/<fileName> so client can fetch consistently.
-      videoUrl = `/media/linker/video/${fileName}`;
+        // Expose media via API streaming route so files are accessible regardless of storage base
+        videoUrl = `/api/media/video/${fileName}`;
       } catch (error: any) {
-          console.error('[VIDEO UPLOAD] Error:', error);
-          res.status(500).json({ error: 'Video processing failed', details: error.message || 'Unknown error' });
-          return;
+        console.error('[VIDEO UPLOAD] Error:', error);
+        res.status(500).json({ error: 'Video processing failed', details: error.message || 'Unknown error' });
+        return;
       }
       const session = await getServerSession(req, res, authOptions);
       const userId = session?.user?.id;

@@ -139,9 +139,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 						   const tempWrite = `${finalPath}.tmp-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 						   await fs.promises.writeFile(tempWrite, fileBuffer);
 						   await fs.promises.rename(tempWrite, finalPath);
-						   // Expose via unified /media URL
+						   // Expose via API streaming route so files are accessible regardless of storage base
 						   urlField = 'audioUrl';
-						   urlValue = `/media/linker/voice/${fileNameSaved}`;
+						   // Serve via our API endpoint which will locate the file in storage
+						   urlValue = `/api/media/voice/${fileNameSaved}`;
 						   // keep raw buffer in fields for potential fallback
 						   (fields as any).__rawBuffer = fileBuffer;
 						   (fields as any).__audioMime = (file as any)?.mimetype || (file as any)?.type || 'audio/webm';
@@ -215,7 +216,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 								await fs.promises.rename(tempFallback, fallbackPath);
 								console.log('[VOICE UPLOAD] Fallback file written to:', fallbackPath, 'host:', os.hostname(), 'pid:', process.pid);
 								// If fallbackPath is in public/, expose it as static /media URL, otherwise use API path
-								let publicUrl = `/api/media/voice/${fallbackFileName}`;
+										   let publicUrl = `/api/media/voice/${fallbackFileName}`;
 								try {
 									const publicPrefix = path.join(process.cwd(), 'public');
 									const normalizedFallback = path.normalize(fallbackPath);

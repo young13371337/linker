@@ -367,7 +367,20 @@ const ChatWithFriend: React.FC = () => {
             setVideoTime(0);
             // (Проверка минимальной длительности видео отключена)
             const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
-            // (Проверка минимального размера видео отключена)
+            // Optimistic UI: show temp message while uploading
+            const tempId = 'temp-video-' + Date.now();
+            const tempMsg: Message = {
+              id: tempId,
+              sender: (session?.user as any)?.id || '',
+              text: '',
+              createdAt: new Date().toISOString(),
+              audioUrl: undefined,
+              videoUrl: undefined,
+              _key: tempId,
+              _persisted: false,
+              _failed: false,
+            };
+            setMessages(prev => [...prev, tempMsg]);
             // Сразу отправляем кружок
             if (chatId && session) {
               const formData = new FormData();
@@ -381,22 +394,23 @@ const ChatWithFriend: React.FC = () => {
                 });
                 if (!res.ok) {
                   const txt = await res.text();
+                  setMessages(prev => prev.map(m => m.id === tempId ? { ...m, _failed: true } : m));
                   alert('Ошибка отправки видео: ' + txt);
                 } else {
                   const data = await res.json();
                   if (data.videoUrl && data.message && data.message.id) {
-                    const newMsg = {
+                    // replace temp message
+                    setMessages(prev => prev.map(m => m.id === tempId ? {
+                      ...m,
                       id: data.message.id,
-                      sender: (session.user as any)?.id,
-                      text: '',
-                      createdAt: data.message.createdAt || new Date().toISOString(),
-                      audioUrl: undefined,
+                      createdAt: data.message.createdAt || m.createdAt,
                       videoUrl: data.videoUrl,
-                    };
-                    setMessages((prev) => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
+                      _persisted: data.persisted !== false,
+                    } : m));
                   }
                 }
               } catch (err) {
+                setMessages(prev => prev.map(m => m.id === tempId ? { ...m, _failed: true } : m));
                 alert('Ошибка отправки видео: ' + err);
               }
             }
@@ -1476,12 +1490,23 @@ const ChatWithFriend: React.FC = () => {
                         if (recordInterval.current) clearInterval(recordInterval.current);
                         setIsRecording(false);
                         setRecordTime(0);
-                        // (Проверка минимальной длительности аудио отключена)
-                        // ...existing code...
-                        // (Проверка минимальной длительности видео отключена)
                         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
                         audioChunksRef.current = [];
-                        // (Проверка минимального размера аудио отключена)
+                        // Optimistic UI: create a temporary message so user sees upload in progress
+                        const tempId = 'temp-audio-' + Date.now();
+                        const tempMsg: Message = {
+                          id: tempId,
+                          sender: (session?.user as any)?.id || '',
+                          text: '',
+                          createdAt: new Date().toISOString(),
+                          audioUrl: undefined,
+                          videoUrl: undefined,
+                          _key: tempId,
+                          _persisted: false,
+                          _failed: false,
+                        };
+                        setMessages(prev => [...prev, tempMsg]);
+
                         const formData = new FormData();
                         formData.append('chatId', chatId || '');
                         formData.append('audio', audioBlob, 'voice.webm');
@@ -1493,22 +1518,27 @@ const ChatWithFriend: React.FC = () => {
                           });
                           if (!res.ok) {
                             const txt = await res.text();
+                            // mark temp message as failed
+                            setMessages(prev => prev.map(m => m.id === tempId ? { ...m, _failed: true } : m));
                             alert('Ошибка отправки голосового: ' + txt);
                           } else {
                             const data = await res.json();
-                            if (data.audioUrl && data.message && data.message.id) {
-                              const newMsg = {
+                            if (data && data.message && data.message.id) {
+                              // replace temp message with server message
+                              setMessages(prev => prev.map(m => m.id === tempId ? {
+                                ...m,
                                 id: data.message.id,
-                                sender: (session?.user as any)?.id,
-                                text: '',
-                                createdAt: data.message.createdAt || new Date().toISOString(),
+                                createdAt: data.message.createdAt || m.createdAt,
                                 audioUrl: data.audioUrl,
-                                videoUrl: undefined,
-                              };
-                              setMessages((prev) => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
+                                _persisted: data.persisted !== false,
+                              } : m));
+                            } else {
+                              // no message returned: mark failed
+                              setMessages(prev => prev.map(m => m.id === tempId ? { ...m, _failed: true } : m));
                             }
                           }
                         } catch (err) {
+                          setMessages(prev => prev.map(m => m.id === tempId ? { ...m, _failed: true } : m));
                           alert('Ошибка отправки голосового: ' + err);
                         }
                       };

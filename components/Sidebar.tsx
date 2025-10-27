@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { getUser, clearUser } from "../lib/session";
 import { useRouter } from "next/router";
-import { FaComments, FaUser, FaSignOutAlt } from "react-icons/fa";
+import { FaComments, FaUser, FaSignOutAlt, FaRobot } from "react-icons/fa";
 import styles from "../styles/Sidebar.module.css"; // создадим CSS для hover и анимаций
 import Pusher from 'pusher-js';
 import ToastNotification from '../pages/chat/ToastNotification';
@@ -273,9 +273,9 @@ export default function Sidebar() {
   );
 }
 
-function SidebarLink({ href, icon, text, open }: any) {
+function SidebarLink({ href, icon, text, open, onClick }: any) {
   return (
-    <Link href={href} className={styles.link}>
+    <Link href={href} className={styles.link} onClick={onClick}>
       <div className={styles.linkContent}>
         <span className={styles.icon}>{icon}</span>
         {open && <span style={{ textDecoration: 'none', pointerEvents: 'none' }}>{text}</span>}
