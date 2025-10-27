@@ -17,14 +17,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const safeName = path.basename(filename as string);
     // Find message by audioUrl containing filename
     const message = await prisma.message.findFirst({ where: { audioUrl: { contains: safeName } } });
-    if (!message) return res.status(404).json({ error: 'Message not found' });
-
-    // Check permissions: sender or participant of chat
     const userId = session.user.id as string;
-    if (message.senderId !== userId) {
-      const chat = await prisma.chat.findUnique({ where: { id: message.chatId }, include: { users: true } });
-  const isParticipant = chat?.users?.some((u: any) => u.id === userId);
-      if (!isParticipant) return res.status(403).json({ error: 'Forbidden' });
+    if (!message) {
+      // No DB message found — allow uploader (owner) to access their own file if filename contains their user id.
+      if (!safeName.includes(userId)) {
+        return res.status(404).json({ error: 'Message not found' });
+      }
+      console.log('[MEDIA][VOICE] No DB message found; serving orphaned audio to owner:', userId);
+    } else {
+      // Check permissions: sender or participant of chat
+      if (message.senderId !== userId) {
+        const chat = await prisma.chat.findUnique({ where: { id: message.chatId }, include: { users: true } });
+        const isParticipant = chat?.users?.some((u: any) => u.id === userId);
+        if (!isParticipant) return res.status(403).json({ error: 'Forbidden' });
+      }
     }
 
   const storageDir = getStoragePath('voice');

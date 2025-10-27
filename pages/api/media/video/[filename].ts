@@ -17,13 +17,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const safeName = path.basename(filename as string);
     // Find message by videoUrl containing filename
     const message = await prisma.message.findFirst({ where: { videoUrl: { contains: safeName } } });
-    if (!message) return res.status(404).json({ error: 'Message not found' });
-
     const userId = session.user.id as string;
-    if (message.senderId !== userId) {
-      const chat = await prisma.chat.findUnique({ where: { id: message.chatId }, include: { users: true } });
-      const isParticipant = chat?.users?.some((u: any) => u.id === userId);
-      if (!isParticipant) return res.status(403).json({ error: 'Forbidden' });
+    if (!message) {
+      // If no DB record exists, allow the uploader to access their own uploaded (possibly temp) file
+      // when the filename contains their user id. This supports optimistic uploads where DB create
+      // failed but the file was saved to storage.
+      if (!safeName.includes(userId)) {
+        return res.status(404).json({ error: 'Message not found' });
+      }
+      console.log('[MEDIA][VIDEO] No DB message found; serving orphaned file to owner:', userId);
+    } else {
+      if (message.senderId !== userId) {
+        const chat = await prisma.chat.findUnique({ where: { id: message.chatId }, include: { users: true } });
+        const isParticipant = chat?.users?.some((u: any) => u.id === userId);
+        if (!isParticipant) return res.status(403).json({ error: 'Forbidden' });
+      }
     }
 
   const storageDir = getStoragePath('video');

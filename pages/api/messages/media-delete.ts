@@ -29,8 +29,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Determine subfolder by inspecting the url
     let subfolder: 'video' | 'voice' | null = null;
     const lower = clean.toLowerCase();
-    if (lower.includes('/video/') || lower.includes('/media/linker/video/') || lower.includes('/api/media/video/')) subfolder = 'video';
-    if (lower.includes('/voice/') || lower.includes('/media/linker/voice/') || lower.includes('/api/media/voice/')) subfolder = 'voice';
+  if (lower.includes('/video/') || lower.includes('/media/linker/video/') || lower.includes('/api/media/video/') || lower.includes('/media/video/')) subfolder = 'video';
+  if (lower.includes('/voice/') || lower.includes('/media/linker/voice/') || lower.includes('/api/media/voice/') || lower.includes('/media/voice/')) subfolder = 'voice';
 
     if (!subfolder) {
       // As a fallback, try to infer from extension

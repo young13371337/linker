@@ -89,12 +89,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       let videoUrl: string;
       try {
+        // Require authenticated user early so we can include owner info in filename
+        const session = await getServerSession(req, res, authOptions);
+        const userId = session?.user?.id;
+        if (!userId) {
+          return res.status(401).json({ error: 'Unauthorized: login required to upload video' });
+        }
+
         // Save the uploaded video file (no encryption) into our writable storage
         const uploadDir = getStoragePath('video');
         if (!ensureDir(uploadDir)) {
           throw new Error(`Unable to create upload dir: ${uploadDir}`);
         }
-        const fileName = `${Date.now()}-circle.webm`;
+        const fileName = `${userId}-${Date.now()}-circle.webm`;
         const filePath = path.join(uploadDir, fileName);
 
         const tmpPath = (video as any)?.filepath || (video as any)?.path || (video as any)?.tempFilePath || (video as any)?.file?.path;
@@ -122,7 +129,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const exists = fs.existsSync(filePath);
         console.log('[VIDEO UPLOAD] File saved (atomic):', filePath, 'exists:', exists, 'host:', os.hostname(), 'pid:', process.pid);
 
-        // Expose media via API streaming route so files are accessible regardless of storage base
+        // Expose media via API streaming route
+        // Use /api/media/video/<fileName> so client can fetch directly.
         videoUrl = `/api/media/video/${fileName}`;
       } catch (error: any) {
         console.error('[VIDEO UPLOAD] Error:', error);

@@ -65,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		return;
 	}
 	try {
-		// session check will be attempted below; continue to parsing so we can return helpful errors
+		// Require authenticated user early so that saved filenames include owner info
 		let sessionEarly;
 		try {
 			sessionEarly = await getServerSession(req, res, authOptions);
@@ -73,7 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			console.error('[VOICE UPLOAD] getServerSession error:', se);
 		}
 		if (!sessionEarly || !sessionEarly.user?.id) {
-			console.warn('[VOICE UPLOAD] Warning: no session found (request may be missing cookies)');
+			return res.status(401).json({ error: 'Unauthorized: login required to upload audio' });
 		}
 
 		let fields: any, files: any;
@@ -102,11 +102,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		   if (audio) {
 			   file = audio;
 			   fileType = 'audio';
-			   fileExt = '.mp3';
+			   // choose extension from original name when possible
+			   const orig = (file as any)?.originalFilename || (file as any)?.name || '';
+			   fileExt = path.extname(orig) || '.webm';
 			   // Save media under writable storage path (supports serverless /tmp fallback)
 			   uploadDir = getStoragePath('voice');
 			   if (!ensureDir(uploadDir)) throw new Error(`Unable to create upload dir: ${uploadDir}`);
-			   fileName = `${Date.now()}-${file.originalFilename ? file.originalFilename.replace(/\.[^/.]+$/, fileExt) : 'voice.mp3'}`;
+			   // include owner id in filename for easier owner-only access when DB missing
+			   const userId = sessionEarly.user.id as string;
+			   fileName = `${userId}-${Date.now()}-${Math.floor(Math.random() * 10000)}${fileExt}`;
 			   
 				   try {
 					   // Read temp file into buffer and store as base64 in DB (safer on serverless platforms)
@@ -160,8 +164,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			   return;
 		   }
 		   // (Проверка минимального размера файла отключена)
-		   let session = await getServerSession(req, res, authOptions);
-		   let userId = session?.user?.id;
+		   // We already validated sessionEarly above
+		   const session = sessionEarly;
+		   const userId = session?.user?.id;
 		   if (!chatId) {
 			   res.status(400).json({ error: 'No chatId provided', fields });
 			   return;
