@@ -1,5 +1,5 @@
 import { useState } from "react";
-import CodeInput from "../../components/CodeInput";
+import CodeInput from "../../components/CodeInputMobile";
 import { useRouter } from "next/router";
 import Lottie from "lottie-react";
 import ToastNotification from "../chat/ToastNotification";

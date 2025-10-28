@@ -134,8 +134,7 @@ const ChatPage: React.FC = () => {
               {chat.users.map(u => u.login).join(', ')}
             </span>
           )}
-          {/* Статус "Печатает..." с анимированными точками (пример, без реального статуса) */}
-          {/* TODO: заменить isTyping на реальный статус из Pusher, если потребуется */}
+          {}
           {false ? (
             <span style={{fontSize: 13, color: '#4fc3f7', display: 'flex', alignItems: 'center', gap: 4}}>
               Печатает
@@ -179,8 +178,34 @@ const ChatPage: React.FC = () => {
   return (
     <div style={{minHeight: '100vh', width: '100vw', background: '#111', fontFamily: 'Segoe UI, Arial, sans-serif', margin: 0, padding: 0, position: 'relative'}}>
       <div style={{maxWidth: 500, margin: '0 auto', paddingTop: 60}}>
-        <div style={{display:'flex',alignItems:'flex-end',justifyContent:'flex-start',marginBottom:10}}>
-          <h2 style={{color: '#e3e8f0', fontWeight: 700, fontSize: 28}}>Выберите чат</h2>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10, position: 'relative'}}>
+          <div style={{width:44}} />
+          <h2 style={{color: '#e3e8f0', fontWeight: 700, fontSize: 28, textAlign: 'center'}}>Чаты</h2>
+          <button
+            title="Создать чат"
+            aria-label="Создать чат"
+            onClick={() => { console.log('create chat'); }}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 10,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              transition: 'transform .12s ease-in-out, box-shadow .12s'
+            }}
+            onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.04)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)'; }}
+            onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none'; }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="3" width="18" height="18" rx="4" stroke="#e3e8f0" strokeWidth="1.2" fill="none" opacity="0.06"/>
+              <path d="M7 17.5L16.2 8.3a1 1 0 0 0 0-1.4l-1.6-1.6a1 1 0 0 0-1.4 0L4 14.5V18h3.5z" stroke="#e3e8f0" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
         </div>
         {chats.length === 0 ? (
           <div style={{color: '#bbb', fontSize: 20, textAlign: 'center', marginTop: 80}}>Нет чатов.<br />Создайте группу или добавьте друзей!</div>

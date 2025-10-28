@@ -87,7 +87,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return;
       }
 
-      let videoUrl: string;
+  let videoUrl: string;
+  let thumbnailUrl: string | undefined = undefined;
       try {
         // Require authenticated user early so we can include owner info in filename
         const session = await getServerSession(req, res, authOptions);
@@ -132,6 +133,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Expose media via API streaming route
         // Use /api/media/video/<fileName> so client can fetch directly.
         videoUrl = `/api/media/video/${fileName}`;
+        // If a thumbnail was uploaded alongside video, persist it too and expose via API
+        let thumbnailUrl: string | undefined = undefined;
+        try {
+          let thumb = files.thumbnail;
+          if (Array.isArray(thumb)) thumb = thumb[0];
+          if (thumb) {
+            const thumbTmpPath = (thumb as any)?.filepath || (thumb as any)?.path || (thumb as any)?.tempFilePath || (thumb as any)?.file?.path;
+            if (thumbTmpPath) {
+              const thumbExt = path.extname((thumb as any)?.originalFilename || (thumb as any)?.name || '') || '.jpg';
+              const thumbName = `${userId}-${Date.now()}-thumb${thumbExt}`;
+              const thumbDest = path.join(uploadDir, thumbName);
+              try {
+                const thumbBuf = await fs.promises.readFile(thumbTmpPath);
+                const tmpThumb = `${thumbDest}.tmp-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+                await fs.promises.writeFile(tmpThumb, thumbBuf);
+                await fs.promises.rename(tmpThumb, thumbDest);
+                thumbnailUrl = `/api/media/video/${thumbName}`;
+                console.log('[VIDEO UPLOAD] Thumbnail saved:', thumbDest);
+              } catch (thumbErr) {
+                console.warn('[VIDEO UPLOAD] Failed to save thumbnail:', thumbErr);
+              }
+            }
+          }
+        } catch (thumbProcErr) {
+          console.warn('[VIDEO UPLOAD] Thumbnail processing error:', thumbProcErr);
+        }
       } catch (error: any) {
         console.error('[VIDEO UPLOAD] Error:', error);
         res.status(500).json({ error: 'Video processing failed', details: error.message || 'Unknown error' });
@@ -151,6 +178,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let dbError: any = null;
       let persisted = false;
       try {
+        // Create DB message record. We don't persist thumbnail URL in DB schema (no column),
+        // but we include it in the response/pusher payload so clients can use it.
         message = await prisma.message.create({
           data: {
             chatId,
@@ -168,7 +197,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       // Уведомляем подписчиков через Pusher
       try {
-        const payload = { id: message.id, sender: userId, text: '', createdAt: message.createdAt, videoUrl, persisted, dbError };
+        const payload: any = { id: message.id, sender: userId, text: '', createdAt: message.createdAt, videoUrl, persisted, dbError };
+        if (thumbnailUrl) payload.thumbnailUrl = thumbnailUrl;
         await pusher.trigger(`chat-${chatId}`, 'new-message', payload);
       } catch (pErr) {
         console.error('[VIDEO UPLOAD] Pusher trigger failed:', pErr);
@@ -176,7 +206,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Include debug fields so the client/dev can verify file was actually saved
       const savedFilePath = path.join(getStoragePath('video'), path.basename(videoUrl));
       const fileSaved = fs.existsSync(savedFilePath);
-      res.status(200).json({ videoUrl, message, persisted, dbError, fileName: path.basename(savedFilePath), fileSaved });
+  res.status(200).json({ videoUrl, thumbnailUrl, message, persisted, dbError, fileName: path.basename(savedFilePath), fileSaved });
     } catch (e) {
       console.error('Video upload error:', e);
       res.status(500).json({ error: 'Upload failed', details: String(e) });

@@ -11,12 +11,13 @@ const pusherClient = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
 });
 
 // --- Кружок с overlay play/pause ---
-const VideoCircle: React.FC<{ src: string }> = ({ src }) => {
+const VideoCircle: React.FC<{ src: string; poster?: string }> = ({ src, poster }) => {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = React.useState(false);
   const [showOverlay, setShowOverlay] = React.useState(true);
   const [progress, setProgress] = React.useState(0); // 0..1
   const [duration, setDuration] = React.useState(0);
+  const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
     const video = videoRef.current;
@@ -49,88 +50,80 @@ const VideoCircle: React.FC<{ src: string }> = ({ src }) => {
 
   return (
     <div style={{ position: 'relative', width: CIRCLE_SIZE, height: CIRCLE_SIZE, transition: 'width .18s, height .18s', display: 'inline-block' }}>
-      <video
-        ref={videoRef}
-        playsInline
-        style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#111', objectFit: 'cover', border: '2.5px solid #229ed9', boxShadow: '0 2px 12px #229ed955', marginBottom: 2, cursor: 'pointer', transition: 'box-shadow .18s, border .18s' }}
-        onClick={() => {
-          if (!videoRef.current) return;
-          if (videoRef.current.paused) {
-            videoRef.current.play();
+      {/* Show a small poster image first for instant display; only mount video when user interacts */}
+      {!mounted ? (
+        (poster ? (
+          <img
+            src={poster}
+            alt="video poster"
+            // Clicking the poster mounts the video node but does NOT autoplay — the user must press the play button.
+            onClick={() => { setMounted(true); }}
+            style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#111', objectFit: 'cover', border: '2.5px solid #229ed9', boxShadow: '0 2px 12px #229ed955', marginBottom: 2, cursor: 'pointer', transition: 'box-shadow .18s, border .18s' }}
+          />
+        ) : (
+          <div
+            onClick={() => setMounted(true)}
+            style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'linear-gradient(135deg,#111,#222)', border: '2.5px solid #229ed9', boxShadow: '0 2px 12px #229ed955', marginBottom: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          />
+        ))
+      ) : (
+        <video
+          ref={videoRef}
+          playsInline
+          preload="metadata"
+          poster={poster}
+          // remove native controls; use custom play/pause and progress ring
+          style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#111', objectFit: 'cover', border: '2.5px solid #229ed9', boxShadow: '0 2px 12px #229ed955', marginBottom: 2, cursor: 'pointer', transition: 'box-shadow .18s, border .18s' }}
+          onClick={() => {
+            if (!videoRef.current) return;
+            if (videoRef.current.paused) {
+              videoRef.current.play();
+              setPlaying(true);
+              setShowOverlay(true);
+              setTimeout(() => setShowOverlay(false), 600);
+            } else {
+              videoRef.current.pause();
+              setPlaying(false);
+              setShowOverlay(true);
+              setTimeout(() => setShowOverlay(false), 600);
+            }
+          }}
+          onPlay={() => {
             setPlaying(true);
             setShowOverlay(true);
             setTimeout(() => setShowOverlay(false), 600);
-          } else {
-            videoRef.current.pause();
+          }}
+          onPause={() => {
             setPlaying(false);
             setShowOverlay(true);
             setTimeout(() => setShowOverlay(false), 600);
-          }
-        }}
-        onPlay={() => {
-          setPlaying(true);
-          setShowOverlay(true);
-          setTimeout(() => setShowOverlay(false), 600);
-        }}
-        onPause={() => {
-          setPlaying(false);
-          setShowOverlay(true);
-          setTimeout(() => setShowOverlay(false), 600);
-        }}
-      >
-        <source src={src} type="video/webm" />
-      </video>
-      {/* SVG прогресс-обводка */}
-      {playing && duration > 0 && (
+          }}
+        >
+          <source src={src} type="video/webm" />
+        </video>
+      )}
+      {/* SVG прогресс-обводка: rounded stroke that animates while playing */}
+      {duration > 0 && (
         <svg
           width={CIRCLE_SIZE}
           height={CIRCLE_SIZE}
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            pointerEvents: 'none',
-            zIndex: 2,
-          }}
+          style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', zIndex: 2 }}
         >
-          <circle
-            cx={CIRCLE_SIZE / 2}
-            cy={CIRCLE_SIZE / 2}
-            r={RADIUS}
-            stroke="#229ed9"
-            strokeWidth={STROKE}
-            fill="none"
-            opacity="0.18"
-          />
-          <circle
-            cx={CIRCLE_SIZE / 2}
-            cy={CIRCLE_SIZE / 2}
-            r={RADIUS}
-            stroke="#229ed9"
-            strokeWidth={STROKE}
-            fill="none"
-            strokeDasharray={CIRCUM}
-            strokeDashoffset={offset}
-            style={{ transition: 'stroke-dashoffset 0.18s linear' }}
-          />
+          <circle cx={CIRCLE_SIZE / 2} cy={CIRCLE_SIZE / 2} r={RADIUS} stroke="#ffffff22" strokeWidth={STROKE} fill="none" opacity={playing ? 0.18 : 0.06} />
+          <circle cx={CIRCLE_SIZE / 2} cy={CIRCLE_SIZE / 2} r={RADIUS} stroke="#229ed9" strokeWidth={STROKE} fill="none" strokeDasharray={CIRCUM} strokeDashoffset={offset} strokeLinecap="round" style={{ transition: playing ? 'stroke-dashoffset 0.15s linear' : 'none' }} />
         </svg>
       )}
-      {showOverlay && (
-        <div style={{
-          position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', transition: 'opacity .18s', opacity: 0.92,
-        }}>
-          {playing ? (
-            <svg width={44} height={44} viewBox="0 0 44 44" style={{ filter: 'drop-shadow(0 2px 8px #222)' }}>
-              <circle cx="22" cy="22" r="22" fill="#222" fillOpacity="0.55" />
-              <rect x="14" y="13" width="6" height="18" rx="2.5" fill="#fff" />
-              <rect x="24" y="13" width="6" height="18" rx="2.5" fill="#fff" />
-            </svg>
-          ) : (
-            <svg width={44} height={44} viewBox="0 0 44 44" style={{ filter: 'drop-shadow(0 2px 8px #222)' }}>
-              <circle cx="22" cy="22" r="22" fill="#222" fillOpacity="0.55" />
-              <polygon points="16,13 32,22 16,31" fill="#fff" />
-            </svg>
-          )}
+
+      {/* Minimal overlay: icon-only play button when paused; hide while playing (progress ring indicates playback) */}
+      {showOverlay && !playing && (
+        <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto', transition: 'opacity .18s', opacity: 0.96, zIndex: 4 }}>
+          <button onClick={(e) => {
+            e.stopPropagation();
+            if (!mounted) { setMounted(true); setTimeout(() => { try { videoRef.current?.play(); setPlaying(true); } catch (err) {} }, 80); return; }
+            const v = videoRef.current; if (!v) return; v.play(); setPlaying(true);
+          }} aria-label="Play video" style={{ width: 44, height: 44, borderRadius: '50%', border: 'none', background: 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 6 }}>
+            <svg width={22} height={22} viewBox="0 0 24 24" style={{ filter: 'drop-shadow(0 2px 6px #000)', display: 'block' }}><polygon points="6,4 20,12 6,20" fill="#fff" /></svg>
+          </button>
         </div>
       )}
     </div>
@@ -226,11 +219,78 @@ interface Message {
   createdAt: string;
   audioUrl?: string;
   videoUrl?: string;
+  thumbnailUrl?: string;
   _key?: string;
   // internal flags used by UI (optional)
   _serverId?: string;
   _persisted?: boolean;
   _failed?: boolean;
+}
+
+// Helper: create a small JPEG thumbnail (square) from the first frame of a video Blob
+async function createVideoThumbnail(videoBlob: Blob, size = 160): Promise<Blob> {
+  return new Promise<Blob>((resolve, reject) => {
+    try {
+      const url = URL.createObjectURL(videoBlob);
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      v.muted = true;
+      v.src = url;
+      const cleanup = () => {
+        try { URL.revokeObjectURL(url); } catch (e) {}
+        try { v.remove(); } catch (e) {}
+      };
+      v.addEventListener('loadeddata', () => {
+        try {
+          v.currentTime = 0;
+        } catch (e) {}
+      });
+      v.addEventListener('seeked', () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            cleanup();
+            return reject(new Error('Canvas not supported'));
+          }
+          // draw center-cropped frame
+          const vw = v.videoWidth || size;
+          const vh = v.videoHeight || size;
+          const aspect = vw / vh;
+          let sx = 0, sy = 0, sw = vw, sh = vh;
+          if (aspect > 1) {
+            // wide -> crop horizontally
+            sw = vh;
+            sx = Math.floor((vw - sw) / 2);
+          } else if (aspect < 1) {
+            sh = vw;
+            sy = Math.floor((vh - sh) / 2);
+          }
+          ctx.drawImage(v, sx, sy, sw, sh, 0, 0, size, size);
+          canvas.toBlob((blob) => {
+            cleanup();
+            if (blob) resolve(blob);
+            else reject(new Error('Failed to convert canvas to blob'));
+          }, 'image/jpeg', 0.78);
+        } catch (err) {
+          cleanup();
+          reject(err);
+        }
+      });
+      v.addEventListener('error', (e) => {
+        cleanup();
+        reject(new Error('Video load error'));
+      });
+      // Kickload — some browsers won't fire seeked for currentTime=0 until play attempted
+      setTimeout(() => {
+        try { v.currentTime = 0; } catch (e) {}
+      }, 80);
+    } catch (e) {
+      reject(e);
+    }
+  });
 }
 
 const ChatWithFriend: React.FC = () => {
@@ -367,6 +427,14 @@ const ChatWithFriend: React.FC = () => {
             setVideoTime(0);
             // (Проверка минимальной длительности видео отключена)
             const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
+            // Create a small thumbnail to speed up initial rendering
+            let thumbnailBlob: Blob | null = null;
+            try {
+              thumbnailBlob = await createVideoThumbnail(blob, 160);
+            } catch (e) {
+              // fall back silently
+              thumbnailBlob = null;
+            }
             // Optimistic UI: show temp message while uploading
             const tempId = 'temp-video-' + Date.now();
             const tempMsg: Message = {
@@ -376,16 +444,18 @@ const ChatWithFriend: React.FC = () => {
               createdAt: new Date().toISOString(),
               audioUrl: undefined,
               videoUrl: undefined,
+              thumbnailUrl: thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : undefined,
               _key: tempId,
               _persisted: false,
               _failed: false,
             };
             setMessages(prev => [...prev, tempMsg]);
-            // Сразу отправляем кружок
+            // Сразу отправляем кружок вместе с миниатюрой
             if (chatId && session) {
               const formData = new FormData();
               formData.append('chatId', chatId);
               formData.append('video', blob, 'circle.webm');
+              if (thumbnailBlob) formData.append('thumbnail', thumbnailBlob, 'thumb.jpg');
               try {
                 const res = await fetch('/api/messages/video-upload', {
                   method: 'POST',
@@ -405,6 +475,7 @@ const ChatWithFriend: React.FC = () => {
                       id: data.message.id,
                       createdAt: data.message.createdAt || m.createdAt,
                       videoUrl: data.videoUrl,
+                      thumbnailUrl: data.thumbnailUrl || m.thumbnailUrl,
                       _persisted: data.persisted !== false,
                     } : m));
                   }
@@ -493,7 +564,8 @@ const ChatWithFriend: React.FC = () => {
                   text: msg.text,
                   createdAt: msg.createdAt,
                   audioUrl: msg.audioUrl || undefined,
-                  videoUrl: msg.videoUrl || undefined
+                  videoUrl: msg.videoUrl || undefined,
+                  thumbnailUrl: msg.thumbnailUrl || msg.videoThumbnail || undefined,
                 }));
                 setMessages(msgs);
                 // Прокручиваем в конец после загрузки сообщений
@@ -1085,10 +1157,23 @@ const ChatWithFriend: React.FC = () => {
                         >
                           <div
                             onClick={(e) => {
-                              // ПК: открываем/закрываем меню по клику
+                              // ПК: открываем/закрываем меню по двойному клику (double-tap)
                               try { e.stopPropagation(); } catch {}
                               if (isMobile) return;
-                              setOpenActionMsgId(prev => prev === msg.id ? null : msg.id);
+                              const now = Date.now();
+                              const last = lastTapRef.current;
+                              const DOUBLE_TAP_MS = 350;
+                              if (last && (now - last) <= DOUBLE_TAP_MS) {
+                                // double click detected — toggle menu
+                                setOpenActionMsgId(prev => prev === msg.id ? null : msg.id);
+                                lastTapRef.current = null;
+                              } else {
+                                // record first click, wait for second
+                                lastTapRef.current = now;
+                                setTimeout(() => {
+                                  if (lastTapRef.current === now) lastTapRef.current = null;
+                                }, DOUBLE_TAP_MS + 50);
+                              }
                             }}
                             onTouchEnd={(e) => {
                               // Моб: открываем меню по двойному тапу (2 клика)
@@ -1116,7 +1201,7 @@ const ChatWithFriend: React.FC = () => {
                                 margin: '2px 0',
                                 marginLeft: 0,
                               }}>
-                                <VideoCircle src={msg.videoUrl.startsWith('/') ? msg.videoUrl : '/' + msg.videoUrl} />
+                                <VideoCircle src={msg.videoUrl.startsWith('/') ? msg.videoUrl : '/' + msg.videoUrl} poster={msg.thumbnailUrl} />
                                 <span style={{ fontSize: 13, color: '#bbb', marginTop: 2 }}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                               </div>
                             ) : msg.audioUrl ? (
@@ -1168,28 +1253,32 @@ const ChatWithFriend: React.FC = () => {
                                 zIndex: 60,
                                 transformOrigin: 'right top'
                               }} data-action-container={msg.id}>
-                                <button className={"action-btn"} onClick={(e) => { try { e.stopPropagation(); } catch {} handleCopy(msg.text); }} title="Копировать">
-                                  <svg width={isMobile ? 14 : 16} height={isMobile ? 14 : 16} viewBox="0 0 24 24" fill="none" style={{ flex: '0 0 auto' }}><path d="M16 1H4a2 2 0 00-2 2v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><rect x="8" y="5" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                  <span style={{ fontSize: isMobile ? 12 : 13, color: '#e6eef8' }}>Копировать</span>
+                                <button
+                                  onClick={(e) => { try { e.stopPropagation(); } catch {} handleCopy(msg.text); }}
+                                  title="Копировать"
+                                  aria-label="Копировать"
+                                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+                                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                                  style={{ background: 'transparent', border: 'none', padding: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#e6eef8', borderRadius: 8, transition: 'background .12s' }}
+                                >
+                                  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" style={{ display: 'block', color: 'inherit' }}>
+                                    <path d="M16 1H4a2 2 0 00-2 2v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                                    <rect x="8" y="5" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
                                 </button>
                                 <button
-                                  className={"action-btn" + (isMobile ? ' icon-only' : '')}
-                                  onClick={(e) => {
-                                    try { e.stopPropagation(); } catch {}
-                                    // Pass the whole message object so the handler can decide how to delete it (DB delete vs media delete)
-                                    handleDeleteMessage(msg);
-                                  }}
+                                  onClick={(e) => { try { e.stopPropagation(); } catch {} handleDeleteMessage(msg); }}
                                   title="Удалить"
-                                  aria-label="Удалить сообщение"
+                                  aria-label="Удалить"
+                                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+                                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                                  style={{ background: 'transparent', border: 'none', padding: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ff7b7b', borderRadius: 8, transition: 'background .12s' }}
                                 >
-                                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: isMobile ? 28 : 34, height: isMobile ? 28 : 34, borderRadius: 9, flex: '0 0 auto' }}>
-                                    <svg width={isMobile ? 14 : 16} height={isMobile ? 14 : 16} viewBox="0 0 24 24" fill="none">
-                                      <path d="M9 3h6l1 2h4v2H4V5h4l1-2z" fill="none" stroke="#ff6b6b" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                                      <path d="M10 11v6" stroke="#ff6b6b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                                      <path d="M14 11v6" stroke="#ff6b6b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                  </span>
-                                  {!isMobile && <span style={{ fontSize: 13, color: '#e6eef8' }}>Удалить</span>}
+                                  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" style={{ display: 'block' }}>
+                                    <path d="M9 3h6l1 2h4v2H4V5h4l1-2z" fill="none" stroke="#ff6b6b" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M10 11v6" stroke="#ff6b6b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M14 11v6" stroke="#ff6b6b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                                  </svg>
                                 </button>
                               </div>
                             )}

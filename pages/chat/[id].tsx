@@ -12,12 +12,13 @@ const pusherClient = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
 });
 
 // --- Кружок с overlay play/pause ---
-const VideoCircle: React.FC<{ src: string }> = ({ src }) => {
+const VideoCircle: React.FC<{ src: string; poster?: string }> = ({ src, poster }) => {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = React.useState(false);
   const [showOverlay, setShowOverlay] = React.useState(true);
   const [progress, setProgress] = React.useState(0); // 0..1
   const [duration, setDuration] = React.useState(0);
+  const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
     const video = videoRef.current;
@@ -50,39 +51,62 @@ const VideoCircle: React.FC<{ src: string }> = ({ src }) => {
 
   return (
     <div style={{ position: 'relative', width: CIRCLE_SIZE, height: CIRCLE_SIZE, transition: 'width .18s, height .18s', display: 'inline-block' }}>
-      <video
-        ref={videoRef}
-        playsInline
-        style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#111', objectFit: 'cover', border: '2.5px solid #229ed9', boxShadow: '0 2px 12px #229ed955', marginBottom: 2, cursor: 'pointer', transition: 'box-shadow .18s, border .18s' }}
-        onClick={() => {
-          if (!videoRef.current) return;
-          if (videoRef.current.paused) {
-            videoRef.current.play();
+      {/* Show a small poster image first for instant display; only mount video when user interacts */}
+      {!mounted ? (
+        (poster ? (
+          <img
+            src={poster}
+            alt="video poster"
+            // Clicking the poster will mount the video element but will NOT autoplay — user must press the play button.
+            onClick={() => {
+              setMounted(true);
+            }}
+            style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#111', objectFit: 'cover', border: '2.5px solid #229ed9', boxShadow: '0 2px 12px #229ed955', marginBottom: 2, cursor: 'pointer', transition: 'box-shadow .18s, border .18s' }}
+          />
+        ) : (
+          <div
+            onClick={() => setMounted(true)}
+            style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'linear-gradient(135deg,#111,#222)', border: '2.5px solid #229ed9', boxShadow: '0 2px 12px #229ed955', marginBottom: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          />
+        ))
+      ) : (
+        <video
+          ref={videoRef}
+          playsInline
+          preload="metadata"
+          poster={poster}
+          // remove native controls; use custom play/pause and progress ring
+          style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#111', objectFit: 'cover', border: '2.5px solid #229ed9', boxShadow: '0 2px 12px #229ed955', marginBottom: 2, cursor: 'pointer', transition: 'box-shadow .18s, border .18s' }}
+          onClick={() => {
+            if (!videoRef.current) return;
+            if (videoRef.current.paused) {
+              videoRef.current.play();
+              setPlaying(true);
+              setShowOverlay(true);
+              setTimeout(() => setShowOverlay(false), 600);
+            } else {
+              videoRef.current.pause();
+              setPlaying(false);
+              setShowOverlay(true);
+              setTimeout(() => setShowOverlay(false), 600);
+            }
+          }}
+          onPlay={() => {
             setPlaying(true);
             setShowOverlay(true);
             setTimeout(() => setShowOverlay(false), 600);
-          } else {
-            videoRef.current.pause();
+          }}
+          onPause={() => {
             setPlaying(false);
             setShowOverlay(true);
             setTimeout(() => setShowOverlay(false), 600);
-          }
-        }}
-        onPlay={() => {
-          setPlaying(true);
-          setShowOverlay(true);
-          setTimeout(() => setShowOverlay(false), 600);
-        }}
-        onPause={() => {
-          setPlaying(false);
-          setShowOverlay(true);
-          setTimeout(() => setShowOverlay(false), 600);
-        }}
-      >
-        <source src={src} type="video/webm" />
-      </video>
-      {/* SVG прогресс-обводка */}
-      {playing && duration > 0 && (
+          }}
+        >
+          <source src={src} type="video/webm" />
+        </video>
+      )}
+      {/* SVG прогресс-обводка: show rounded stroke that animates as playback progresses */}
+      {duration > 0 && (
         <svg
           width={CIRCLE_SIZE}
           height={CIRCLE_SIZE}
@@ -98,10 +122,10 @@ const VideoCircle: React.FC<{ src: string }> = ({ src }) => {
             cx={CIRCLE_SIZE / 2}
             cy={CIRCLE_SIZE / 2}
             r={RADIUS}
-            stroke="#229ed9"
+            stroke="#ffffff22"
             strokeWidth={STROKE}
             fill="none"
-            opacity="0.18"
+            opacity={playing ? 0.18 : 0.06}
           />
           <circle
             cx={CIRCLE_SIZE / 2}
@@ -112,26 +136,40 @@ const VideoCircle: React.FC<{ src: string }> = ({ src }) => {
             fill="none"
             strokeDasharray={CIRCUM}
             strokeDashoffset={offset}
-            style={{ transition: 'stroke-dashoffset 0.18s linear' }}
+            strokeLinecap="round"
+            style={{ transition: playing ? 'stroke-dashoffset 0.15s linear' : 'none' }}
           />
         </svg>
       )}
-      {showOverlay && (
+
+      {/* Overlay: show a minimal icon-only play button when paused; hide while playing (progress ring serves as indicator) */}
+      {showOverlay && !playing && (
         <div style={{
-          position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', transition: 'opacity .18s', opacity: 0.92,
+          position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto', transition: 'opacity .18s', opacity: 0.96,
+          zIndex: 4,
         }}>
-          {playing ? (
-            <svg width={44} height={44} viewBox="0 0 44 44" style={{ filter: 'drop-shadow(0 2px 8px #222)' }}>
-              <circle cx="22" cy="22" r="22" fill="#222" fillOpacity="0.55" />
-              <rect x="14" y="13" width="6" height="18" rx="2.5" fill="#fff" />
-              <rect x="24" y="13" width="6" height="18" rx="2.5" fill="#fff" />
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!mounted) {
+                setMounted(true);
+                setTimeout(() => { try { videoRef.current?.play(); setPlaying(true); } catch (err) {} }, 80);
+                return;
+              }
+              const v = videoRef.current;
+              if (!v) return;
+              v.play();
+              setPlaying(true);
+            }}
+            aria-label="Play video"
+            style={{
+              width: 44, height: 44, borderRadius: '50%', border: 'none', background: 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 6,
+            }}
+          >
+            <svg width={22} height={22} viewBox="0 0 24 24" style={{ filter: 'drop-shadow(0 2px 6px #000)', display: 'block' }}>
+              <polygon points="6,4 20,12 6,20" fill="#fff" />
             </svg>
-          ) : (
-            <svg width={44} height={44} viewBox="0 0 44 44" style={{ filter: 'drop-shadow(0 2px 8px #222)' }}>
-              <circle cx="22" cy="22" r="22" fill="#222" fillOpacity="0.55" />
-              <polygon points="16,13 32,22 16,31" fill="#fff" />
-            </svg>
-          )}
+          </button>
         </div>
       )}
     </div>
@@ -227,6 +265,7 @@ interface Message {
   createdAt: string;
   audioUrl?: string;
   videoUrl?: string;
+  thumbnailUrl?: string;
   _key?: string;
   // internal flags used by UI (optional)
   _serverId?: string;
@@ -481,21 +520,22 @@ const ChatWithFriend: React.FC = () => {
     fetch(`/api/chats?userIds=${(session.user as any).id},${id}`)
       .then(res => res.json())
       .then(data => {
-        if (data && data.chat && data.chat.id) {
+                if (data && data.chat && data.chat.id) {
           setChatId(data.chat.id);
           // Получить сообщения
           fetch(`/api/messages?chatId=${data.chat.id}`, { credentials: 'include' })
             .then(res => res.json())
             .then(data => {
               if (Array.isArray(data.messages)) {
-                const msgs = data.messages.map((msg: any) => ({
-                  id: msg.id,
-                  sender: msg.senderId,
-                  text: msg.text,
-                  createdAt: msg.createdAt,
-                  audioUrl: msg.audioUrl || undefined,
-                  videoUrl: msg.videoUrl || undefined
-                }));
+                        const msgs = data.messages.map((msg: any) => ({
+                          id: msg.id,
+                          sender: msg.senderId,
+                          text: msg.text,
+                          createdAt: msg.createdAt,
+                          audioUrl: msg.audioUrl || undefined,
+                          videoUrl: msg.videoUrl || undefined,
+                          thumbnailUrl: msg.thumbnailUrl || undefined,
+                        }));
                 setMessages(msgs);
                 // Прокручиваем в конец после загрузки сообщений
                 setTimeout(() => {
@@ -811,7 +851,6 @@ const ChatWithFriend: React.FC = () => {
     return (
       <div style={{minHeight:'100vh',display:'flex',alignItems:'flex-start',justifyContent:'center',background:'#111'}}>
         <div style={{marginTop:80,color:'#bbb',fontSize:22,fontWeight:500}}>
-          Для общения в чате нужно авторизоваться.
         </div>
       </div>
     );
@@ -1089,10 +1128,23 @@ const ChatWithFriend: React.FC = () => {
                         >
                           <div
                             onClick={(e) => {
-                              // ПК: открываем/закрываем меню по клику
+                              // ПК: открываем/закрываем меню по двойному клику (double-tap)
                               try { e.stopPropagation(); } catch {}
                               if (isMobile) return;
-                              setOpenActionMsgId(prev => prev === msg.id ? null : msg.id);
+                              const now = Date.now();
+                              const last = lastTapRef.current;
+                              const DOUBLE_TAP_MS = 350;
+                              if (last && (now - last) <= DOUBLE_TAP_MS) {
+                                // double click detected — toggle menu
+                                setOpenActionMsgId(prev => prev === msg.id ? null : msg.id);
+                                lastTapRef.current = null;
+                              } else {
+                                // record first click, wait for second
+                                lastTapRef.current = now;
+                                setTimeout(() => {
+                                  if (lastTapRef.current === now) lastTapRef.current = null;
+                                }, DOUBLE_TAP_MS + 50);
+                              }
                             }}
                             onTouchEnd={(e) => {
                               // Моб: открываем меню по двойному тапу (2 клика)
@@ -1120,7 +1172,7 @@ const ChatWithFriend: React.FC = () => {
                                 margin: '2px 0',
                                 marginLeft: 0,
                               }}>
-                                <VideoCircle src={msg.videoUrl.startsWith('/') ? msg.videoUrl : '/' + msg.videoUrl} />
+                                <VideoCircle src={msg.videoUrl.startsWith('/') ? msg.videoUrl : '/' + msg.videoUrl} poster={msg.thumbnailUrl} />
                                 <span style={{ fontSize: 13, color: '#bbb', marginTop: 2 }}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                               </div>
                             ) : msg.audioUrl ? (
@@ -1156,44 +1208,55 @@ const ChatWithFriend: React.FC = () => {
 
                             {/* Action menu: только для собственных сообщений */}
                             {isOwn && openActionMsgId === msg.id && (
-                              <div className="action-menu" style={{
-                                position: 'absolute',
-                                top: isMobile ? -46 : -44,
-                                right: isOwn ? (isMobile ? 6 : 8) : 'auto',
-                                left: isOwn ? 'auto' : (isMobile ? 6 : 8),
-                                background: '#0f1113',
-                                border: '1px solid rgba(255,255,255,0.04)',
-                                padding: isMobile ? '6px 8px' : '8px 10px',
-                                borderRadius: isMobile ? 10 : 12,
-                                display: 'flex',
-                                gap: isMobile ? 8 : 12,
-                                alignItems: 'center',
-                                boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
-                                zIndex: 60,
-                                transformOrigin: 'right top'
-                              }} data-action-container={msg.id}>
-                                <button className={"action-btn"} onClick={(e) => { try { e.stopPropagation(); } catch {} handleCopy(msg.text); }} title="Копировать">
-                                  <svg width={isMobile ? 14 : 16} height={isMobile ? 14 : 16} viewBox="0 0 24 24" fill="none" style={{ flex: '0 0 auto' }}><path d="M16 1H4a2 2 0 00-2 2v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><rect x="8" y="5" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                  <span style={{ fontSize: isMobile ? 12 : 13, color: '#e6eef8' }}>Копировать</span>
+                              <div
+                                className="action-menu"
+                                onClick={(e) => { e.stopPropagation(); }}
+                                role="menu"
+                                style={{
+                                  position: 'absolute',
+                                  top: isMobile ? -46 : -44,
+                                  right: isOwn ? (isMobile ? 6 : 8) : 'auto',
+                                  left: isOwn ? 'auto' : (isMobile ? 6 : 8),
+                                  background: '#0f1113',
+                                  border: '1px solid rgba(255,255,255,0.06)',
+                                  padding: isMobile ? '6px 8px' : '8px 10px',
+                                  borderRadius: isMobile ? 10 : 12,
+                                  display: 'flex',
+                                  gap: isMobile ? 8 : 12,
+                                  alignItems: 'center',
+                                  boxShadow: '0 10px 30px rgba(0,0,0,0.65)',
+                                  zIndex: 110,
+                                  transformOrigin: 'right top',
+                                  minWidth: isMobile ? 120 : 160,
+                                }}
+                                data-action-container={msg.id}
+                              >
+                                <button
+                                  onClick={(e) => { try { e.stopPropagation(); } catch {} handleCopy(msg.text); }}
+                                  title="Копировать"
+                                  aria-label="Копировать"
+                                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+                                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                                  style={{ background: 'transparent', border: 'none', padding: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#e6eef8', borderRadius: 8, transition: 'background .12s' }}
+                                >
+                                  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" style={{ display: 'block', color: 'inherit' }}>
+                                    <path d="M16 1H4a2 2 0 00-2 2v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                                    <rect x="8" y="5" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
                                 </button>
                                 <button
-                                  className={"action-btn" + (isMobile ? ' icon-only' : '')}
-                                  onClick={(e) => {
-                                    try { e.stopPropagation(); } catch {}
-                                    // Pass the whole message object so the handler can decide how to delete it (DB delete vs media delete)
-                                    handleDeleteMessage(msg);
-                                  }}
+                                  onClick={(e) => { try { e.stopPropagation(); } catch {} handleDeleteMessage(msg); }}
                                   title="Удалить"
-                                  aria-label="Удалить сообщение"
+                                  aria-label="Удалить"
+                                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+                                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                                  style={{ background: 'transparent', border: 'none', padding: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ff7b7b', borderRadius: 8, transition: 'background .12s' }}
                                 >
-                                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: isMobile ? 28 : 34, height: isMobile ? 28 : 34, borderRadius: 9, flex: '0 0 auto' }}>
-                                    <svg width={isMobile ? 14 : 16} height={isMobile ? 14 : 16} viewBox="0 0 24 24" fill="none">
-                                      <path d="M9 3h6l1 2h4v2H4V5h4l1-2z" fill="none" stroke="#ff6b6b" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                                      <path d="M10 11v6" stroke="#ff6b6b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                                      <path d="M14 11v6" stroke="#ff6b6b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                  </span>
-                                  {!isMobile && <span style={{ fontSize: 13, color: '#e6eef8' }}>Удалить</span>}
+                                  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" style={{ display: 'block' }}>
+                                    <path d="M9 3h6l1 2h4v2H4V5h4l1-2z" fill="none" stroke="#ff6b6b" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M10 11v6" stroke="#ff6b6b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M14 11v6" stroke="#ff6b6b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                                  </svg>
                                 </button>
                               </div>
                             )}
@@ -1312,285 +1375,243 @@ const ChatWithFriend: React.FC = () => {
               }
             }}
           />
-          {isRecording ? (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              flex: 1,
-              margin: '0 8px',
-              color: '#d32f2f',
-              fontSize: 16,
-              fontWeight: 600,
-              background: '#23232a',
-              borderRadius: 12,
-              padding: '6px 16px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
-              maxWidth: '100%',
-              justifyContent: 'space-between',
-              gap: 0,
-            }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#d32f2f', marginRight: 6, boxShadow: '0 0 8px #d32f2f88' }} />
-                
-                <span style={{ marginLeft: 12, fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
-                  {String(Math.floor(recordTime / 60)).padStart(2, '0')}:{String(recordTime % 60).padStart(2, '0')}
-                </span>
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {/* Кнопка удаления (крестик) */}
-                <button
-                  type="button"
-                  style={{
-                    background: '#d32f2f',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: 36,
-                    height: 36,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    fontSize: 22,
-                    boxShadow: '0 2px 8px #d32f2f44',
-                    transition: 'background .18s',
-                  }}
-                  aria-label="Удалить голосовое сообщение"
-                  title="Удалить голосовое сообщение"
-                  onClick={cancelRecording}
-                >
-                  &#10006;
-                </button>
-                {/* Кнопка отправки (иконка микрофона с галочкой) */}
-                <button
-                  type="button"
-                  style={{
-                    ...buttonStyle,
-                    padding: 0,
-                    background: '#229ed9',
-                    border: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '50%',
-                    width: isMobile ? 44 : 36,
-                    height: isMobile ? 44 : 36,
-                    boxShadow: 'none',
-                    transition: 'background .18s, opacity .15s, transform .1s',
-                    cursor: 'pointer',
-                    opacity: 1,
-                    transform: 'scale(1.05)',
-                  }}
-                  aria-label="Отправить голосовое сообщение"
-                  title="Отправить голосовое сообщение"
-                  onMouseOver={e => { e.currentTarget.style.background = '#23243a'; }}
-                  onMouseOut={e => { e.currentTarget.style.background = '#229ed9'; }}
-                  onClick={() => {
-                    if (mediaRecorder && isRecording) {
-                      // обработчик onstop уже установлен для отправки
-                      mediaRecorder.stop();
-                      mediaRecorder.stream.getTracks().forEach(track => track.stop());
-                    }
-                  }}
-                >
-                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 28 : 22, height: isMobile ? 28 : 22, display: 'block' }} />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <input
-                value={newMessage}
-                onChange={(e) => {
-                  setNewMessage(e.target.value);
-                  sendTypingEvent();
-                }}
-                placeholder="Сообщение..."
-                style={inputStyle}
-              />
-              {/* Кнопка видеокружка рядом с микрофоном */}
+          {/* Always render the input and controls so the layout doesn't shift; the recording UI will overlay when active */}
+          <>
+            <input
+              value={newMessage}
+              onChange={(e) => {
+                setNewMessage(e.target.value);
+                sendTypingEvent();
+              }}
+              placeholder="Сообщение..."
+              style={inputStyle}
+            />
+            {/* Кнопка видеокружка рядом с микрофоном */}
+            <button
+              type="button"
+              style={{
+                width: isMobile ? 44 : 36,
+                height: isMobile ? 44 : 36,
+                borderRadius: '50%',
+                background: inputStyle.background,
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginLeft: 4,
+                cursor: 'pointer',
+                boxShadow: inputStyle.boxShadow,
+                color: '#bbb',
+                fontSize: isMobile ? 22 : 18,
+                transition: 'background .2s',
+              }}
+              title="Видеокружок"
+              aria-label="Видеокружок"
+              onClick={() => {
+                setShowVideoPreview(true);
+              }}
+            >
+              {/* SVG иконка камеры */}
+              <svg width={isMobile ? 22 : 18} height={isMobile ? 22 : 18} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2"/>
+                <rect x="9" y="9" width="6" height="6" rx="3" fill="currentColor"/>
+                <rect x="16" y="7" width="3" height="3" rx="1.5" fill="currentColor"/>
+              </svg>
+            </button>
+            {newMessage.trim() ? (
               <button
-                type="button"
+                type="submit"
                 style={{
-                  width: isMobile ? 44 : 36,
-                  height: isMobile ? 44 : 36,
-                  borderRadius: '50%',
-                  background: inputStyle.background,
+                  ...buttonStyle,
+                  padding: 0,
+                  background: '#229ed9',
                   border: 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginLeft: 4,
+                  borderRadius: '50%',
+                  width: isMobile ? 44 : 36,
+                  height: isMobile ? 44 : 36,
+                  boxShadow: 'none',
+                  transition: 'background .18s, opacity .15s, transform .1s',
                   cursor: 'pointer',
-                  boxShadow: inputStyle.boxShadow,
-                  color: '#bbb',
-                  fontSize: isMobile ? 22 : 18,
-                  transition: 'background .2s',
+                  opacity: 1,
+                  transform: 'scale(1.05)',
                 }}
-                title="Видеокружок"
-                aria-label="Видеокружок"
-                onClick={() => {
-                  setShowVideoPreview(true);
+                aria-label="Отправить"
+                title="Отправить"
+                onMouseOver={e => { e.currentTarget.style.background = '#23243a'; }}
+                onMouseOut={e => { e.currentTarget.style.background = '#229ed9'; }}
+              >
+                <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 28 : 22, height: isMobile ? 28 : 22, display: 'block' }} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                style={{
+                  ...buttonStyle,
+                  padding: 0,
+                  background: isRecording ? '#d32f2f' : '#444457',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '50%',
+                  width: isMobile ? 44 : 36,
+                  height: isMobile ? 44 : 36,
+                  boxShadow: 'none',
+                  transition: 'background .18s, opacity .15s, transform .1s',
+                  cursor: 'pointer',
+                  opacity: 0.85,
+                  marginLeft: 4, // небольшой отступ между кружком и микрофоном
+                }}
+                aria-label="Голосовое сообщение"
+                title="Голосовое сообщение"
+                onClick={async () => {
+                  if (!isRecording) {
+                    // Начать запись
+                    if (!navigator.mediaDevices) return;
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    // Используем audio/webm если поддерживается
+                    let mimeType = 'audio/webm';
+                    if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = '';
+                    const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+                    setMediaRecorder(recorder);
+                    audioChunksRef.current = [];
+                    setIsRecording(true);
+                    setRecordTime(0);
+                    if (recordInterval.current) clearInterval(recordInterval.current);
+                    recordInterval.current = setInterval(() => setRecordTime(t => t + 1), 1000);
+                    recorder.ondataavailable = (e) => {
+                      audioChunksRef.current.push(e.data);
+                    };
+                    recorder.onstop = async () => {
+                      if (recordInterval.current) clearInterval(recordInterval.current);
+                      setIsRecording(false);
+                      setRecordTime(0);
+                      const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
+                      audioChunksRef.current = [];
+                      // Optimistic UI: create a temporary message so user sees upload in progress
+                      const tempId = 'temp-audio-' + Date.now();
+                      const tempMsg: Message = {
+                        id: tempId,
+                        sender: (session?.user as any)?.id || '',
+                        text: '',
+                        createdAt: new Date().toISOString(),
+                        audioUrl: undefined,
+                        videoUrl: undefined,
+                        _key: tempId,
+                        _persisted: false,
+                        _failed: false,
+                      };
+                      setMessages(prev => [...prev, tempMsg]);
+
+                      const formData = new FormData();
+                      formData.append('chatId', chatId || '');
+                      formData.append('audio', audioBlob, 'voice.webm');
+                      try {
+                        const res = await fetch('/api/messages/voice-upload', {
+                          method: 'POST',
+                          credentials: 'include',
+                          body: formData,
+                        });
+                        if (!res.ok) {
+                          const txt = await res.text();
+                          // mark temp message as failed
+                          setMessages(prev => prev.map(m => m.id === tempId ? { ...m, _failed: true } : m));
+                          alert('Ошибка отправки голосового: ' + txt);
+                        } else {
+                          const data = await res.json();
+                          if (data && data.message && data.message.id) {
+                            // replace temp message with server message
+                            setMessages(prev => prev.map(m => m.id === tempId ? {
+                              ...m,
+                              id: data.message.id,
+                              createdAt: data.message.createdAt || m.createdAt,
+                              audioUrl: data.audioUrl,
+                              _persisted: data.persisted !== false,
+                            } : m));
+                          } else {
+                            // no message returned: mark failed
+                            setMessages(prev => prev.map(m => m.id === tempId ? { ...m, _failed: true } : m));
+                          }
+                        }
+                      } catch (err) {
+                        setMessages(prev => prev.map(m => m.id === tempId ? { ...m, _failed: true } : m));
+                        alert('Ошибка отправки голосового: ' + err);
+                      }
+                    };
+                    recorder.start();
+                  } else {
+                    // Остановить запись и отправить
+                    if (mediaRecorder && isRecording) {
+                      // Минимальная длительность
+                      // (Проверка минимальной длительности аудио отключена)
+                      mediaRecorder.stop();
+                      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                    }
+                  }
                 }}
               >
-                {/* SVG иконка камеры */}
-                <svg width={isMobile ? 22 : 18} height={isMobile ? 22 : 18} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2"/>
-                  <rect x="9" y="9" width="6" height="6" rx="3" fill="currentColor"/>
-                  <rect x="16" y="7" width="3" height="3" rx="1.5" fill="currentColor"/>
+                <svg
+                  width={isMobile ? 26 : 20}
+                  height={isMobile ? 26 : 20}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  style={{ display: 'block' }}
+                >
+                  <path d="M12 17a4 4 0 004-4V7a4 4 0 10-8 0v6a4 4 0 004 4zm5-4a1 1 0 112 0 7 7 0 01-14 0 1 1 0 112 0 5 5 0 0010 0z" fill="#fff"/>
                 </svg>
               </button>
-              {newMessage.trim() ? (
-                <button
-                  type="submit"
-                  style={{
-                    ...buttonStyle,
-                    padding: 0,
-                    background: '#229ed9',
-                    border: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '50%',
-                    width: isMobile ? 44 : 36,
-                    height: isMobile ? 44 : 36,
-                    boxShadow: 'none',
-                    transition: 'background .18s, opacity .15s, transform .1s',
-                    cursor: 'pointer',
-                    opacity: 1,
-                    transform: 'scale(1.05)',
-                  }}
-                  aria-label="Отправить"
-                  title="Отправить"
-                  onMouseOver={e => { e.currentTarget.style.background = '#23243a'; }}
-                  onMouseOut={e => { e.currentTarget.style.background = '#229ed9'; }}
-                >
-                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 28 : 22, height: isMobile ? 28 : 22, display: 'block' }} />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  style={{
-                    ...buttonStyle,
-                    padding: 0,
-                    background: isRecording ? '#d32f2f' : '#444457',
-                    border: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '50%',
-                    width: isMobile ? 44 : 36,
-                    height: isMobile ? 44 : 36,
-                    boxShadow: 'none',
-                    transition: 'background .18s, opacity .15s, transform .1s',
-                    cursor: 'pointer',
-                    opacity: 0.85,
-                    marginLeft: 4, // небольшой отступ между кружком и микрофоном
-                  }}
-                  aria-label="Голосовое сообщение"
-                  title="Голосовое сообщение"
-                  onClick={async () => {
-                    if (!isRecording) {
-                      // Начать запись
-                      if (!navigator.mediaDevices) return;
-                      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                      // Используем audio/webm если поддерживается
-                      let mimeType = 'audio/webm';
-                      if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = '';
-                      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-                      setMediaRecorder(recorder);
-                      audioChunksRef.current = [];
-                      setIsRecording(true);
-                      setRecordTime(0);
-                      if (recordInterval.current) clearInterval(recordInterval.current);
-                      recordInterval.current = setInterval(() => setRecordTime(t => t + 1), 1000);
-                      recorder.ondataavailable = (e) => {
-                        audioChunksRef.current.push(e.data);
-                      };
-                      recorder.onstop = async () => {
-                        if (recordInterval.current) clearInterval(recordInterval.current);
-                        setIsRecording(false);
-                        setRecordTime(0);
-                        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
-                        audioChunksRef.current = [];
-                        // Optimistic UI: create a temporary message so user sees upload in progress
-                        const tempId = 'temp-audio-' + Date.now();
-                        const tempMsg: Message = {
-                          id: tempId,
-                          sender: (session?.user as any)?.id || '',
-                          text: '',
-                          createdAt: new Date().toISOString(),
-                          audioUrl: undefined,
-                          videoUrl: undefined,
-                          _key: tempId,
-                          _persisted: false,
-                          _failed: false,
-                        };
-                        setMessages(prev => [...prev, tempMsg]);
-
-                        const formData = new FormData();
-                        formData.append('chatId', chatId || '');
-                        formData.append('audio', audioBlob, 'voice.webm');
-                        try {
-                          const res = await fetch('/api/messages/voice-upload', {
-                            method: 'POST',
-                            credentials: 'include',
-                            body: formData,
-                          });
-                          if (!res.ok) {
-                            const txt = await res.text();
-                            // mark temp message as failed
-                            setMessages(prev => prev.map(m => m.id === tempId ? { ...m, _failed: true } : m));
-                            alert('Ошибка отправки голосового: ' + txt);
-                          } else {
-                            const data = await res.json();
-                            if (data && data.message && data.message.id) {
-                              // replace temp message with server message
-                              setMessages(prev => prev.map(m => m.id === tempId ? {
-                                ...m,
-                                id: data.message.id,
-                                createdAt: data.message.createdAt || m.createdAt,
-                                audioUrl: data.audioUrl,
-                                _persisted: data.persisted !== false,
-                              } : m));
-                            } else {
-                              // no message returned: mark failed
-                              setMessages(prev => prev.map(m => m.id === tempId ? { ...m, _failed: true } : m));
-                            }
-                          }
-                        } catch (err) {
-                          setMessages(prev => prev.map(m => m.id === tempId ? { ...m, _failed: true } : m));
-                          alert('Ошибка отправки голосового: ' + err);
-                        }
-                      };
-                      recorder.start();
-                    } else {
-                      // Остановить запись и отправить
-                      if (mediaRecorder && isRecording) {
-                        // Минимальная длительность
-                        // (Проверка минимальной длительности аудио отключена)
-                        mediaRecorder.stop();
-                        mediaRecorder.stream.getTracks().forEach(track => track.stop());
-                      }
-                    }
-                  }}
-                >
-                  <svg
-                    width={isMobile ? 26 : 20}
-                    height={isMobile ? 26 : 20}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{ display: 'block' }}
-                  >
-                    <path d="M12 17a4 4 0 004-4V7a4 4 0 10-8 0v6a4 4 0 004 4zm5-4a1 1 0 112 0 7 7 0 01-14 0 1 1 0 112 0 5 5 0 0010 0z" fill="#fff"/>
-                  </svg>
-                </button>
-              )}
-            </>
-          )}
+            )}
+          </>
         </form>
-        {/* (удалено дублирующееся отображение индикатора записи) */}
+        {/* Overlay recording bar so it doesn't push the input */}
+        {isRecording && (
+          <div style={{
+            position: 'absolute',
+            left: isMobile ? 12 : 18,
+            right: isMobile ? 12 : 18,
+            bottom: isMobile ? 12 : 14,
+            zIndex: 140,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            pointerEvents: 'auto',
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              width: '100%',
+              color: '#e6eef8',
+              fontSize: isMobile ? 12 : 13,
+              fontWeight: 600,
+              background: '#1b1b1f',
+              border: '1px solid rgba(255,255,255,0.03)',
+              borderRadius: isMobile ? 8 : 10,
+              padding: isMobile ? '5px 6px' : '5px 8px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.7)',
+              gap: isMobile ? 6 : 8,
+            }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: isMobile ? 6 : 8, minWidth: isMobile ? 60 : 68 }}>
+                <span style={{ width: isMobile ? 6 : 7, height: isMobile ? 6 : 7, borderRadius: '50%', background: '#d32f2f', boxShadow: '0 0 5px #d32f2f55' }} />
+                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#f0f3f8', fontSize: isMobile ? 12 : 13 }}>
+                  {String(Math.floor(recordTime / 60)).padStart(2, '0')}:{String(recordTime % 60).padStart(2, '0')}
+                </span>
+              </div>
+              <div style={{ flex: 1, textAlign: 'center' }}>
+                <button type="button" onClick={cancelRecording} style={{ background: 'transparent', border: 'none', color: '#b992ff', fontSize: isMobile ? 13 : 14, fontWeight: 700, cursor: 'pointer', padding: '2px 6px' }} aria-label="Отмена" title="Отмена">Отмена</button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minWidth: isMobile ? 56 : 60 }}>
+                <button type="button" title="Отправить голосовое сообщение" aria-label="Отправить голосовое сообщение" onClick={() => { if (mediaRecorder && isRecording) { mediaRecorder.stop(); mediaRecorder.stream.getTracks().forEach(track => track.stop()); } }} style={{ width: isMobile ? 38 : 42, height: isMobile ? 38 : 42, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.06)', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(180deg,#7c3aed,#6d28d9)', boxShadow: '0 4px 10px rgba(109,40,217,0.14)', cursor: 'pointer', transform: 'translateZ(0)' }}>
+                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 18 : 16, height: isMobile ? 18 : 16, display: 'block', filter: 'brightness(1.05) invert(0)' }} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+  {/* (удалено дублирующееся отображение индикатора записи) */}
       </div>
       {/* (модалка удалена, только inline превью) */}
       </div>

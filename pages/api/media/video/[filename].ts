@@ -48,12 +48,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'File not found', storageDirListing: listing });
     }
     const stat = fs.statSync(fullPath);
-    const stream = fs.createReadStream(fullPath);
     const ext = path.extname(safeName).toLowerCase();
-    const contentType = ext === '.mp4' ? 'video/mp4' : 'video/webm';
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Length', String(stat.size));
-    stream.pipe(res);
+    // support images (thumbnails) and video range requests
+    let contentType = 'video/webm';
+    if (ext === '.mp4') contentType = 'video/mp4';
+    if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+    if (ext === '.png') contentType = 'image/png';
+
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+
+    const range = req.headers.range;
+    if (range) {
+      // Parse range: bytes=start-end
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? Math.min(stat.size - 1, parseInt(parts[1], 10)) : stat.size - 1;
+      if (isNaN(start) || isNaN(end) || start > end) {
+        res.status(416).setHeader('Content-Range', `bytes */${stat.size}`);
+        return res.end();
+      }
+      const chunkSize = (end - start) + 1;
+      res.status(206);
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${stat.size}`);
+      res.setHeader('Content-Length', String(chunkSize));
+      res.setHeader('Content-Type', contentType);
+      const stream = fs.createReadStream(fullPath, { start, end });
+      stream.pipe(res);
+    } else {
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Length', String(stat.size));
+      const stream = fs.createReadStream(fullPath);
+      stream.pipe(res);
+    }
   } catch (e) {
     console.error('[MEDIA][VIDEO] Error serving file:', e);
     res.status(500).json({ error: 'Internal server error' });
