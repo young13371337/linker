@@ -66,6 +66,70 @@ function MainApp({ Component, pageProps }: AppProps) {
 
   // Global Pusher listener for incoming messages -> show toast on any page
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const synthFallbackRef = useRef<boolean>(false);
+  const audioContextRef = useRef<any>(null);
+
+  // Try to detect whether notification file exists; if not, enable synth fallback
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch('/sounds/notification.mp3', { method: 'HEAD' });
+        if (!mounted) return;
+        if (!res.ok) {
+          // try fallback path
+          const res2 = await fetch('/sound/notification.mp3', { method: 'HEAD' });
+          synthFallbackRef.current = !res2.ok;
+        } else {
+          synthFallbackRef.current = false;
+        }
+      } catch (e) {
+        synthFallbackRef.current = true;
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const playSynth = () => {
+    try {
+      if (!audioContextRef.current) audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const ctx = audioContextRef.current;
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.value = 880;
+      g.gain.value = 0.05;
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.start();
+      setTimeout(() => { try { o.stop(); } catch (e) {} }, 150);
+    } catch (e) {
+      // last-resort no-op
+    }
+  };
+
+  const playSound = async () => {
+    try {
+      if (synthFallbackRef.current) {
+        playSynth();
+        return;
+      }
+      const audio = audioRef.current;
+      if (audio) {
+        const p = audio.play();
+        if (p && typeof p.then === 'function') {
+          await p.catch(() => {
+            // autoplay blocked — don't crash, fallback to synth
+            playSynth();
+          });
+        }
+      } else {
+        playSynth();
+      }
+    } catch (e) {
+      playSynth();
+    }
+  };
   useEffect(() => {
     if (!session?.user?.id) return;
     const userId = (session.user as any).id;
@@ -75,7 +139,7 @@ function MainApp({ Component, pageProps }: AppProps) {
       const pusherClient = getPusherClient();
       if (!pusherClient) return;
       const channel = pusherClient.subscribe(channelName);
-      const handler = (data: any) => {
+  const handler = (data: any) => {
         // data expected: { chatId, senderId, senderAvatar, senderName, senderRole?, content }
         // if user currently viewing the same chat, skip the toast
         try {
@@ -88,7 +152,7 @@ function MainApp({ Component, pageProps }: AppProps) {
         } catch (e) {}
 
         try {
-          audioRef.current?.play().catch(() => {});
+          playSound();
         } catch (e) {}
 
         toast.custom((t) => (

@@ -109,8 +109,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Параллельно - обновления и pusher
       (async () => {
         try {
-          const upserts = chat.users?.filter((u: any) => u.id !== user.id).map((u: any) => prisma.chatUnread.upsert({ where: { chatId_userId: { chatId, userId: u.id } }, update: { count: { increment: 1 } }, create: { chatId, userId: u.id, count: 1 } })) || [];
-          await Promise.all([ Promise.all(upserts), pusher.trigger(`chat-${chatId}`, 'new-message', messageToSend) ]);
+          const recipients = chat.users?.filter((u: any) => u.id !== user.id) || [];
+          const upserts = recipients.map((u: any) => prisma.chatUnread.upsert({ where: { chatId_userId: { chatId, userId: u.id } }, update: { count: { increment: 1 } }, create: { chatId, userId: u.id, count: 1 } }));
+
+          // Prepare a lightweight payload for user-level notifications
+          const userPayload = {
+            chatId,
+            senderId: user.id,
+            senderName: user.login || (user as any).name || 'Unknown',
+            senderAvatar: user.avatar || null,
+            senderRole: (user as any).role || null,
+            content: text,
+          };
+
+          // Trigger chat channel and per-user channels in parallel
+          const pusherPromises: Promise<any>[] = [];
+          pusherPromises.push(pusher.trigger(`chat-${chatId}`, 'new-message', messageToSend));
+          recipients.forEach((r: any) => {
+            try {
+              pusherPromises.push(pusher.trigger(`user-${r.id}`, 'new-message', userPayload));
+            } catch (e) {
+              console.error('[MESSAGES API] Failed to trigger user notification for', r.id, e);
+            }
+          });
+
+          await Promise.all([ Promise.all(upserts), Promise.all(pusherPromises) ]);
         } catch (bgErr) {
           console.error('[MESSAGES API][POST][BG] background error', bgErr);
         }

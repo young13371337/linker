@@ -1,10 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import prisma from "../../../lib/prisma";
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
-  const { userId, friendId } = req.body as { userId?: string, friendId?: string };
-  if (!userId || !friendId) return res.status(400).json({ error: "userId and friendId required" });
+  const { friendId } = req.body as { userId?: string, friendId?: string };
+  const session = (await getServerSession(req, res, authOptions as any)) as any;
+  if (!session || !session.user || !(session.user as any).id) return res.status(401).json({ error: 'Unauthorized' });
+  const userId = (session.user as any).id;
+  if (!friendId) return res.status(400).json({ error: "friendId required" });
   try {
     // Удалить связь дружбы в обе стороны
     await prisma.friend.deleteMany({

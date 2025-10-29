@@ -5,13 +5,11 @@ import { authOptions } from '../auth/[...nextauth]';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
-  let { userId, requestId } = req.body as { userId?: string, requestId?: string };
-  // Try to resolve current user from session if userId not provided
-  if (!userId) {
-    const session = await getServerSession(req, res, authOptions);
-    if (session && session.user && (session.user as any).id) userId = (session.user as any).id;
-  }
-  if (!userId || !requestId) return res.status(400).json({ error: "userId and requestId required" });
+  const { requestId } = req.body as { requestId?: string };
+  const session = (await getServerSession(req, res, authOptions as any)) as any;
+  if (!session || !session.user || !(session.user as any).id) return res.status(401).json({ error: 'Unauthorized' });
+  const userId = (session.user as any).id;
+  if (!requestId) return res.status(400).json({ error: "requestId required" });
   try {
     // Найти заявку
     const request = await prisma.friendRequest.findFirst({ where: { toId: userId, fromId: requestId } });

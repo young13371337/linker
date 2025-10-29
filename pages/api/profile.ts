@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import prisma from "../../lib/prisma";
 import { pusher } from "../../lib/pusher";
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from './auth/[...nextauth]';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Получить профиль пользователя, друзей, устройства
@@ -107,8 +109,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Ошибочный дублирующийся код удалён. Всё внутри handler.
   // Обновить профиль (описание, аватар)
   if (req.method === "POST") {
-  const { userId, description, avatar, twoFactorToken, password, backgroundUrl, bgOpacity, favoriteTrackUrl, login: newLogin, status } = req.body;
-    if (!userId) return res.status(400).json({ error: "userId required" });
+    // Only allow authenticated users to modify their own profile.
+    const session = (await getServerSession(req, res, authOptions as any)) as any;
+    if (!session || !session.user || !(session.user as any).id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const currentUserId = (session.user as any).id;
+
+    const { description, avatar, twoFactorToken, password, backgroundUrl, bgOpacity, favoriteTrackUrl, login: newLogin, status } = req.body;
     try {
       const data: any = {};
       if (typeof description !== "undefined") data.description = description;
@@ -141,11 +149,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // If status is being updated, check previous value so we can broadcast change
       let prevStatus: string | null = null;
       if (typeof data.status !== 'undefined') {
-        const prev = await prisma.user.findUnique({ where: { id: userId } }) as any;
+        const prev = await prisma.user.findUnique({ where: { id: currentUserId } }) as any;
         prevStatus = prev?.status || null;
       }
       const user = await prisma.user.update({
-        where: { id: userId },
+        where: { id: currentUserId },
         data,
       });
 
@@ -154,11 +162,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (typeof data.status !== 'undefined') {
           const newStatus = (user as any).status || null;
           if (newStatus !== prevStatus) {
-            try {
-              await pusher.trigger(`user-${userId}`, 'status-changed', { userId, status: newStatus });
-            } catch (pErr) {
-              console.error('[PROFILE] Failed to trigger pusher status-changed:', String(pErr));
-            }
+              try {
+                await pusher.trigger(`user-${currentUserId}`, 'status-changed', { userId: currentUserId, status: newStatus });
+              } catch (pErr) {
+                console.error('[PROFILE] Failed to trigger pusher status-changed:', String(pErr));
+              }
           }
         }
       } catch (bErr) {
