@@ -39,10 +39,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { chatId } = req.query;
     if (!chatId || typeof chatId !== 'string') return res.status(400).json({ error: 'chatId required' });
     try {
-      const messages = await prisma.message.findMany({
-        where: { chatId },
-        orderBy: { createdAt: 'asc' }
-      });
+      // Ensure the requesting user is a participant of the chat
+      const chat = await prisma.chat.findUnique({ where: { id: chatId }, include: { users: true } });
+      if (!chat) return res.status(404).json({ error: 'Chat not found' });
+      const isParticipant = (chat.users || []).some((u: any) => u.id === user.id);
+      if (!isParticipant) return res.status(403).json({ error: 'Forbidden' });
+
+      const messages = await prisma.message.findMany({ where: { chatId }, orderBy: { createdAt: 'asc' } });
       // Расшифровываем текст сообщений
       const decryptedMessages = messages.map((msg: any) => ({
         ...msg,
@@ -63,6 +66,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'PUT') {
     const { chatId } = req.body;
     if (!chatId || typeof chatId !== 'string') return res.status(400).json({ error: 'chatId required' });
+    // Ensure the requesting user is a participant
+    const chat = await prisma.chat.findUnique({ where: { id: chatId }, include: { users: true } });
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+    const isParticipant = (chat.users || []).some((u: any) => u.id === user.id);
+    if (!isParticipant) return res.status(403).json({ error: 'Forbidden' });
+
     await prisma.chatUnread.upsert({
       where: { chatId_userId: { chatId, userId: user.id } },
       update: { count: 0 },
@@ -83,11 +92,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-      // Ensure chat exists
+      // Ensure chat exists and the sender is a participant
       const chat = await prisma.chat.findUnique({ where: { id: chatId }, include: { users: true } });
       if (!chat) {
         console.warn('[MESSAGES API][POST] chat not found', chatId);
         return res.status(404).json({ error: 'Chat not found' });
+      }
+      const isParticipant = (chat.users || []).some((u: any) => u.id === user.id);
+      if (!isParticipant) {
+        console.warn('[MESSAGES API][POST] user not participant', { userId: user.id, chatId });
+        return res.status(403).json({ error: 'Forbidden' });
       }
 
       // Шифруем сообщение (защищаем шифрование отдельным try)

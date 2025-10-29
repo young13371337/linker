@@ -178,6 +178,54 @@ function MainApp({ Component, pageProps }: AppProps) {
     }
   }, [session?.user?.id]);
 
+  // Sliding session refresh on user activity.
+  // We'll call /api/auth/session (no-store) to force NextAuth to refresh the JWT when updateAge=0.
+  // Throttle calls to once every 25 seconds to avoid spamming the server.
+  useEffect(() => {
+    if (!session) return;
+    let mounted = true;
+    const lastRef = { last: 0 } as { last: number };
+
+    const doRefresh = async () => {
+      try {
+        const now = Date.now();
+        if (now - lastRef.last < 25_000) return; // throttle 25s
+        lastRef.last = now;
+        // call NextAuth session endpoint to force refresh (updateAge=0 will make backend refresh)
+        await fetch('/api/auth/session', { credentials: 'include', cache: 'no-store' }).catch(() => null);
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    const onActivity = () => {
+      if (!mounted) return;
+      void doRefresh();
+    };
+
+    // Listen to a set of user interactions
+    window.addEventListener('mousemove', onActivity);
+    window.addEventListener('keydown', onActivity);
+    window.addEventListener('click', onActivity);
+    window.addEventListener('touchstart', onActivity);
+    window.addEventListener('scroll', onActivity, { passive: true });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') onActivity();
+    });
+
+    // also refresh once on mount
+    void doRefresh();
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('mousemove', onActivity);
+      window.removeEventListener('keydown', onActivity);
+      window.removeEventListener('click', onActivity);
+      window.removeEventListener('touchstart', onActivity);
+      window.removeEventListener('scroll', onActivity);
+    };
+  }, [session]);
+
   return (
     <>
       <Head>

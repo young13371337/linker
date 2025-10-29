@@ -83,7 +83,15 @@ export const authOptions = {
     })
   ],
   session: {
-    strategy: 'jwt' as const
+    strategy: 'jwt' as const,
+    // session max age in seconds (4 minutes)
+    maxAge: 4 * 60,
+    // force token refresh on every session request so we can implement sliding expiry
+    updateAge: 0,
+  },
+  jwt: {
+    // when using JWT strategy, set jwt maxAge as well (4 minutes)
+    maxAge: 4 * 60,
   },
   secret: process.env.NEXTAUTH_SECRET || "dev-secret",
   callbacks: {
