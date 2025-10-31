@@ -114,7 +114,7 @@ const ChatWithFriend: React.FC = () => {
   
   const [messages, setMessages] = useState<Message[]>([]);
   // Исправить тип friend, чтобы поддерживать login, name, avatar, role
-  const [friend, setFriend] = useState<{id: string, login?: string, name?: string, avatar?: string | null, role?: string, status?: string} | null>(null);
+  const [friend, setFriend] = useState<{id: string, login?: string, name?: string, link?: string, avatar?: string | null, role?: string, status?: string} | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
   // Chat background URL (local per-chat, stored in localStorage like Telegram)
   const [chatBgUrl, setChatBgUrl] = useState<string | null>(null);
