@@ -45,7 +45,6 @@
 /* Скрыть скроллбар полностью */
 .chat-messages-scroll {
   overflow-y: auto !important;
-  background: rgba(40, 40, 40, 0.7) !important;
   border-radius: 12px;
   scrollbar-width: none !important; /* Firefox */
   -ms-overflow-style: none !important; /* IE and Edge */
@@ -71,7 +70,8 @@
 }
 @media (max-width: 600px) {
   .chat-messages-scroll {
-    background: rgba(40, 40, 40, 0.4) !important;
+    /* keep transparent to allow per-chat background images; overlay applied inline via component */
+    background: transparent;
   }
 }
 .chat-messages-scroll::-webkit-scrollbar {

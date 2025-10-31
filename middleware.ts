@@ -19,10 +19,8 @@ export async function middleware(request: NextRequest) {
     // Use next-auth jwt helper to read token from cookie or authorization header
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
     if (!token) {
-      // Not authenticated — redirect to login
+      // Not authenticated — redirect to login (no returnTo param to keep URL clean)
       const loginUrl = new URL('/auth/login', request.nextUrl.origin);
-      // include returnTo param for convenience
-      loginUrl.searchParams.set('returnTo', request.nextUrl.pathname + request.nextUrl.search);
       return NextResponse.redirect(loginUrl);
     }
 

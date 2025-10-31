@@ -95,13 +95,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const now = Date.now();
             return now - created < 2 * 60 * 1000;
           }) ? 'online' : 'offline');
-      return res.status(200).json({ user: {
-        ...(user as any),
+      // Build a safe user object to avoid leaking sensitive fields (password, sessions, etc.)
+      const safeUser = {
+        id: (user as any).id,
+        login: (user as any).login,
+        avatar: (user as any).avatar || null,
+        role: (user as any).role || null,
+        description: (user as any).description || null,
+        backgroundUrl: (user as any).backgroundUrl || null,
+        bgOpacity: (user as any).bgOpacity ?? null,
+        favoriteTrackUrl: (user as any).favoriteTrackUrl ?? null,
+        createdAt: (user as any).createdAt,
         status: mainStatus,
-        backgroundUrl: user.backgroundUrl || null,
         friends: friendsFull.filter(Boolean),
         friendRequests: friendRequests.filter(Boolean)
-      }});
+      };
+
+      return res.status(200).json({ user: safeUser });
     } catch (e: any) {
       return res.status(500).json({ error: e.message || "Internal server error" });
     }
@@ -173,7 +183,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.error('[PROFILE] Broadcast error:', String(bErr));
       }
 
-      return res.status(200).json({ user });
+      // Return sanitized user to avoid leaking password/sessions
+      const returnedUser = {
+        id: (user as any).id,
+        login: (user as any).login,
+        avatar: (user as any).avatar || null,
+        role: (user as any).role || null,
+        description: (user as any).description || null,
+        backgroundUrl: (user as any).backgroundUrl || null,
+        bgOpacity: (user as any).bgOpacity ?? null,
+        favoriteTrackUrl: (user as any).favoriteTrackUrl ?? null,
+        createdAt: (user as any).createdAt,
+      };
+
+      return res.status(200).json({ user: returnedUser });
     } catch (e: any) {
       return res.status(500).json({ error: e.message || "Internal server error" });
     }

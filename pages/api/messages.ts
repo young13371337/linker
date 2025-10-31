@@ -42,15 +42,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Ensure the requesting user is a participant of the chat
       const chat = await prisma.chat.findUnique({ where: { id: chatId }, include: { users: true } });
       if (!chat) return res.status(404).json({ error: 'Chat not found' });
-      const isParticipant = (chat.users || []).some((u: any) => u.id === user.id);
+      const isParticipant = (chat.users || []).some((u: any) => String(u.id) === String(user.id));
       if (!isParticipant) return res.status(403).json({ error: 'Forbidden' });
 
       const messages = await prisma.message.findMany({ where: { chatId }, orderBy: { createdAt: 'asc' } });
-      // Расшифровываем текст сообщений
-      const decryptedMessages = messages.map((msg: any) => ({
-        ...msg,
-        text: msg.text ? decryptMessage(msg.text, chatId) : ''
-      }));
+      // Расшифровываем текст сообщений. Если расшифровка упадёт для одного сообщения,
+      // логируем ошибку, но возвращаем остальные сообщения — не ломаем весь ответ.
+      const decryptedMessages = messages.map((msg: any) => {
+        let text = '';
+        if (msg.text) {
+          try {
+            text = decryptMessage(msg.text, chatId);
+          } catch (dErr) {
+            console.error('[MESSAGES GET] Failed to decrypt message', msg.id, dErr);
+            // preserve placeholder instead of throwing
+            text = '[Ошибка расшифровки]';
+          }
+        }
+        return { ...msg, text };
+      });
       return res.status(200).json({ messages: decryptedMessages });
     } catch (err: any) {
       console.error('Failed to fetch messages for chatId', chatId, err);
@@ -98,7 +108,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.warn('[MESSAGES API][POST] chat not found', chatId);
         return res.status(404).json({ error: 'Chat not found' });
       }
-      const isParticipant = (chat.users || []).some((u: any) => u.id === user.id);
+      const isParticipant = (chat.users || []).some((u: any) => String(u.id) === String(user.id));
       if (!isParticipant) {
         console.warn('[MESSAGES API][POST] user not participant', { userId: user.id, chatId });
         return res.status(403).json({ error: 'Forbidden' });

@@ -1,50 +1,104 @@
-// --- Шифрование/дешифрование файлов (Buffer <-> Buffer) ---
-export function encryptFileBuffer(buffer: Buffer, chatId: string): Buffer {
-    const key = getChatKey(chatId);
-    const iv = crypto.randomBytes(IV_LENGTH);
-    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-    const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
-    // Сохраняем IV в начале файла
-    return Buffer.concat([iv, encrypted]);
-}
-
-export function decryptFileBuffer(buffer: Buffer, chatId: string): Buffer {
-    const key = getChatKey(chatId);
-    const iv = buffer.slice(0, IV_LENGTH);
-    const encrypted = buffer.slice(IV_LENGTH);
-    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
-    return decrypted;
-}
 import crypto from 'crypto';
 
-const ALGORITHM = 'aes-256-ctr';
-const IV_LENGTH = 16;
+const ALGORITHM = 'aes-256-gcm'; // Используем GCM вместо CTR для лучшей безопасности
+const IV_LENGTH = 12; // Для GCM рекомендуется 12 байт
+const AUTH_TAG_LENGTH = 16; // Длина тега аутентификации для GCM
+const SALT_LENGTH = 16;
 
-function getChatKey(chatId: string): Buffer {
-    // Генерируем 32-байтовый ключ из chatId через SHA-256
-    return crypto.createHash('sha256').update(chatId).digest();
+function deriveKey(chatId: string, salt: Buffer): { key: Buffer, salt: Buffer } {
+    // Используем PBKDF2 для получения ключа из chatId
+    const iterations = 100000;
+    const keyLength = 32;
+    const secret = process.env.MESSAGE_ENCRYPTION_KEY;
+    if (!secret || typeof secret !== 'string' || secret.length < 16) {
+        throw new Error('MESSAGE_ENCRYPTION_KEY environment variable is required and must be a sufficiently long secret');
+    }
+    const derivedKey = crypto.pbkdf2Sync(
+        secret + chatId,
+        salt,
+        iterations,
+        keyLength,
+        'sha256'
+    );
+    return { key: derivedKey, salt };
 }
 
 export function encryptMessage(message: string, chatId: string): string {
-    const key = getChatKey(chatId);
+    const salt = crypto.randomBytes(SALT_LENGTH);
+    const { key } = deriveKey(chatId, salt);
     const iv = crypto.randomBytes(IV_LENGTH);
     const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+    
     const encrypted = Buffer.concat([cipher.update(message, 'utf8'), cipher.final()]);
-    return iv.toString('hex') + ':' + encrypted.toString('hex');
+    const authTag = cipher.getAuthTag();
+
+    // Формат: salt:iv:encrypted:authTag
+    return Buffer.concat([
+        salt,
+        iv,
+        encrypted,
+        authTag
+    ]).toString('base64');
 }
 
 export function decryptMessage(encryptedMessage: string, chatId: string): string {
     try {
-        const key = getChatKey(chatId);
-        const [ivHex, encryptedHex] = encryptedMessage.split(':');
-        if (!ivHex || !encryptedHex) throw new Error('Invalid encrypted message format');
-        const iv = Buffer.from(ivHex, 'hex');
-        const encryptedText = Buffer.from(encryptedHex, 'hex');
+        const buffer = Buffer.from(encryptedMessage, 'base64');
+        
+        const salt = buffer.slice(0, SALT_LENGTH);
+        const iv = buffer.slice(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
+        const authTag = buffer.slice(-AUTH_TAG_LENGTH);
+        const encrypted = buffer.slice(SALT_LENGTH + IV_LENGTH, -AUTH_TAG_LENGTH);
+        
+        const { key } = deriveKey(chatId, salt);
+        
         const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-        const decrypted = Buffer.concat([decipher.update(encryptedText), decipher.final()]);
+        decipher.setAuthTag(authTag);
+        
+        const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
         return decrypted.toString('utf8');
     } catch (e) {
+        console.error('Decryption error:', e);
         return '[Ошибка шифрования]';
     }
+}
+
+// Шифрование файлов с улучшенной безопасностью
+export function encryptFileBuffer(buffer: Buffer, chatId: string): Buffer {
+    const salt = crypto.randomBytes(SALT_LENGTH);
+    const { key } = deriveKey(chatId, salt);
+    const iv = crypto.randomBytes(IV_LENGTH);
+    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+    
+    const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
+    const authTag = cipher.getAuthTag();
+
+    // Формат: salt + iv + authTag + encrypted
+    return Buffer.concat([salt, iv, authTag, encrypted]);
+}
+
+export function decryptFileBuffer(buffer: Buffer, chatId: string): Buffer {
+    try {
+        const salt = buffer.slice(0, SALT_LENGTH);
+        const iv = buffer.slice(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
+        const authTag = buffer.slice(SALT_LENGTH + IV_LENGTH, SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH);
+        const encrypted = buffer.slice(SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH);
+
+        const { key } = deriveKey(chatId, salt);
+        const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+        decipher.setAuthTag(authTag);
+
+        return Buffer.concat([decipher.update(encrypted), decipher.final()]);
+    } catch (e) {
+        console.error('File decryption error:', e);
+        throw new Error('Failed to decrypt file');
+    }
+}
+
+// Функция для безопасного хеширования userId
+export function hashUserId(userId: string): string {
+    return crypto
+        .createHmac('sha256', process.env.USER_HASH_SECRET || '')
+        .update(userId)
+        .digest('hex');
 }

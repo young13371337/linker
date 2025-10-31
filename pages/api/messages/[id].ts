@@ -55,7 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'Message not found' });
     }
     
-    if (msg.senderId !== session.user.id) {
+    if (String(msg.senderId) !== String(session.user.id)) {
       console.log('[DELETE MESSAGE] Unauthorized delete attempt:', { 
         messageId: id, 
         requesterId: session.user.id,
@@ -79,17 +79,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Файлы и Pusher выполняем в фоне — не блокируем ответ клиенту
     (async () => {
       try {
-        const tryUnlink = async (fullPath: string) => {
-          try {
-            if (fs.existsSync(fullPath)) {
-              await fs.promises.unlink(fullPath);
-              console.log('[DELETE MESSAGE][BG] File deleted:', fullPath);
-            } else {
-              console.log('[DELETE MESSAGE][BG] File not found (skip):', fullPath);
+        // tryUnlink with a couple of retries — sometimes filesystem locks/antivirus cause transient errors
+        const tryUnlink = async (fullPath: string, attempts = 3) => {
+          for (let i = 0; i < attempts; i++) {
+            try {
+              if (fs.existsSync(fullPath)) {
+                await fs.promises.unlink(fullPath);
+                console.log('[DELETE MESSAGE][BG] File deleted:', fullPath);
+                return true;
+              } else {
+                console.log('[DELETE MESSAGE][BG] File not found (skip):', fullPath);
+                return false;
+              }
+            } catch (e) {
+              console.error(`[DELETE MESSAGE][BG] Error deleting file (attempt ${i+1}/${attempts}):`, fullPath, e);
+              // small backoff
+              await new Promise(r => setTimeout(r, 120 * (i+1)));
             }
-          } catch (e) {
-            console.error('[DELETE MESSAGE][BG] Error deleting file:', fullPath, e);
           }
+          console.error('[DELETE MESSAGE][BG] Failed to delete file after retries:', fullPath);
+          return false;
         };
 
         if (msg.audioUrl) {

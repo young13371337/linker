@@ -1,4 +1,8 @@
 import Pusher from 'pusher-js';
+import { getPusherClient } from '../../lib/pusher';
+
+// Use shared pusher client helper (returns null on server)
+const pusherClient = typeof window !== 'undefined' ? getPusherClient() : null;
 import React, { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
 import { FaPaperPlane } from 'react-icons/fa';
@@ -7,187 +11,17 @@ import UserStatus, { statusLabels } from '../../components/UserStatus';
 import { useSession } from 'next-auth/react';
 
 // Инициализация Pusher
-const pusherClient = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
-  cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
-});
-
-// --- Кружок с overlay play/pause ---
-const VideoCircle: React.FC<{ src: string; poster?: string }> = ({ src, poster }) => {
-  const videoRef = React.useRef<HTMLVideoElement>(null);
-  const [playing, setPlaying] = React.useState(false);
-  const [showOverlay, setShowOverlay] = React.useState(true);
-  const [progress, setProgress] = React.useState(0); // 0..1
-  const [duration, setDuration] = React.useState(0);
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    const onLoaded = () => setDuration(video.duration);
-    const onTime = () => {
-      if (video.duration) setProgress(video.currentTime / video.duration);
-      else setProgress(0);
-    };
-    video.addEventListener('loadedmetadata', onLoaded);
-    video.addEventListener('timeupdate', onTime);
-    return () => {
-      video.removeEventListener('loadedmetadata', onLoaded);
-      video.removeEventListener('timeupdate', onTime);
-    };
-  }, []);
-
-  React.useEffect(() => {
-    if (playing) {
-      setShowOverlay(false);
-    }
-  }, [playing]);
-
-  // параметры круга
-  const CIRCLE_SIZE = playing ? 140 : 120;
-  const STROKE = 5;
-  const RADIUS = (CIRCLE_SIZE / 2) - (STROKE / 2);
-  const CIRCUM = 2 * Math.PI * RADIUS;
-  const offset = CIRCUM * (1 - progress);
-
-  return (
-    <div style={{ position: 'relative', width: CIRCLE_SIZE, height: CIRCLE_SIZE, transition: 'width .18s, height .18s', display: 'inline-block' }}>
-      {/* Show a small poster image first for instant display; only mount video when user interacts */}
-      {!mounted ? (
-        (poster ? (
-          <img
-            src={poster}
-            alt="video poster"
-            // Clicking the poster will mount the video element but will NOT autoplay — user must press the play button.
-            onClick={() => {
-              setMounted(true);
-            }}
-            style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#111', objectFit: 'cover', border: '2.5px solid #229ed9', boxShadow: '0 2px 12px #229ed955', marginBottom: 2, cursor: 'pointer', transition: 'box-shadow .18s, border .18s' }}
-          />
-        ) : (
-          <div
-            onClick={() => setMounted(true)}
-            style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'linear-gradient(135deg,#111,#222)', border: '2.5px solid #229ed9', boxShadow: '0 2px 12px #229ed955', marginBottom: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          />
-        ))
-      ) : (
-        <video
-          ref={videoRef}
-          playsInline
-          preload="metadata"
-          poster={poster}
-          // remove native controls; use custom play/pause and progress ring
-          style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#111', objectFit: 'cover', border: '2.5px solid #229ed9', boxShadow: '0 2px 12px #229ed955', marginBottom: 2, cursor: 'pointer', transition: 'box-shadow .18s, border .18s' }}
-          onClick={() => {
-            if (!videoRef.current) return;
-            if (videoRef.current.paused) {
-              videoRef.current.play();
-              setPlaying(true);
-              setShowOverlay(true);
-              setTimeout(() => setShowOverlay(false), 600);
-            } else {
-              videoRef.current.pause();
-              setPlaying(false);
-              setShowOverlay(true);
-              setTimeout(() => setShowOverlay(false), 600);
-            }
-          }}
-          onPlay={() => {
-            setPlaying(true);
-            setShowOverlay(true);
-            setTimeout(() => setShowOverlay(false), 600);
-          }}
-          onPause={() => {
-            setPlaying(false);
-            setShowOverlay(true);
-            setTimeout(() => setShowOverlay(false), 600);
-          }}
-        >
-          <source src={src} type="video/webm" />
-        </video>
-      )}
-      {/* SVG прогресс-обводка: show rounded stroke that animates as playback progresses */}
-      {duration > 0 && (
-        <svg
-          width={CIRCLE_SIZE}
-          height={CIRCLE_SIZE}
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            pointerEvents: 'none',
-            zIndex: 2,
-          }}
-        >
-          <circle
-            cx={CIRCLE_SIZE / 2}
-            cy={CIRCLE_SIZE / 2}
-            r={RADIUS}
-            stroke="#ffffff22"
-            strokeWidth={STROKE}
-            fill="none"
-            opacity={playing ? 0.18 : 0.06}
-          />
-          <circle
-            cx={CIRCLE_SIZE / 2}
-            cy={CIRCLE_SIZE / 2}
-            r={RADIUS}
-            stroke="#229ed9"
-            strokeWidth={STROKE}
-            fill="none"
-            strokeDasharray={CIRCUM}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-            style={{ transition: playing ? 'stroke-dashoffset 0.15s linear' : 'none' }}
-          />
-        </svg>
-      )}
-
-      {/* Overlay: show a minimal icon-only play button when paused; hide while playing (progress ring serves as indicator) */}
-      {showOverlay && !playing && (
-        <div style={{
-          position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto', transition: 'opacity .18s', opacity: 0.96,
-          zIndex: 4,
-        }}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!mounted) {
-                setMounted(true);
-                setTimeout(() => { try { videoRef.current?.play(); setPlaying(true); } catch (err) {} }, 80);
-                return;
-              }
-              const v = videoRef.current;
-              if (!v) return;
-              v.play();
-              setPlaying(true);
-            }}
-            aria-label="Play video"
-            style={{
-              width: 44, height: 44, borderRadius: '50%', border: 'none', background: 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 6,
-            }}
-          >
-            <svg width={22} height={22} viewBox="0 0 24 24" style={{ filter: 'drop-shadow(0 2px 6px #000)', display: 'block' }}>
-              <polygon points="6,4 20,12 6,20" fill="#fff" />
-            </svg>
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Кастомный компонент для голосовых сообщений
 const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUrl, isOwn }) => {
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [duration, setDuration] = useState<number>(0);
+  const [current, setCurrent] = useState<number>(0);
   const [playing, setPlaying] = useState(false);
-  const [duration, setDuration] = useState(0);
-  const [current, setCurrent] = useState(0);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    const onLoaded = () => setDuration(audio.duration);
-    const onTime = () => setCurrent(audio.currentTime);
+    const onLoaded = () => setDuration(audio.duration || 0);
+    const onTime = () => setCurrent(audio.currentTime || 0);
     audio.addEventListener('loadedmetadata', onLoaded);
     audio.addEventListener('timeupdate', onTime);
     return () => {
@@ -282,6 +116,8 @@ const ChatWithFriend: React.FC = () => {
   // Исправить тип friend, чтобы поддерживать login, name, avatar, role
   const [friend, setFriend] = useState<{id: string, login?: string, name?: string, avatar?: string | null, role?: string, status?: string} | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
+  // Chat background URL (local per-chat, stored in localStorage like Telegram)
+  const [chatBgUrl, setChatBgUrl] = useState<string | null>(null);
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
   const [viewers, setViewers] = useState<Set<string>>(new Set());
   const [openActionMsgId, setOpenActionMsgId] = useState<string | null>(null);
@@ -522,6 +358,14 @@ const ChatWithFriend: React.FC = () => {
       .then(data => {
                 if (data && data.chat && data.chat.id) {
           setChatId(data.chat.id);
+            // load per-chat background URL from localStorage
+            try {
+              const key = `chat-bg-${data.chat.id}`;
+              const stored = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+              if (stored) setChatBgUrl(stored);
+            } catch (e) {
+              console.warn('[CHAT BG] failed to read localStorage', e);
+            }
           // Получить сообщения
           fetch(`/api/messages?chatId=${data.chat.id}`, { credentials: 'include' })
             .then(res => res.json())
@@ -716,7 +560,6 @@ const ChatWithFriend: React.FC = () => {
       };
     chatChannel.bind('new-message', onNewMessage);
     chatChannel.bind('typing', onTyping);
-      // viewer-state: { userId, action: 'enter' | 'leave' }
       const onViewer = (data: any) => {
         try {
           if (!data || !data.userId) return;
@@ -887,6 +730,19 @@ const ChatWithFriend: React.FC = () => {
         padding: '22px 18px 16px 18px',
         position: 'relative' as const,
       };
+  // Apply chat background if provided (localStorage per-chat setting)
+  const appliedChatContainerStyle = (() => {
+    try {
+      if (chatBgUrl) {
+        return { ...chatContainerStyle, background: `linear-gradient(rgba(30,32,42,0.55),rgba(30,32,42,0.75)), url('${chatBgUrl}') center/cover no-repeat` };
+      }
+    } catch (e) {
+      console.warn('[CHAT BG] failed to apply background', e);
+    }
+    return chatContainerStyle;
+  })();
+  // Default background to use when per-chat bg is not set
+  const DEFAULT_CHAT_BG = 'https://cs13.pikabu.ru/post_img/2023/08/31/12/1693515176124117632.jpg';
   const avatarStyle = isMobile
     ? { width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover' as const, background: '#222', boxShadow: '0 2px 8px #2226' }
     : { width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' as const, background: '#222', boxShadow: '0 2px 8px #2226' };
@@ -979,65 +835,66 @@ const ChatWithFriend: React.FC = () => {
           padding: 0,
         }}
       >
-        <div style={chatContainerStyle}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: isMobile ? 10 : 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button
-              onClick={() => router.push('/chat')}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                marginRight: 6,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                color: '#bbb',
-                fontSize: isMobile ? 28 : 22,
-                transition: 'color 0.2s',
-              }}
-              title="Назад к чатам"
-              aria-label="Назад к чатам"
-              onMouseOver={e => (e.currentTarget.style.color = '#229ed9')}
-              onMouseOut={e => (e.currentTarget.style.color = '#bbb')}
-            >
-              <svg width={isMobile ? 28 : 22} height={isMobile ? 28 : 22} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M15.5 19L9.5 12L15.5 5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-            <div style={{ position: 'relative' }}>
-              <img src={friend?.avatar || '/window.svg'} alt="avatar" style={avatarStyle} />
-              {/* Статус только возле аватарки */}
-              {friend?.status === 'dnd' ? (
-                <img src="/moon-dnd.svg" alt="dnd" style={{ position: 'absolute', right: -6, bottom: -6, width: 18, height: 18 }} />
-              ) : (
-                <span style={{ position: 'absolute', right: -2, bottom: -2, width: 14, height: 14, borderRadius: '50%', background: friend?.status === 'online' ? '#1ed760' : '#888', border: '2px solid #23242a' }} />
-              )}
+  <div style={appliedChatContainerStyle}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: isMobile ? 10 : 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+                <button
+                  onClick={() => router.push('/chat')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    marginRight: 6,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: '#bbb',
+                    fontSize: isMobile ? 28 : 22,
+                    transition: 'color 0.2s',
+                  }}
+                  title="Назад к чатам"
+                  aria-label="Назад к чатам"
+                  onMouseOver={e => (e.currentTarget.style.color = '#229ed9')}
+                  onMouseOut={e => (e.currentTarget.style.color = '#bbb')}
+                >
+                  <svg width={isMobile ? 28 : 22} height={isMobile ? 28 : 22} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15.5 19L9.5 12L15.5 5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+
+                {/* Center: name + status/typing */}
+                <div style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={nameStyle}>{friend?.name || friend?.login || <span style={{color:'#888'}}>Загрузка...</span>}</span>
+                    {/* role icons */}
+                    {friend?.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" title="Админ" style={{ width: 16, height: 16, marginLeft: 2 }} />}
+                    {friend?.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" title="Модератор" style={{ width: 16, height: 16, marginLeft: 2 }} />}
+                    {friend?.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" title="Верифицирован" style={{ width: 16, height: 16, marginLeft: 2 }} />}
+                    {friend?.role === 'pepe' && <img src="/role-icons/pepe.svg" alt="pepe" title="Пепешка" style={{ width: 16, height: 16, marginLeft: 2 }} />}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#9aa0a6', marginTop: 2, minHeight: 14, lineHeight: '1' }}>
+                    {isTyping ? (
+                      <span style={{ color: '#229ed9', fontSize: 12 }}>печатает...</span>
+                    ) : (
+                      friend?.status === 'dnd' ? <span style={{ fontSize: 12, color: '#9aa0a6' }}>не беспокоить</span> : (friend?.status === 'online' ? <span style={{ fontSize: 12, color: '#229ed9' }}>в сети</span> : <span style={{ fontSize: 12, color: '#9aa0a6' }}>не в сети</span>)
+                    )}
+                  </div>
+                </div>
+
+                {/* Avatar on the right (no status dot in chat header) */}
+                <div style={{ marginLeft: 8 }}>
+                  <img src={friend?.avatar || '/window.svg'} alt="avatar" style={avatarStyle} />
+                </div>
+              </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={nameStyle}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span>{friend?.name || friend?.login || <span style={{color:'#888'}}>Загрузка...</span>}</span>
-                </span>
-                {/* Иконка роли */}
-                {friend?.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" title="Админ" style={{ width: 16, height: 16, marginLeft: 2 }} />}
-                {friend?.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" title="Модератор" style={{ width: 16, height: 16, marginLeft: 2 }} />}
-                {friend?.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" title="Верифицирован" style={{ width: 16, height: 16, marginLeft: 2 }} />}
-                {friend?.role === 'pepe' && <img src="/role-icons/pepe.svg" alt="pepe" title="Пепешка" style={{ width: 16, height: 16, marginLeft: 2 }} />}
-              </span>
-              {/* typing indicator below the whole header (under name and status) */}
-              {isTyping && (
-                <TypingIndicator name={isTyping} />
-              )}
-            </div>
-          </div>
-        </div>
         <div
             className="chat-messages-scroll"
             style={{
               flex: 1,
               borderRadius: 16,
               padding: '4px 0',
+              // apply per-chat background (local) or default global background
+              background: `linear-gradient(rgba(30,32,42,0.55),rgba(30,32,42,0.75)), url('${chatBgUrl || DEFAULT_CHAT_BG}') center/cover no-repeat`,
               marginBottom: isMobile ? 10 : 12,
               display: 'flex',
               flexDirection: 'column',
@@ -1048,7 +905,6 @@ const ChatWithFriend: React.FC = () => {
                 : (isMobile ? 'calc(100vh - 180px)' : '32vh'),
               overflowY: showVideoPreview ? 'hidden' : 'auto',
               overflowX: 'hidden', // <-- добавлено, чтобы убрать горизонтальный скролл
-              background: '#232228',
               boxShadow: '0 2px 16px #0002',
             }}
             ref={chatScrollRef}
@@ -1317,6 +1173,7 @@ const ChatWithFriend: React.FC = () => {
             <div style={{
               position: 'fixed', left: 0, top: 0, width: '100vw', height: '100vh', zIndex: 2000,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(20,22,30,0.85)',
               animation: 'fadeInOverlay 0.25s',
             }}>
               <style>{`
@@ -1327,24 +1184,28 @@ const ChatWithFriend: React.FC = () => {
                 .circle-btn-anim:hover { transform: scale(1.08); box-shadow: 0 4px 16px #229ed9aa; }
                 .circle-btn-cancel:hover { background: #b71c1c !important; }
               `}</style>
-              {/* Затемнение */}
-              <div style={{
-                position: 'absolute', left: 0, top: 0, width: '100vw', height: '100vh',
-                background: 'rgba(20,22,30,0.55)', zIndex: 0,
-                animation: 'fadeInOverlay 0.25s',
-              }} onClick={cancelVideo} />
               {/* Кружок и кнопки */}
               <div style={{
                 position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
               }}>
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  muted
-                  playsInline
-                  className="circle-anim"
-                  style={{ width: 220, height: 220, borderRadius: '50%', background: '#111', objectFit: 'cover', border: '4px solid #229ed9', boxShadow: '0 4px 32px #000a' }}
-                />
+                <div style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '20px'
+                }}>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    className="circle-anim"
+                    style={{ width: 280, height: 280, borderRadius: '50%', background: '#111', objectFit: 'cover', border: '4px solid #229ed9', boxShadow: '0 4px 32px #000a' }}
+                  />
                 <div style={{ color: '#fff', fontWeight: 600, fontSize: 18, textAlign: 'center', marginTop: 18, marginBottom: 10 }}>
                   {videoRecording ? ` ${videoTime}s` : 'Готово'}
                 </div>
@@ -1359,7 +1220,36 @@ const ChatWithFriend: React.FC = () => {
                   </button>
                 </div>
               </div>
+            {/* Chat background button (right-aligned) */}
+            <div style={{ marginLeft: 'auto' }}>
+              <button
+                onClick={() => {
+                  try {
+                    const key = `chat-bg-${chatId}`;
+                    const current = chatBgUrl || '';
+                    const url = prompt('Вставьте URL фонового изображения для этого чата (оставьте пустым для удаления):', current);
+                    if (url === null) return; // cancelled
+                    const trimmed = String(url || '').trim();
+                    if (!trimmed) {
+                      localStorage.removeItem(key);
+                      setChatBgUrl(null);
+                    } else {
+                      localStorage.setItem(key, trimmed);
+                      setChatBgUrl(trimmed);
+                    }
+                  } catch (e) {
+                    console.error('[CHAT BG] set background error', e);
+                    alert('Не удалось сохранить фон: ' + String(e));
+                  }
+                }}
+                title="Установить фон чата"
+                style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.06)', color: '#e6e6e6', padding: '8px 10px', borderRadius: 10, cursor: 'pointer' }}
+              >
+                Фон
+              </button>
             </div>
+            </div>
+          </div>
           )}
           {/* Скрытый input для выбора файла/медиа */}
           <input
@@ -1577,33 +1467,33 @@ const ChatWithFriend: React.FC = () => {
             zIndex: 140,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            justifyContent: 'center',
             pointerEvents: 'auto',
           }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              width: '100%',
               color: '#e6eef8',
               fontSize: isMobile ? 12 : 13,
               fontWeight: 600,
               background: '#1b1b1f',
               border: '1px solid rgba(255,255,255,0.03)',
               borderRadius: isMobile ? 8 : 10,
-              padding: isMobile ? '5px 6px' : '5px 8px',
+              padding: isMobile ? '5px 10px' : '6px 12px',
               boxShadow: '0 2px 8px rgba(0,0,0,0.7)',
-              gap: isMobile ? 6 : 8,
+              gap: isMobile ? 10 : 14,
+              alignSelf: 'center',
             }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: isMobile ? 6 : 8, minWidth: isMobile ? 60 : 68 }}>
-                <span style={{ width: isMobile ? 6 : 7, height: isMobile ? 6 : 7, borderRadius: '50%', background: '#d32f2f', boxShadow: '0 0 5px #d32f2f55' }} />
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: isMobile ? 8 : 10 }}>
+                <span style={{ width: isMobile ? 8 : 9, height: isMobile ? 8 : 9, borderRadius: '50%', background: '#d32f2f', boxShadow: '0 0 6px #d32f2f55' }} />
                 <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#f0f3f8', fontSize: isMobile ? 12 : 13 }}>
                   {String(Math.floor(recordTime / 60)).padStart(2, '0')}:{String(recordTime % 60).padStart(2, '0')}
                 </span>
               </div>
-              <div style={{ flex: 1, textAlign: 'center' }}>
+              <div>
                 <button type="button" onClick={cancelRecording} style={{ background: 'transparent', border: 'none', color: '#b992ff', fontSize: isMobile ? 13 : 14, fontWeight: 700, cursor: 'pointer', padding: '2px 6px' }} aria-label="Отмена" title="Отмена">Отмена</button>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minWidth: isMobile ? 56 : 60 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <button type="button" title="Отправить голосовое сообщение" aria-label="Отправить голосовое сообщение" onClick={() => { if (mediaRecorder && isRecording) { mediaRecorder.stop(); mediaRecorder.stream.getTracks().forEach(track => track.stop()); } }} style={{ width: isMobile ? 38 : 42, height: isMobile ? 38 : 42, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.06)', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(180deg,#7c3aed,#6d28d9)', boxShadow: '0 4px 10px rgba(109,40,217,0.14)', cursor: 'pointer', transform: 'translateZ(0)' }}>
                   <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 18 : 16, height: isMobile ? 18 : 16, display: 'block', filter: 'brightness(1.05) invert(0)' }} />
                 </button>
@@ -1616,6 +1506,123 @@ const ChatWithFriend: React.FC = () => {
       {/* (модалка удалена, только inline превью) */}
       </div>
     </>
+  );
+};
+
+// VideoCircle component with custom play/pause controls and progress overlay
+const VideoCircle: React.FC<{ src: string; poster?: string }> = ({ src, poster }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const togglePlay = () => {
+    if (!videoRef.current) return;
+    if (isPlaying) {
+      videoRef.current.pause();
+    } else {
+      videoRef.current.play();
+    }
+  };
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    const onEnded = () => {
+      setIsPlaying(false);
+      setProgress(0);
+    };
+    const onTimeUpdate = () => {
+      if (video.duration) {
+        setProgress(video.currentTime / video.duration);
+      }
+    };
+
+    video.addEventListener('play', onPlay);
+    video.addEventListener('pause', onPause);
+    video.addEventListener('ended', onEnded);
+    video.addEventListener('timeupdate', onTimeUpdate);
+
+    return () => {
+      video.removeEventListener('play', onPlay);
+      video.removeEventListener('pause', onPause);
+      video.removeEventListener('ended', onEnded);
+      video.removeEventListener('timeupdate', onTimeUpdate);
+    };
+  }, []);
+
+  return (
+    <div style={{ 
+      position: 'relative',
+      width: 120,
+      height: 120,
+      transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      transform: isPlaying ? 'scale(1.1)' : 'scale(0.95)',
+      cursor: 'pointer'
+    }}>
+      <video 
+        ref={videoRef}
+        src={src} 
+        poster={poster} 
+        style={{ 
+          width: '100%',
+          height: '100%',
+          borderRadius: '50%',
+          objectFit: 'cover'
+        }}
+      />
+      <div 
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: isPlaying ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.3)',
+          borderRadius: '50%',
+          transition: 'background 0.3s'
+        }}
+        onClick={togglePlay}
+      >
+        {!isPlaying ? (
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="#fff">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+        ) : (
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="#fff">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+          </svg>
+        )}
+      </div>
+      {isPlaying && (
+        <div style={{
+          position: 'absolute',
+          top: -3,
+          left: -3,
+          right: -3,
+          bottom: -3,
+          borderRadius: '50%',
+          border: '2px solid #229ed9',
+          borderTopColor: 'transparent',
+          transform: `rotate(${progress * 360}deg)`,
+          transition: 'transform 0.1s linear',
+          animation: 'spin 1s linear infinite',
+          opacity: 0.9,
+          pointerEvents: 'none'
+        }} />
+      )}
+      <style jsx>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
   );
 };
 

@@ -86,10 +86,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         users: true
       }
     });
-    // unreadCount можно получить отдельным запросом, если нужно
-  const chatsWithUnread = chats.map((chat: any) => ({ ...chat }));
-    console.log('API /api/chats: found chats for user', user.id, chatsWithUnread);
-    return res.status(200).json({ chats: chatsWithUnread });
+    // Ensure each user entry includes a computed 'status' (online/offline/dnd)
+    const chatsWithStatus = await Promise.all(chats.map(async (chat: any) => {
+      const usersWithStatus = await Promise.all((chat.users || []).map(async (u: any) => {
+        const full = await prisma.user.findUnique({ where: { id: u.id }, include: { sessions: true } });
+        if (!full) return { id: u.id, login: u.login, avatar: u.avatar, role: u.role, status: 'offline' };
+        const saved = (full as any).status;
+        const allowed = ['online', 'offline', 'dnd'];
+        const status = (typeof saved === 'string' && allowed.includes(saved))
+          ? saved
+          : ((full.sessions || []).some((s: any) => {
+              if (!s.isActive) return false;
+              const created = new Date(s.createdAt).getTime();
+              const now = Date.now();
+              return now - created < 2 * 60 * 1000;
+            }) ? 'online' : 'offline');
+        return {
+          id: full.id,
+          login: full.login,
+          avatar: full.avatar,
+          role: full.role,
+          status
+        };
+      }));
+      return { ...chat, users: usersWithStatus };
+    }));
+    console.log('API /api/chats: found chats for user', user.id, chatsWithStatus);
+    return res.status(200).json({ chats: chatsWithStatus });
   }
 
   return res.status(405).end();

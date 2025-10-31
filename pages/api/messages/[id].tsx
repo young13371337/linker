@@ -105,6 +105,7 @@ const ChatWithFriend: React.FC = () => {
   // Исправить тип friend, чтобы поддерживать login, name, avatar, role
   const [friend, setFriend] = useState<{id: string, login?: string, name?: string, avatar?: string | null, role?: string} | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
+  const [chatBgUrl, setChatBgUrl] = useState<string | null>(null);
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState<string | null>(null);
   const [isSpeaking, setIsSpeaking] = useState<string | null>(null);
@@ -271,6 +272,13 @@ const ChatWithFriend: React.FC = () => {
       .then(data => {
         if (data && data.chat && data.chat.id) {
           setChatId(data.chat.id);
+            try {
+              const key = `chat-bg-${data.chat.id}`;
+              const stored = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+              if (stored) setChatBgUrl(stored);
+            } catch (e) {
+              console.warn('[CHAT BG] failed to read localStorage', e);
+            }
           // Получить сообщения
           fetch(`/api/messages?chatId=${data.chat.id}`, { credentials: 'include' })
             .then(res => res.json())
@@ -491,7 +499,7 @@ const ChatWithFriend: React.FC = () => {
               minHeight: 0,
               maxHeight: isMobile ? 'calc(100vh - 180px)' : '32vh',
               overflowY: 'auto',
-              background: '#232228', // светло-серый/серый фон как на скрине
+              background: `linear-gradient(rgba(30,32,42,0.55),rgba(30,32,42,0.75)), url('${chatBgUrl || 'https://cs13.pikabu.ru/post_img/2023/08/31/12/1693515176124117632.jpg'}') center/cover no-repeat`,
               boxShadow: '0 2px 16px #0002',
             }}
             ref={chatScrollRef}

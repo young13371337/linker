@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import Pusher from 'pusher-js';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/router';
 const ToastNotification = dynamic(() => import('./ToastNotification'), { ssr: false });
 
 interface Chat {
@@ -20,11 +21,82 @@ interface LastMessage {
   videoUrl?: string;
 }
 
+// Обновлён компонент для воспроизведения/индикации видео в списке.
+// Сделан компактным: меньший круг и меньший треугольник.
+const VideoPlayCircle: React.FC<{ videoUrl: string }> = ({ videoUrl }) => {
+  const [playing, setPlaying] = React.useState(false);
+  const [ended, setEnded] = React.useState(false);
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (videoRef.current) {
+        try { videoRef.current.pause(); } catch {}
+        videoRef.current.src = '';
+        videoRef.current = null;
+      }
+    };
+  }, []);
+
+  const handlePlay = async () => {
+    setEnded(false);
+    if (!videoRef.current) {
+      const v = document.createElement('video');
+      v.src = videoUrl;
+      v.preload = 'metadata';
+      v.onplay = () => setPlaying(true);
+      v.onpause = () => setPlaying(false);
+      v.onended = () => { setPlaying(false); setEnded(true); };
+      videoRef.current = v;
+    }
+    try {
+      await videoRef.current.play();
+    } catch (e) {
+      // autoplay may be blocked
+      setPlaying(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handlePlay}
+      aria-label="play video"
+      title="Воспроизвести"
+      style={{ background: 'transparent', border: 'none', padding: 0, margin: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
+    >
+      <style>{`
+        /* Компактный круг по умолчанию (уменьшено) */
+        .vpc-wrap { width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; }
+        /* круг с легкой обводкой */
+        .vpc-ring { width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; transition: border-radius .28s ease, transform .28s ease, background .28s ease, width .18s ease, height .18s ease; border: 1px solid rgba(79,195,247,0.14); background: transparent; }
+        .vpc-inner { width: 10px; height: 10px; display:inline-flex; align-items:center; justify-content:center; color: #4fc3f7; transition: transform .28s ease; }
+        /* вращение внутренней иконки во время воспроизведения */
+        .vpc-rotating .vpc-inner { animation: vpc-spin 1s linear infinite; }
+        @keyframes vpc-spin { to { transform: rotate(360deg); } }
+        /* когда закончилось — компактный заполненный круг */
+        .vpc-ended { background: rgba(79,195,247,0.18) !important; border-color: rgba(79,195,247,0.22) !important; transform: scale(0.96); }
+        .vpc-ended .vpc-inner { transform: scale(0.92); }
+      `}</style>
+      <span className="vpc-wrap">
+        <span className={`vpc-ring ${playing ? 'vpc-rotating' : ''} ${ended ? 'vpc-ended' : ''}`}>
+          <span className="vpc-inner">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 5v14l11-7-11-7z" fill="#4fc3f7"/>
+            </svg>
+          </span>
+        </span>
+      </span>
+    </button>
+  );
+};
+
 const ChatPage: React.FC = () => {
   const [toast, setToast] = useState<{type: 'error'|'success', message: string}|null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [lastMessages, setLastMessages] = useState<Record<string, LastMessage | null>>({});
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const { data: session } = useSession();
+  const router = useRouter();
 
   const fetchChats = async () => {
     const userId = (session?.user && (session.user as any).id) ? (session.user as any).id : undefined;
@@ -77,6 +149,25 @@ const ChatPage: React.FC = () => {
       channel.bind('new-message', (msg: any) => {
         setLastMessages(prev => ({ ...prev, [chat.id]: msg }));
       });
+      // Subscribe to status changes for the other participant (1:1 chats)
+      if (!chat.name) {
+        const meId = (session?.user as any)?.id as string | undefined;
+        const otherUser = chat.users.find(u => u.id !== meId);
+        if (otherUser) {
+          try {
+            const uChannel = pusher.subscribe(`user-${otherUser.id}`);
+            uChannel.bind('status-changed', (data: any) => {
+              // expected data: { userId, status }
+              setChats(prev => prev.map(c => ({
+                ...c,
+                users: c.users.map(u => u.id === data.userId ? { ...u, status: data.status } : u)
+              })));
+            });
+          } catch (e) {
+            // ignore
+          }
+        }
+      }
     });
     return () => {
       if (pusherRef.current) {
@@ -91,37 +182,77 @@ const ChatPage: React.FC = () => {
   const chatList = useMemo(() => chats.map(chat => {
     const isGroup = !!chat.name;
     let title = chat.name;
-    let avatar = '/window.svg';
-    let role;
-    // find other participant once and reuse
-    const other = !isGroup ? chat.users.find(u => u.id !== (session?.user as any)?.id) : null;
+    let role: string | undefined;
+    const meId = (session?.user as any)?.id as string | undefined;
+    // find other participant for 1:1 chats
+    const other = !isGroup ? chat.users.find(u => u.id !== meId) : null;
     if (!isGroup) {
       if (other) {
         title = other.login;
-        avatar = other.avatar || '/window.svg';
         role = other.role;
       }
     } else {
       // Для группового чата показываем роль текущего пользователя, если есть
-      const me = chat.users.find(u => u.id === (session?.user as any)?.id);
+      const me = chat.users.find(u => u.id === meId);
       role = me?.role;
+      // If group has no explicit name, build fallback: "Группа (admin) и (another)"
+      if (!title) {
+        const admin = chat.users.find(u => u.role === 'admin') || chat.users[0];
+        const otherMember = chat.users.find(u => u.id !== admin?.id) || chat.users[1] || chat.users[0];
+        const adminNick = admin?.login || 'user';
+        const otherNick = otherMember?.login || 'user';
+        title = `Группа (${adminNick}) и (${otherNick})`;
+      }
     }
-  const bgUrl = (other as any)?.backgroundUrl || undefined;
+    const bgUrl = (other as any)?.backgroundUrl || undefined;
     const itemBackground = bgUrl
       ? `linear-gradient(rgba(10,11,13,0.6), rgba(10,11,13,0.6)), url(${bgUrl}) center/cover no-repeat`
       : '#191a1e';
 
+    // Helper render for avatars: single avatar or stacked for groups
+    const renderAvatar = () => {
+      const fallback = 'https://spng.pngfind.com/pngs/s/64-647085_teamwork-png-teamwork-symbol-png-transparent-png.png';
+      if (!isGroup) {
+        const src = (other && other.avatar) ? other.avatar : '/window.svg';
+        return (
+          <div style={{ position: 'relative', width: 44, height: 44 }}>
+            <img src={src} alt="avatar" style={{width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', background: '#444'}} />
+            {/* status overlay in chat list: show only online or dnd */}
+            {((other as any)?.status === 'online') && (
+              <span style={{ position: 'absolute', right: 0, bottom: 0, width: 12, height: 12, borderRadius: '50%', background: '#1ed760', border: '2px solid #0f1113' }} />
+            )}
+            {((other as any)?.status === 'dnd') && (
+              <img src="/moon-dnd.svg" alt="dnd" style={{ position: 'absolute', right: -2, bottom: -2, width: 16, height: 16 }} />
+            )}
+          </div>
+        );
+      }
+      // For groups: show up to 3 avatars overlapped like Telegram
+      const avatars = (chat.users || []).slice(0, 3).map(u => u.avatar || fallback);
+      return (
+        <div style={{width:44,height:44,position:'relative'}}>
+          {avatars.map((a, idx) => {
+            const size = 28 - idx * 6; // 28,22,16
+            const right = idx * 10;
+            return (
+              <img key={idx} src={a} alt={`g${idx}`} style={{position:'absolute',right:`${right}px`,bottom:0,width:size,height:size,borderRadius:'50%',objectFit:'cover',border:'2px solid #0f1113',background:'#333'}} />
+            );
+          })}
+        </div>
+      );
+    };
+
     return (
       <a
         key={chat.id}
-        href={`/chat/${isGroup ? chat.id : chat.users.find(u => u.id !== (session?.user as any)?.id)?.id}`}
+        href={`/chat/${isGroup ? chat.id : chat.users.find(u => u.id !== meId)?.id}`}
         style={{
           display: 'flex', alignItems: 'center', gap: 18, padding: '18px 28px', borderRadius: 14,
           background: itemBackground, boxShadow: '0 2px 8px #2222',
           transition: 'background 0.2s', textDecoration: 'none', cursor: 'pointer'
         }}
       >
-        <img src={avatar} alt="avatar" style={{width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', background: '#444'}} />
+  {renderAvatar()}
         <div style={{display:'flex',flexDirection:'column',flex:1}}>
           <span style={{fontWeight: 600, fontSize: 20, color: '#e3e8f0', display:'flex',alignItems:'center',gap:8}}>
             {title || 'Группа'}
@@ -129,11 +260,7 @@ const ChatPage: React.FC = () => {
             {role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" style={{width:20, height:20, marginLeft:4}} />}
             {role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" style={{width:20, height:20, marginLeft:4}} />}
           </span>
-          {isGroup && (
-            <span style={{fontSize: 14, color: '#aaa', display: 'flex', alignItems: 'center', gap: 6}}>
-              {chat.users.map(u => u.login).join(', ')}
-            </span>
-          )}
+          {/* group member list removed from chat preview; group name will be shown inside the chat */}
           {}
           {false ? (
             <span style={{fontSize: 13, color: '#4fc3f7', display: 'flex', alignItems: 'center', gap: 4}}>
@@ -153,27 +280,40 @@ const ChatPage: React.FC = () => {
             </span>
           ) : lastMessages[chat.id] && (
             lastMessages[chat.id]?.videoUrl ? (
-              <span style={{fontSize: 13, color: '#4fc3f7', display:'flex',alignItems:'center',gap:6}}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{display:'inline'}} xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="14" rx="2" fill="#4fc3f7"/><polygon points="10,9 16,12 10,15" fill="#0b1116"/></svg>
-                Видеосообщение
-              </span>
+              /* компактный вид для видеосообщения: меньший gap и более тонкая подпись */
+              <div style={{display:'flex',alignItems:'center',gap:6}}>
+                <VideoPlayCircle videoUrl={lastMessages[chat.id]!.videoUrl!} />
+                <span style={{fontSize: 13, color: '#4fc3f7', lineHeight: '1'}}>Видеосообщение</span>
+              </div>
             ) : lastMessages[chat.id]?.audioUrl ? (
               <span style={{fontSize: 13, color: '#4fc3f7', display:'flex',alignItems:'center',gap:6}}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{display:'inline'}} xmlns="http://www.w3.org/2000/svg"><path d="M8 5v14l11-7z" fill="#4fc3f7"/></svg>
                 Голосовое сообщение
               </span>
             ) : (
-              <span style={{fontSize: 13, color: '#bbb'}}>
-                {lastMessages[chat.id]!.text.length > 60
-                  ? lastMessages[chat.id]!.text.slice(0, 60) + '...'
-                  : lastMessages[chat.id]!.text}
-              </span>
+              <div style={{display:'flex',flexDirection:'column'}}>
+                <span style={{fontSize: 13, color: '#bbb'}}>
+                  {lastMessages[chat.id]!.text.length > 60
+                    ? lastMessages[chat.id]!.text.slice(0, 60) + '...'
+                    : lastMessages[chat.id]!.text}
+                </span>
+                {/* Removed textual status from chat list — only avatar icons remain */}
+                {/* 
+                {(!isGroup && (other as any)?.status && ((other as any).status === 'online' || (other as any).status === 'dnd')) && (
+                  <span style={{fontSize: 12, color: (other as any).status === 'online' ? '#229ed9' : '#9aa0a6', marginTop: 6}}>
+                    {(other as any).status === 'online' ? 'В сети' : 'Не беспокоить'}
+                  </span>
+                )}
+                */}
+              </div>
             )
           )}
         </div>
       </a>
     );
   }), [chats, lastMessages, session]);
+
+  // Group info modal via click was removed: clicking a chat (group or 1:1) navigates into the chat directly
 
   return (
     <div style={{minHeight: '100vh', width: '100vw', background: '#111', fontFamily: 'Segoe UI, Arial, sans-serif', margin: 0, padding: 0, position: 'relative'}}>
@@ -184,7 +324,7 @@ const ChatPage: React.FC = () => {
           <button
             title="Создать чат"
             aria-label="Создать чат"
-            onClick={() => { console.log('create chat'); }}
+            onClick={() => { setShowCreateModal(true); }}
             style={{
               width: 44,
               height: 44,
