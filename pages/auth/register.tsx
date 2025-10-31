@@ -8,20 +8,27 @@ import { useRouter } from "next/router";
 export default function RegisterPage() {
   const [toast, setToast] = useState<{type: 'error'|'success', message: string}|null>(null);
   const [login, setLogin] = useState("");
+  const [link, setLink] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Пример логики, можно заменить на свою
-    if (!login || !password) {
+    if (!login || !password || !link) {
       setToast({ type: 'error', message: 'Заполните все поля' });
+      return;
+    }
+    // client-side validation for link: only letters, numbers and underscore, 3..32
+    const re = /^[A-Za-z0-9_]{3,32}$/;
+    if (!re.test(link)) {
+      setToast({ type: 'error', message: 'Неверный формат линка (A-Z, 0-9, _ , 3-32 символа)' });
       return;
     }
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ login, password }),
+        body: JSON.stringify({ login, password, link }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -49,6 +56,14 @@ export default function RegisterPage() {
           placeholder="Логин"
           value={login}
           onChange={e => setLogin(e.target.value)}
+          required
+          style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid #333", background: "#222", color: "#fff", fontSize: 16, outline: "none" }}
+        />
+        <input
+          type="text"
+          placeholder="Линк"
+          value={link}
+          onChange={e => setLink(e.target.value)}
           required
           style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid #333", background: "#222", color: "#fff", fontSize: 16, outline: "none" }}
         />

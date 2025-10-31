@@ -66,7 +66,7 @@ export default function Sidebar() {
     const channel = pusherClient.subscribe(channelName);
     const onFriendRequest = (data: any) => {
       try {
-        const from = data?.fromLogin || 'Пользователь';
+  const from = data?.fromLink ? `@${data.fromLink}` : (data?.fromLogin || 'Пользователь');
         const fromId = data?.fromId;
         // increment pending count optimistically
         setPendingCount(prev => (typeof prev === 'number' ? prev + 1 : 1));

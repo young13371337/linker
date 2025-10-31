@@ -2,19 +2,17 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import prisma from "../../../lib/prisma";
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") return res.status(405).end();
-  const { login, userId } = req.query;
-  if (!login || typeof login !== "string") return res.status(400).json({ error: "login required" });
-  // Поиск пользователей по части логина
+  const { link, userId } = req.query;
+  if (!link || typeof link !== "string") return res.status(400).json({ error: "link required" });
+  // Поиск пользователей только по полю link (username)
   const users = await prisma.user.findMany({
     where: {
-      login: {
-        contains: login,
-        mode: "insensitive"
-      }
+      link: { contains: link, mode: "insensitive" }
     },
     select: {
       id: true,
       login: true,
+      link: true,
       avatar: true,
       role: true
     },

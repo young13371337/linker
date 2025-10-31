@@ -865,7 +865,7 @@ const ChatWithFriend: React.FC = () => {
                 {/* Center: name + status/typing */}
                 <div style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={nameStyle}>{friend?.name || friend?.login || <span style={{color:'#888'}}>Загрузка...</span>}</span>
+                    <span style={nameStyle}>{friend?.link ? `${friend.link}` : (friend?.name || friend?.login || <span style={{color:'#888'}}>Загрузка...</span>)}</span>
                     {/* role icons */}
                     {friend?.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" title="Админ" style={{ width: 16, height: 16, marginLeft: 2 }} />}
                     {friend?.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" title="Модератор" style={{ width: 16, height: 16, marginLeft: 2 }} />}

@@ -46,11 +46,11 @@ export default function CodeInputMobile({ value, onChange, length = 6, disabled 
     }
   }, [autoFocus]);
 
-  // Animation style based on effectiveSize
-  const baseSize = effectiveSize === "small" ? 28 : 48;
-  const baseHeight = effectiveSize === "small" ? 36 : 56;
-  const baseFont = effectiveSize === "small" ? 18 : 32;
-  const baseRadius = effectiveSize === "small" ? 6 : 12;
+  // Animation style based on effectiveSize (tighter/smaller for a neater look)
+  const baseSize = effectiveSize === "small" ? 24 : 44;
+  const baseHeight = effectiveSize === "small" ? 32 : 52;
+  const baseFont = effectiveSize === "small" ? 16 : 30;
+  const baseRadius = effectiveSize === "small" ? 6 : 10;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>, idx: number) => {
     const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 1);
@@ -96,7 +96,7 @@ export default function CodeInputMobile({ value, onChange, length = 6, disabled 
   };
 
   return (
-    <div style={{ display: "flex", gap: baseSize / 4, justifyContent: "center", margin: baseHeight / 3 + "px 0" }}>
+    <div style={{ display: "flex", gap: 6, justifyContent: "center", margin: "0" }}>
       {Array.from({ length }).map((_, idx) => (
         <div key={idx} style={{ position: "relative" }}>
           <input
@@ -114,13 +114,13 @@ export default function CodeInputMobile({ value, onChange, length = 6, disabled 
               fontSize: baseFont,
               textAlign: "center",
               borderRadius: baseRadius,
-              border: "2px solid #444",
-              background: "#18191c",
+              border: "1.6px solid rgba(255,255,255,0.06)",
+              background: "rgba(255,255,255,0.02)",
               color: "#fff",
               fontWeight: 700,
-              boxShadow: "0 2px 8px #0002",
+              boxShadow: "none",
               outline: "none",
-              transition: "border 0.22s, box-shadow 0.22s, transform 0.22s"
+              transition: "border 0.18s, box-shadow 0.18s, transform 0.18s"
             }}
             onFocus={e => e.target.select()}
             autoComplete="off"

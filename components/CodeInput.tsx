@@ -11,11 +11,11 @@ type CodeInputProps = {
 };
 
 export default function CodeInput({ value, onChange, length = 6, disabled = false, autoFocus = false, onComplete, size = "large" }: CodeInputProps) {
-  // Animation style
-  const baseSize = size === "small" ? 32 : size === "large" ? 48 : 32;
-  const baseHeight = size === "small" ? 40 : size === "large" ? 56 : 40;
-  const baseFont = size === "small" ? 22 : size === "large" ? 32 : 22;
-  const baseRadius = size === "small" ? 8 : size === "large" ? 12 : 8;
+  // Animation style (smaller small-size for neater look)
+  const baseSize = size === "small" ? 28 : size === "large" ? 48 : 28;
+  const baseHeight = size === "small" ? 36 : size === "large" ? 56 : 36;
+  const baseFont = size === "small" ? 20 : size === "large" ? 32 : 20;
+  const baseRadius = size === "small" ? 7 : size === "large" ? 12 : 7;
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
@@ -88,7 +88,7 @@ export default function CodeInput({ value, onChange, length = 6, disabled = fals
           transform: scale(0.7);
         }
       `}</style>
-      <div style={{ display: "flex", gap: baseSize / 4, justifyContent: "center", margin: baseHeight / 3 + "px 0" }}>
+      <div style={{ display: "flex", gap: Math.max(6, Math.floor(baseSize / 6)), justifyContent: "center", margin: Math.max(6, Math.floor(baseHeight / 4)) + "px 0" }}>
         {Array.from({ length }).map((_, idx) => (
           <div key={idx} style={{ position: "relative" }}>
             <input
@@ -107,13 +107,13 @@ export default function CodeInput({ value, onChange, length = 6, disabled = fals
                 fontSize: baseFont,
                 textAlign: "center",
                 borderRadius: baseRadius,
-                border: "2px solid #444",
-                background: "#18191c",
+                border: "1.6px solid rgba(255,255,255,0.06)",
+                background: "rgba(255,255,255,0.02)",
                 color: "#fff",
                 fontWeight: 700,
-                boxShadow: "0 2px 8px #0002",
+                boxShadow: "none",
                 outline: "none",
-                transition: "border 0.22s, box-shadow 0.22s, transform 0.22s"
+                transition: "border 0.18s, box-shadow 0.18s, transform 0.18s"
               }}
               onFocus={e => e.target.select()}
               autoComplete="off"

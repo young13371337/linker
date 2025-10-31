@@ -300,7 +300,7 @@ const ChatWithFriend: React.FC = () => {
   
   const [messages, setMessages] = useState<Message[]>([]);
   // Исправить тип friend, чтобы поддерживать login, name, avatar, role
-  const [friend, setFriend] = useState<{id: string, login?: string, name?: string, avatar?: string | null, role?: string, status?: string} | null>(null);
+  const [friend, setFriend] = useState<{id: string, login?: string, link?: string | null, name?: string, avatar?: string | null, role?: string, status?: string} | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
   const [viewers, setViewers] = useState<Set<string>>(new Set());
@@ -1045,8 +1045,8 @@ const ChatWithFriend: React.FC = () => {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={nameStyle}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span>{friend?.name || friend?.login || <span style={{color:'#888'}}>Загрузка...</span>}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>{friend?.link ? `@${friend.link}` : (friend?.name || friend?.login || <span style={{color:'#888'}}>Загрузка...</span>)}</span>
                 </span>
                 {/* Иконка роли */}
                 {friend?.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" title="Админ" style={{ width: 16, height: 16, marginLeft: 2 }} />}

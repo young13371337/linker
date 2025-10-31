@@ -3,10 +3,10 @@ import { registerUser } from "../../../lib/auth";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
-  const { login, password } = req.body;
-  if (!login || !password) return res.status(400).json({ error: "Login and password required" });
+  const { login, password, link } = req.body;
+  if (!login || !password || !link) return res.status(400).json({ error: "Login, password and link required" });
   try {
-    const user = await registerUser(login, password);
+    const user = await registerUser(login, password, link);
     return res.status(201).json({ user });
   } catch (e: any) {
     console.error("/api/auth/register error:", e);

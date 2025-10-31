@@ -54,7 +54,7 @@ export default function FriendsPage() {
     }
     let active = true;
     setLoading(true);
-    fetch(`/api/friends/search?login=${search}&userId=${user?.id || ''}`)
+    fetch(`/api/friends/search?link=${encodeURIComponent(search)}&userId=${user?.id || ''}`)
       .then(res => res.json())
       .then(data => {
         if (active) {
@@ -101,7 +101,7 @@ export default function FriendsPage() {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Поиск по логину..."
+              placeholder="Поиск по линку"
               style={{
                 padding: "12px 16px",
                 borderRadius: "10px",
@@ -120,7 +120,7 @@ export default function FriendsPage() {
           </div>
           {loading && <div style={{ color: "#bbb", marginTop: 12, fontSize: 16 }}>Поиск...</div>}
           {Array.isArray(searchResult) && searchResult.length === 0 && !loading && (
-            <div style={{ background: "none", borderRadius: 0, padding: "12px 18px", marginTop: 22, textAlign: "center", color: "#bbb", fontSize: 17, boxShadow: "none" }}>Нет пользователя с таким логином</div>
+            <div style={{ background: "none", borderRadius: 0, padding: "12px 18px", marginTop: 22, textAlign: "center", color: "#bbb", fontSize: 17, boxShadow: "none" }}>Пользователь с таким линком не найден</div>
           )}
           {Array.isArray(searchResult) && searchResult.length > 0 && (
             <div style={{ marginTop: 14 }}>
@@ -135,7 +135,7 @@ export default function FriendsPage() {
                     )}
                   </div>
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ color: '#e3e8f0', fontWeight: 500 }}>{foundUser.login}</div>
+                    <div style={{ color: '#e3e8f0', fontWeight: 500 }}>{foundUser.link ? `@${foundUser.link}` : foundUser.login}</div>
                     {foundUser.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" style={{ width: 24, height: 24 }} />}
                     {foundUser.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" style={{ width: 24, height: 24 }} />}
                     {foundUser.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" style={{ width: 24, height: 24 }} />}
@@ -172,7 +172,7 @@ export default function FriendsPage() {
                     )}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 15, fontWeight: 500, cursor: "pointer", color: "#fff" }} onClick={() => window.location.href = `/profile/${r.id}`}>{r.login}</span>
+                    <span style={{ fontSize: 15, fontWeight: 500, cursor: "pointer", color: "#fff" }} onClick={() => window.location.href = `/profile/${r.id}`}>{r.link ? `@${r.link}` : r.login}</span>
                     {r.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" style={{ width: 22, height: 22 }} />}
                     {r.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" style={{ width: 22, height: 22 }} />}
                     {r.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" style={{ width: 22, height: 22 }} />}

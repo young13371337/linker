@@ -46,9 +46,10 @@ export default function UserProfile() {
       .then(data => {
         setUser(data.user);
         setLoading(false);
-        // Проверяем, друг ли этот пользователь
-        if (data.user && loadedUser && data.user.login) {
-          fetch(`/api/friends/search?login=${data.user.login}&userId=${loadedUser.id}`)
+        // Проверяем, друг ли этот пользователь — поиск только по полю link
+        if (data.user && loadedUser && data.user.link) {
+          const q = encodeURIComponent(data.user.link);
+          fetch(`/api/friends/search?link=${q}&userId=${loadedUser.id}`)
             .then(r => r.json())
             .then(fdata => {
               if (Array.isArray(fdata.users)) {
@@ -59,6 +60,8 @@ export default function UserProfile() {
               }
             })
             .catch(() => setIsFriend(false));
+        } else {
+          setIsFriend(false);
         }
       })
       .catch(() => {
@@ -90,7 +93,7 @@ export default function UserProfile() {
           {user.avatar ? (
             <img src={user.avatar} alt="avatar" style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", background: "#444" }} />
           ) : (
-            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#444", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 38, color: "#bbb" }}>{user.login[0].toUpperCase()}</div>
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#444", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 38, color: "#bbb" }}>{(user.link ? user.link[0] : user.login[0]).toUpperCase()}</div>
           )}
           {/* Статус dnd/online/offline */}
           {user.status === 'dnd' ? (
@@ -102,7 +105,7 @@ export default function UserProfile() {
   <div style={{ flex: 1 }}>
           <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: 1, display: "flex", flexDirection: "column", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, position: 'relative' }}>
-              <span>{user.login}</span>
+              <span style={{ fontFamily: 'Segoe UI, Roboto, sans-serif' }}>{user.link ? `@${user.link}` : user.login}</span>
               {user.role === "admin" && (
               <span
                 style={{ position: 'relative', display: 'inline-block' }}
@@ -241,7 +244,7 @@ export default function UserProfile() {
             </div>
             <div style={{ fontSize: 15, color: "#bbb", marginTop: 2 }}>{user.description}</div>
             {isFriend && (
-              <div style={{ fontSize: 14, color: '#333434ff', fontWeight: 500, marginTop: 4 }}>Ваш друг</div>
+              <div style={{ fontSize: 14, color: '#6e6e6eff', fontWeight: 500, marginTop: 4 }}>Ваш друг</div>
             )}
           </div>
         </div>

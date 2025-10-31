@@ -17,7 +17,7 @@ export default function FriendsPage() {
     }
     let active = true;
     setLoading(true);
-    fetch(`/api/friends/search?login=${search}&userId=${user?.id || ''}`)
+    fetch(`/api/friends/search?link=${encodeURIComponent(search)}&userId=${user?.id || ''}`)
       .then(res => res.json())
       .then(data => {
         if (active) {

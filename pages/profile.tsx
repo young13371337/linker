@@ -63,7 +63,7 @@ function CodeInput({ value, onChange, length = 6, disabled = false }: CodeInputP
 import ToastNotification from "./chat/ToastNotification";
 import LottiePlayer from "../lib/LottiePlayer";
 // Форма смены логина
-type UserType = { id: string; login: string; verified?: boolean; status?: 'online' | 'offline' | 'dnd' } | null;
+type UserType = { id: string; login: string; link?: string | null; verified?: boolean; status?: 'online' | 'offline' | 'dnd' } | null;
 type ChangeLoginFormProps = {
   user: UserType;
   setUser: (u: any) => void;
@@ -82,33 +82,29 @@ function ChangeLoginForm({ user, setUser, setFriends }: ChangeLoginFormProps) {
     setStatus("");
     setShowToast(false);
     setToastMsg("");
-    const res = await fetch("/api/profile", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, login: newLogin })
+    setStatus("");
+    setShowToast(false);
+    setToastMsg("");
+    const res = await fetch('/api/profile/change-login', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newLogin })
     });
     const data = await res.json();
     if (res.ok) {
-      setToastMsg("Логин успешно изменён!");
+      setToastMsg('Логин успешно изменён!');
       setShowToast(true);
-      setStatus("");
       setUser(data.user);
-      // Получить новых друзей
-      fetch(`/api/profile?userId=${data.user.id}`)
-        .then(r => r.json())
-        .then(profile => {
-          setFriends(profile.user.friends || []);
-        });
-      try {
-        localStorage.setItem("user", JSON.stringify({ id: data.user.id, login: data.user.login }));
-      } catch {}
+      // refresh friends
+      fetch(`/api/profile?userId=${data.user.id}`).then(r => r.json()).then(profile => setFriends(profile.user.friends || [])).catch(()=>{});
+      try { localStorage.setItem('user', JSON.stringify({ id: data.user.id, login: data.user.login, link: data.user.link || null })); } catch {}
     } else {
-      if (data.error === "Login is already taken") {
-        setToastMsg("Логин уже занят.");
+      if (data.error === 'Login is already taken') {
+        setToastMsg('Логин уже занят.');
         setShowToast(true);
-        setStatus("");
       } else {
-        setStatus(data.error || "Ошибка при смене логина");
+        setStatus(data.error || 'Ошибка при смене логина');
       }
     }
     setLoading(false);
@@ -117,7 +113,7 @@ function ChangeLoginForm({ user, setUser, setFriends }: ChangeLoginFormProps) {
   return (
     <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, position: 'relative' }}>
       <label style={{ fontSize: 15, fontWeight: 500 }}>Смена логина</label><br />
-      <input type="text" value={newLogin} onChange={e => setNewLogin(e.target.value)} style={{ marginTop: 6, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #444", background: "#18191c", color: "#fff", fontSize: 15 }} />
+  <input type="text" value={newLogin} onChange={e => setNewLogin(e.target.value)} style={{ marginTop: 6, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #444", background: "#18191c", color: "#fff", fontSize: 15 }} />
       <button
         style={{ marginTop: 10, background: "#18191c", color: "#fff", border: "1px solid #444", borderRadius: 8, padding: "8px 18px", fontSize: 15, cursor: "pointer", fontWeight: 500 }}
         onClick={handleChangeLogin}
@@ -236,7 +232,7 @@ export default function ProfilePage() {
         setFriends(data.user.friends || []);
         setSessions((data.user.sessions || []).filter((s: any) => s.isActive));
         try {
-          localStorage.setItem("user", JSON.stringify({ id: data.user.id, login: data.user.login }));
+          localStorage.setItem("user", JSON.stringify({ id: data.user.id, login: data.user.login, link: data.user.link || null }));
             // После успешной загрузки профиля вызываем событие для Sidebar
             window.dispatchEvent(new Event("user-login"));
         } catch {}
@@ -274,6 +270,48 @@ export default function ProfilePage() {
     } finally {
       setSetupLoading(false);
     }
+  }
+
+  // Форма смены линка (username)
+  function ChangeLinkForm({ user, setUser, setFriends }: ChangeLoginFormProps) {
+    const [newLink, setNewLink] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [toastMsg, setToastMsg] = useState<string>("");
+    const [showToast, setShowToast] = useState(false);
+
+    const handleChangeLink = async () => {
+      if (!newLink || !user) return;
+      // client-side validation
+      const re = /^[A-Za-z0-9_]{3,32}$/;
+      if (!re.test(newLink)) {
+        setToastMsg('Неверный формат линка'); setShowToast(true); return;
+      }
+      setLoading(true);
+  const res = await fetch('/api/profile/change-link', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newLink }) });
+      const data = await res.json();
+      if (res.ok) {
+        setUser(data.user);
+        fetch(`/api/profile?userId=${data.user.id}`).then(r=>r.json()).then(profile=>setFriends(profile.user.friends || [])).catch(()=>{});
+        try { localStorage.setItem('user', JSON.stringify({ id: data.user.id, login: data.user.login, link: data.user.link || null })); } catch {}
+        setToastMsg('Линк успешно изменён!'); setShowToast(true);
+        setNewLink('');
+      } else {
+        if (data.error === 'Link is already taken') setToastMsg('Линк уже занят');
+        else if (data.error === 'Invalid link format') setToastMsg('Неверный формат линка');
+        else setToastMsg(data.error || 'Ошибка при смене линка');
+        setShowToast(true);
+      }
+      setLoading(false);
+    };
+
+    return (
+      <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, position: 'relative' }}>
+        <label style={{ fontSize: 15, fontWeight: 500 }}>Смена линка</label><br />
+        <input type="text" value={newLink} onChange={e=>setNewLink(e.target.value)} placeholder="без @" style={{ marginTop: 6, width: '100%', padding: '8px 10px', borderRadius:8, border: '1px solid #444', background:'#18191c', color:'#fff', fontSize:15 }} />
+        <button style={{ marginTop:10, background: '#18191c', color:'#fff', border:'1px solid #444', borderRadius:8, padding:'8px 18px', fontSize:15, cursor:'pointer', fontWeight:500 }} onClick={handleChangeLink} disabled={loading}>{loading ? 'Проверка...' : 'Сменить линк'}</button>
+        {showToast && <ToastNotification type={toastMsg.includes('успеш') ? 'success' : 'error'} message={toastMsg} duration={3000} onClose={()=>setShowToast(false)} />}
+      </div>
+    );
   }
 
   // Отключить 2FA
@@ -391,7 +429,7 @@ export default function ProfilePage() {
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: 1, display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {user?.login || "user"}
+              {user?.link ? `@${user.link}` : (user?.login || "user")}
               {userRole === "admin" && (
                 <span style={{ position: 'relative', display: 'inline-block' }}
                   onMouseEnter={e => {
@@ -579,7 +617,7 @@ export default function ProfilePage() {
                     <span style={{ position: "absolute", left: 32, top: 32, width: 12, height: 12, borderRadius: "50%", background: f.isOnline ? "#1ed760" : "#888", border: "2px solid #23242a" }} />
                   </div>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ fontSize: 17, fontWeight: 600, cursor: "pointer", color: "#fff" }} onClick={() => window.location.href = `/profile/${f.id}`}>{f.login || f.friendId}</span>
+                    <span style={{ fontSize: 17, fontWeight: 600, cursor: "pointer", color: "#fff" }} onClick={() => window.location.href = `/profile/${f.id}`}>{f.link ? `@${f.link}` : (f.login || f.friendId)}</span>
                     {f.role === "admin" && (
                       <img src="/role-icons/admin.svg" alt="admin" style={{width:24, height:24, marginLeft:4, verticalAlign:'middle'}} />
                     )}
@@ -648,7 +686,7 @@ export default function ProfilePage() {
         >
           <img src="/news-images/update.jpg" alt="Новое обновление" style={{ width: '100%', height: 70, objectFit: 'cover', display: 'block', borderTopLeftRadius: 12, borderTopRightRadius: 12 }} />
           <div style={{ padding: '10px 12px 8px 12px', textAlign: 'center', width: '100%' }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', letterSpacing: 0.1 }}>v7.1</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', letterSpacing: 0.1 }}>Новое обновление!</div>
           </div>
         </div>
         {/* Можно добавить другие новости ниже */}
@@ -663,9 +701,11 @@ export default function ProfilePage() {
             <button onClick={() => setShowNewsModal(false)} style={{ position: 'absolute', top: 10, right: 16, zIndex: 100, background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer', transition: 'color 0.2s' }} onMouseOver={e => {e.currentTarget.style.color="#4fc3f7"}} onMouseOut={e => {e.currentTarget.style.color="#fff"}}>✕</button>
             <img src="/news-images/update.jpg" alt="Новое обновление" style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block', borderTopLeftRadius: 18, borderTopRightRadius: 18 }} />
             <div style={{ padding: '24px 22px 18px 22px' }}>
-              <div style={{ fontSize: 19, fontWeight: 700, marginBottom: 10 }}>Linker Updated to v7.1</div>
+              <div style={{ fontSize: 19, fontWeight: 700, marginBottom: 10 }}>Новое обновление v8.0</div>
               <div style={{ color: '#bbb', fontSize: 16, marginBottom: 8 }}>
-                Обновление v7.1
+                Обновление v8.0
+                Линк - как юзернейм, стало намного безопаснее и удобнее
+                Новое шифрование всех сообщений
                 Статусы, отображение фона профиля и чата, исправление проблем с UserID
                 Отображение UserID в профиле друга/своем. Google 2FA доделан, и работает полноценно. Доработаны видео и голосовые сообщения, все шифруется и отправляется.<br />
                 <br />
@@ -721,6 +761,7 @@ export default function ProfilePage() {
                     }
                     await fetch('/api/profile', {
                       method: 'POST',
+                      credentials: 'include',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ userId: user.id, password: newPassword })
                     });
@@ -850,6 +891,7 @@ export default function ProfilePage() {
                       if (!user) return;
                       await fetch('/api/profile', {
                         method: 'POST',
+                        credentials: 'include',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ userId: user.id, status: 'online' })
                       });
@@ -879,6 +921,7 @@ export default function ProfilePage() {
                       if (!user) return;
                       await fetch('/api/profile', {
                         method: 'POST',
+                        credentials: 'include',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ userId: user.id, status: 'offline' })
                       });
@@ -908,6 +951,7 @@ export default function ProfilePage() {
                       if (!user) return;
                       await fetch('/api/profile', {
                         method: 'POST',
+                        credentials: 'include',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ userId: user.id, status: 'dnd' })
                       });
@@ -940,6 +984,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               <ChangeLoginForm user={user} setUser={setUser} setFriends={setFriends} />
+              <ChangeLinkForm user={user} setUser={setUser} setFriends={setFriends} />
             <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s" }}>
               <label style={{ fontSize: 15, fontWeight: 500 }}>Описание:</label><br />
               <input type="text" value={desc} onChange={e => setDesc(e.target.value)} style={{ marginTop: 6, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #444", background: "#18191c", color: "#fff", fontSize: 15 }} />
@@ -949,6 +994,7 @@ export default function ProfilePage() {
                   if (!user) return;
                   await fetch('/api/profile', {
                     method: 'POST',
+                    credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: user.id, description: desc })
                   });
@@ -978,6 +1024,7 @@ export default function ProfilePage() {
                   // Сохраняем аватарку
                   await fetch('/api/profile', {
                     method: 'POST',
+                    credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: user.id, avatar })
                   });
@@ -1016,6 +1063,7 @@ export default function ProfilePage() {
                   if (!user) return;
                   await fetch('/api/profile', {
                     method: 'POST',
+                    credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: user.id, backgroundUrl })
                   });

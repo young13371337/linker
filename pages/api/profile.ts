@@ -53,6 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return {
             id: friend.id,
             login: friend.login,
+            link: friend.link || null,
             avatar: friend.avatar,
             role: friend.role,
             status: friendStatus
@@ -70,6 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return fromUser ? {
             id: fromUser.id,
             login: fromUser.login,
+            link: fromUser.link || null,
             avatar: fromUser.avatar,
             role: fromUser.role,
             isOnline: fromUser.sessions.some((s: any) => {
@@ -99,6 +101,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const safeUser = {
         id: (user as any).id,
         login: (user as any).login,
+        twoFactorEnabled: (user as any).twoFactorEnabled || false,
+        link: (user as any).link || null,
         avatar: (user as any).avatar || null,
         role: (user as any).role || null,
         description: (user as any).description || null,
@@ -126,7 +130,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     const currentUserId = (session.user as any).id;
 
-    const { description, avatar, twoFactorToken, password, backgroundUrl, bgOpacity, favoriteTrackUrl, login: newLogin, status } = req.body;
+  const { description, avatar, twoFactorToken, password, backgroundUrl, bgOpacity, favoriteTrackUrl, status } = req.body;
     try {
       const data: any = {};
       if (typeof description !== "undefined") data.description = description;
@@ -148,14 +152,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const bcrypt = require('bcryptjs');
         data.password = await bcrypt.hash(password, 8);
       }
-      if (typeof newLogin === "string" && newLogin.length > 0) {
-        // Проверка, занят ли логин
-        const existing = await prisma.user.findUnique({ where: { login: newLogin } });
-        if (existing) {
-          return res.status(409).json({ error: "Login is already taken" });
-        }
-        data.login = newLogin;
-      }
+      // Note: login and link updates are handled by dedicated endpoints
       // If status is being updated, check previous value so we can broadcast change
       let prevStatus: string | null = null;
       if (typeof data.status !== 'undefined') {
@@ -187,6 +184,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const returnedUser = {
         id: (user as any).id,
         login: (user as any).login,
+        twoFactorEnabled: (user as any).twoFactorEnabled || false,
+        link: (user as any).link || null,
         avatar: (user as any).avatar || null,
         role: (user as any).role || null,
         description: (user as any).description || null,

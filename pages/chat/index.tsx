@@ -8,7 +8,7 @@ const ToastNotification = dynamic(() => import('./ToastNotification'), { ssr: fa
 interface Chat {
   id: string;
   name?: string | null;
-  users: { id: string; login: string; avatar?: string | null; role?: string }[];
+  users: { id: string; login: string; link?: string | null; avatar?: string | null; role?: string }[];
   unreadCount?: number;
 }
 
@@ -188,7 +188,7 @@ const ChatPage: React.FC = () => {
     const other = !isGroup ? chat.users.find(u => u.id !== meId) : null;
     if (!isGroup) {
       if (other) {
-        title = other.login;
+        title = other.link ? `@${other.link}` : other.login;
         role = other.role;
       }
     } else {
@@ -199,8 +199,8 @@ const ChatPage: React.FC = () => {
       if (!title) {
         const admin = chat.users.find(u => u.role === 'admin') || chat.users[0];
         const otherMember = chat.users.find(u => u.id !== admin?.id) || chat.users[1] || chat.users[0];
-        const adminNick = admin?.login || 'user';
-        const otherNick = otherMember?.login || 'user';
+        const adminNick = admin?.link ? `@${admin.link}` : (admin?.login || 'user');
+        const otherNick = otherMember?.link ? `@${otherMember.link}` : (otherMember?.login || 'user');
         title = `Группа (${adminNick}) и (${otherNick})`;
       }
     }

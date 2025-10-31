@@ -9,6 +9,7 @@ const FriendSearch: React.FC = () => {
   type UserResult = {
   id: string;
   login: string;
+  link?: string | null;
   avatar?: string;
   role?: string;
   isFriend?: boolean;
@@ -26,8 +27,8 @@ const FriendSearch: React.FC = () => {
     }
     setLoading(true);
     setError('');
-    const userIdParam = session?.user ? `&userId=${encodeURIComponent((session.user as any).id)}` : '';
-    fetch(`/api/friends/search?login=${encodeURIComponent(query)}${userIdParam}`)
+  const userIdParam = session?.user ? `&userId=${encodeURIComponent((session.user as any).id)}` : '';
+  fetch(`/api/friends/search?link=${encodeURIComponent(query)}${userIdParam}`)
       .then(res => res.json())
       .then(data => {
         if (data.error) setError(data.error);
@@ -48,11 +49,11 @@ const FriendSearch: React.FC = () => {
             <line x1="17" y1="17" x2="22" y2="22" stroke="#229ed9" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </span>
-        <input
+          <input
           type="text"
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder="Поиск..."
+          placeholder="Поиск по линку (например: test или @test)"
           style={{
             flex: 1,
             background: 'none',
@@ -73,9 +74,9 @@ const FriendSearch: React.FC = () => {
           {results.map(user => (
             <div key={user.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid #2a2b3d' }}>
               <img src={user.avatar || 'https://www.svgrepo.com/show/452030/avatar-default.svg'} alt="avatar" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', background: '#222' }} />
-              <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ color: '#e3e8f0', fontWeight: 500 }}>{user.login}</span>
+                  <span style={{ color: '#e3e8f0', fontWeight: 500 }}>{user.link ? `@${user.link}` : user.login}</span>
                   {user.status && <UserStatus status={user.status} size={12} />}
                 </div>
                 <div style={{ color: '#229ed9', fontSize: 13 }}>{user.role || 'user'}</div>

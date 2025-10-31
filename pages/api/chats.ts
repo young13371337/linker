@@ -90,7 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const chatsWithStatus = await Promise.all(chats.map(async (chat: any) => {
       const usersWithStatus = await Promise.all((chat.users || []).map(async (u: any) => {
         const full = await prisma.user.findUnique({ where: { id: u.id }, include: { sessions: true } });
-        if (!full) return { id: u.id, login: u.login, avatar: u.avatar, role: u.role, status: 'offline' };
+  if (!full) return { id: u.id, login: u.login, avatar: u.avatar, role: u.role, status: 'offline', link: null };
         const saved = (full as any).status;
         const allowed = ['online', 'offline', 'dnd'];
         const status = (typeof saved === 'string' && allowed.includes(saved))
@@ -104,6 +104,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return {
           id: full.id,
           login: full.login,
+          link: full.link || null,
           avatar: full.avatar,
           role: full.role,
           status

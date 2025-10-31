@@ -36,12 +36,29 @@ export default function LoginPage() {
         const res = await signIn("credentials", signInData);
         if (res?.error) {
           // Если ошибка про 2FA — показываем поле для кода
-          if (res.error.toLowerCase().includes("2fa code required")) {
+          const err = String(res.error).toLowerCase();
+          if (err.includes("2fa") || err.includes("twofactor") || err.includes("two-factor") || err.includes("two factor")) {
             setShow2FA(true);
             setPending2FA(true);
             setToast({ type: "error", message: "Введите 2FA код" });
+          } else if (res.error === "CredentialsSignin") {
+            // Backend may return null from authorize() for 2FA-required case, which surfaces as CredentialsSignin.
+            // Try to detect if the account has 2FA enabled and show the 2FA input instead of generic error.
+            try {
+              const resp = await fetch(`/api/profile?login=${encodeURIComponent(login)}`);
+              const data = await resp.json();
+              if (data.user && data.user.twoFactorEnabled) {
+                setShow2FA(true);
+                setPending2FA(true);
+                setToast({ type: "error", message: "Введите 2FA код" });
+              } else {
+                setToast({ type: "error", message: "Ошибка входа, проверьте данные" });
+              }
+            } catch (e) {
+              setToast({ type: "error", message: "Ошибка входа, проверьте данные" });
+            }
           } else {
-            setToast({ type: "error", message: res.error === "CredentialsSignin" ? "Ошибка входа, проверьте данные" : res.error });
+            setToast({ type: "error", message: res.error });
           }
         } else {
           // Успешный вход без 2FA
@@ -94,7 +111,7 @@ export default function LoginPage() {
           <Lottie animationData={loginAnimation} loop={true} />
         </div>
       </div>
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16, width: 360, maxWidth: "90vw", margin: "0 auto" }}>
+  <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: show2FA ? 8 : 16, width: 360, maxWidth: "90vw", margin: "0 auto" }}>
         <input
           type="text"
           placeholder="Логин"
@@ -113,14 +130,17 @@ export default function LoginPage() {
           style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid #333", background: "#222", color: "#fff", fontSize: 16, outline: "none" }}
         />
         {show2FA && (
-          <CodeInput
-            value={twoFactorCode}
-            onChange={setTwoFactorCode}
-            length={6}
-            autoFocus={pending2FA}
-            onComplete={() => {}}
-            size="small"
-          />
+          <>
+            <div style={{ textAlign: 'center', color: '#ddd', fontSize: 13, marginTop: 6, marginBottom: 6 }}></div>
+            <CodeInput
+              value={twoFactorCode}
+              onChange={setTwoFactorCode}
+              length={6}
+              autoFocus={pending2FA}
+              onComplete={() => {}}
+              size="small" /* use compact size by default; mobile component will remain compact on narrow screens */
+            />
+          </>
         )}
         <button type="submit" style={{ width: "100%", padding: "12px 0", borderRadius: 8, border: "none", background: "#4fc3f7", color: "#111", fontWeight: 600, fontSize: 18, cursor: "pointer", transition: "background .2s" }}>Войти</button>
         {toast && (

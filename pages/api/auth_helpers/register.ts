@@ -10,13 +10,19 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 import bcrypt from "bcryptjs";
 import prisma from "../../../lib/prisma";
 
-export async function registerUser(login: string, password: string) {
+export async function registerUser(login: string, password: string, link?: string) {
   try {
-    const existing = await prisma.user.findUnique({ where: { login } });
-    if (existing) throw new Error("User already exists");
+    if (!link || typeof link !== 'string') throw new Error('Link required');
+    const re = /^[A-Za-z0-9_]{3,32}$/;
+    if (!re.test(link)) throw new Error('Invalid link format');
+    const existing = await prisma.user.findFirst({ where: { OR: [{ login }, { link }] } });
+    if (existing) {
+      if (existing.login === login) throw new Error("User already exists");
+      throw new Error('Link already exists');
+    }
     const hash = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({ data: { login, password: hash } });
-    return { id: user.id, login: user.login };
+    const user = await prisma.user.create({ data: { login, password: hash, link } });
+    return { id: user.id, login: user.login, link: user.link };
   } catch (e: any) {
     // rethrow so API route can handle and map to HTTP status
     throw e;
