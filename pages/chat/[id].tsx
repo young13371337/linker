@@ -492,27 +492,27 @@ const ChatWithFriend: React.FC = () => {
       
       // Подписка на канал пользователя для статуса
       const userChannel = pusherClient.subscribe(`user-${friend.id}`);
+      // Подписка на channel чата для новых сообщений
+      const chatChannel = pusherClient.subscribe(`chat-${chatId}`);
+
       const onStatus = (payload: any) => {
         if (!payload || !payload.userId) return;
         setFriend(prev => prev && prev.id === payload.userId ? { ...prev, status: payload.status } : prev);
       };
-      userChannel.bind('status-changed', onStatus);
-
-      // Подписка на канал чата для сообщений
-      const chatChannel = pusherClient.subscribe(`chat-${chatId}`);
       const onNewMessage = (data: any) => {
         // Поддерживаем оба формата: { message: {...} } и прямой объект
         const payload = data?.message ? data.message : data;
         if (!payload || !payload.id) return;
+
+        // message may arrive without plaintext (server no longer broadcasts plaintext).
         const newMsg = {
           id: payload.id,
           sender: payload.sender || payload.senderId,
-          text: payload.text || '',
+          text: payload.text || '', // might be empty if server didn't include plaintext
           createdAt: payload.createdAt || new Date().toISOString(),
           audioUrl: payload.audioUrl,
           videoUrl: payload.videoUrl
         };
-
 
         setMessages(prev => {
           // Если сообщение с таким id уже есть — игнорируем (дедупликация)
@@ -522,7 +522,7 @@ const ChatWithFriend: React.FC = () => {
           // но сохраним внутренний _key, чтобы React не ремонтировал DOM элемент (избегаем дергания).
           const tempIndex = prev.findIndex(m => typeof m.id === 'string' && m.id.startsWith('temp-') && m.sender === newMsg.sender && m.text === newMsg.text);
           if (tempIndex !== -1) {
-            const copy = [...prev];
+            const copy = prev.slice();
             const existing = copy[tempIndex];
             copy[tempIndex] = {
               ...existing,
@@ -541,6 +541,29 @@ const ChatWithFriend: React.FC = () => {
           setAnimatedMsgIds(prevAnim => new Set([...prevAnim, newMsg.id]));
           return [...prev, toAdd];
         });
+
+        // Если payload не содержит текста — запросим расшифровку конкретного сообщения по id
+        if (!payload.text) {
+          (async () => {
+            try {
+              const r = await fetch('/api/messages/read', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messageId: payload.id })
+              });
+              if (r.ok) {
+                const d = await r.json();
+                if (d && typeof d.text === 'string') {
+                  setMessages(prev => prev.map(m => m.id === payload.id ? { ...m, text: d.text } : m));
+                }
+              }
+            } catch (e) {
+              // non-blocking
+              console.error('[CHAT] Failed to fetch decrypted message', e);
+            }
+          })();
+        }
 
         // Автоматически прокручиваем к новому сообщению
         setTimeout(scrollToBottom, 50);

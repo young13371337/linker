@@ -95,7 +95,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Access-Control-Allow-Methods', 'POST');
 
     const { chatId, text } = req.body || {};
-    console.log('[MESSAGES API][POST] incoming body:', { chatId, text: typeof text === 'string' ? `${text.slice(0,80)}${text && text.length>80 ? '...':''}` : text });
+    // Avoid logging full plaintext. Only log minimal metadata for diagnostics.
+    try {
+      console.log('[MESSAGES API][POST] incoming body:', { chatId, textLength: typeof text === 'string' ? text.length : null });
+    } catch (e) {}
     if (!chatId || typeof chatId !== 'string' || !text || typeof text !== 'string') {
       console.warn('[MESSAGES API][POST] bad request body');
       return res.status(400).json({ error: 'chatId and text required' });
@@ -119,7 +122,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       try {
         encryptedText = encryptMessage(text, chatId);
       } catch (encErr: any) {
-        console.error('[MESSAGES API][POST] encryptMessage failed', encErr);
+        console.error('[MESSAGES API][POST] encryptMessage failed');
         return res.status(500).json({ error: 'Encryption failed', details: String(encErr?.message || encErr) });
       }
 
@@ -128,7 +131,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         data: { chatId, senderId: user.id, text: encryptedText, createdAt: new Date() }
       });
 
-      const messageToSend = { ...message, text };
+      // Не включаем plaintext в ответ/пушер — отправляем только метаданные и id.
+      const messageMeta = {
+        id: message.id,
+        chatId: message.chatId,
+        senderId: message.senderId,
+        createdAt: message.createdAt,
+        audioUrl: (message as any).audioUrl || null,
+        videoUrl: (message as any).videoUrl || null,
+      } as any;
 
       // Параллельно - обновления и pusher
       (async () => {
@@ -136,7 +147,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const recipients = chat.users?.filter((u: any) => u.id !== user.id) || [];
           const upserts = recipients.map((u: any) => prisma.chatUnread.upsert({ where: { chatId_userId: { chatId, userId: u.id } }, update: { count: { increment: 1 } }, create: { chatId, userId: u.id, count: 1 } }));
 
-          // Prepare a lightweight payload for user-level notifications
+          // Prepare a lightweight payload for user-level notifications (no plaintext)
           const userPayload = {
             chatId,
             senderId: user.id,
@@ -144,12 +155,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             senderLink: (user as any).link || null,
             senderAvatar: user.avatar || null,
             senderRole: (user as any).role || null,
-            content: text,
+            // content omitted intentionally
           };
 
-          // Trigger chat channel and per-user channels in parallel
+          // Trigger chat channel and per-user channels in parallel (no plaintext)
           const pusherPromises: Promise<any>[] = [];
-          pusherPromises.push(pusher.trigger(`chat-${chatId}`, 'new-message', messageToSend));
+          try {
+            pusherPromises.push(pusher.trigger(`chat-${chatId}`, 'new-message', messageMeta));
+          } catch (e) {
+            console.error('[MESSAGES API] Failed to trigger chat pusher', e);
+          }
           recipients.forEach((r: any) => {
             try {
               pusherPromises.push(pusher.trigger(`user-${r.id}`, 'new-message', userPayload));
@@ -164,7 +179,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       })();
 
-      return res.status(200).json({ message: messageToSend });
+      // Return metadata only (client-side keeps optimistic text). Do not include plaintext.
+      return res.status(200).json({ message: messageMeta });
     } catch (error: any) {
       console.error('Message send error (top):', error);
       // Return details to help debugging (include stack) — remove/limit this in production when fixed
