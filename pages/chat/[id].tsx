@@ -151,6 +151,61 @@ const ChatWithFriend: React.FC = () => {
   const audioChunksRef = useRef<Blob[]>([]);
   const recordInterval = useRef<NodeJS.Timeout | null>(null);
 
+  // Typing event throttling: send only once per typing session.
+  const typingSentRef = useRef(false);
+  const typingInactivityTimer = useRef<number | null>(null);
+
+  const stopTyping = () => {
+    try {
+      if (!chatId) return;
+      // send optional stop event; server may ignore unknown fields but it's harmless
+      fetch('/api/messages/typing', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId, action: 'stop' }),
+      }).catch(() => {});
+    } finally {
+      typingSentRef.current = false;
+      if (typingInactivityTimer.current) {
+        clearTimeout(typingInactivityTimer.current as unknown as number);
+        typingInactivityTimer.current = null;
+      }
+    }
+  };
+
+  const maybeStartTyping = (text: string) => {
+    // If input is empty, ensure we send stop and clear state
+    if (!text || text.trim() === '') {
+      stopTyping();
+      return;
+    }
+    // If we've already sent typing, just reset inactivity timer
+    if (typingSentRef.current) {
+      if (typingInactivityTimer.current) clearTimeout(typingInactivityTimer.current as unknown as number);
+      typingInactivityTimer.current = window.setTimeout(() => {
+        stopTyping();
+      }, 6000);
+      return;
+    }
+
+    // Send typing start event once
+    try {
+      fetch('/api/messages/typing', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId, action: 'start' }),
+      }).catch(() => {});
+    } finally {
+      typingSentRef.current = true;
+      if (typingInactivityTimer.current) clearTimeout(typingInactivityTimer.current as unknown as number);
+      typingInactivityTimer.current = window.setTimeout(() => {
+        stopTyping();
+      }, 6000);
+    }
+  };
+
   // cancelRecording функция-заглушка (реализуй по необходимости)
   const cancelRecording = () => {
     if (mediaRecorder && isRecording) {
@@ -520,7 +575,27 @@ const ChatWithFriend: React.FC = () => {
 
           // Если есть временное сообщение (temp-...) с тем же текстом и отправителем — заменим его,
           // но сохраним внутренний _key, чтобы React не ремонтировал DOM элемент (избегаем дергания).
-          const tempIndex = prev.findIndex(m => typeof m.id === 'string' && m.id.startsWith('temp-') && m.sender === newMsg.sender && m.text === newMsg.text);
+          // Try to match an optimistic temporary message (id starts with 'temp-') and replace it.
+          // Primary match: same sender and identical text. Secondary match: when server didn't include text
+          // (payload.text is empty), match by sender and by close createdAt timestamps (within 15s).
+          const tempIndex = prev.findIndex(m => {
+            if (typeof m.id !== 'string' || !m.id.startsWith('temp-')) return false;
+            if (m.sender !== newMsg.sender) return false;
+            // exact text match
+            if (m.text && newMsg.text && m.text === newMsg.text) return true;
+            // if server didn't send text, try matching by timestamp proximity
+            if (!newMsg.text) {
+              try {
+                const a = new Date(m.createdAt).getTime();
+                const b = new Date(newMsg.createdAt).getTime();
+                if (isNaN(a) || isNaN(b)) return false;
+                return Math.abs(a - b) < 15000; // 15 seconds
+              } catch (e) {
+                return false;
+              }
+            }
+            return false;
+          });
           if (tempIndex !== -1) {
             const copy = prev.slice();
             const existing = copy[tempIndex];
@@ -601,6 +676,7 @@ const ChatWithFriend: React.FC = () => {
       // cleanup
       return () => {
         try {
+          try { stopTyping(); } catch (e) {}
           try { userChannel.unbind('status-changed', onStatus); } catch (e) {}
           try { chatChannel.unbind('new-message', onNewMessage); } catch (e) {}
           try { chatChannel.unbind('typing', onTyping); } catch (e) {}
@@ -678,7 +754,7 @@ const ChatWithFriend: React.FC = () => {
         }
         return data;
       })
-      .then((data) => {
+        .then((data) => {
         if (!data || !data.message) {
           console.error('[SEND] Unexpected response from /api/messages', data);
           // mark temp message as failed
@@ -691,20 +767,33 @@ const ChatWithFriend: React.FC = () => {
           // mark temp message as failed visually
           setMessages((prev: any[]) => prev.map((msg: any) => msg.id === tempId ? { ...msg, _failed: true } : msg));
         }
-        // Replace temporary message with server-provided message data,
-        // but preserve the internal _key so the DOM node/key stays stable
-        setMessages((prev: any[]) => prev.map((msg: any) => 
-          msg.id === tempId ? {
-            ...msg,
-            id: serverMsg.id,
-            sender: serverMsg.senderId || serverMsg.sender,
-            text: serverMsg.text || messageText,
-            createdAt: serverMsg.createdAt || new Date().toISOString(),
-            videoUrl: serverMsg.videoUrl,
-            audioUrl: serverMsg.audioUrl,
-            _persisted: serverMsg.persisted !== false,
-          } : msg
-        ));
+  // If a server message with the same id already exists (arrived via pusher),
+  // remove the temporary message instead of replacing it to avoid duplicates.
+        setMessages((prev: any[]) => {
+          try {
+            if (prev.some((m: any) => m.id === serverMsg.id)) {
+              // server message already present (pusher delivered it): remove temp
+              return prev.filter((m: any) => m.id !== tempId);
+            }
+            // Otherwise replace the temp message with the server-provided message data,
+            // preserving _key so the DOM node/key stays stable.
+            return prev.map((msg: any) => msg.id === tempId ? {
+              ...msg,
+              id: serverMsg.id,
+              sender: serverMsg.senderId || serverMsg.sender,
+              text: serverMsg.text || messageText,
+              createdAt: serverMsg.createdAt || new Date().toISOString(),
+              videoUrl: serverMsg.videoUrl,
+              audioUrl: serverMsg.audioUrl,
+              _persisted: serverMsg.persisted !== false,
+            } : msg);
+          } catch (e) {
+            console.error('[SEND] Error while merging server message', e);
+            return prev;
+          }
+        });
+        // we've sent the message — stop typing state
+        try { stopTyping(); } catch (e) {}
       })
       .catch(err => {
         console.error('[SEND] Network or parse error sending message', err);
@@ -1293,8 +1382,9 @@ const ChatWithFriend: React.FC = () => {
             <input
               value={newMessage}
               onChange={(e) => {
-                setNewMessage(e.target.value);
-                sendTypingEvent();
+                const v = e.target.value;
+                setNewMessage(v);
+                maybeStartTyping(v);
               }}
               placeholder="Сообщение..."
               style={inputStyle}
