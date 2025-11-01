@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
+import { useRef } from "react";
 import Link from "next/link";
-import { getUser, clearUser } from "../lib/session";
+import { getUser, clearUser, saveUser } from "../lib/session";
 import { useRouter } from "next/router";
 import { FaComments, FaUser, FaSignOutAlt, FaRobot } from "react-icons/fa";
 import styles from "../styles/Sidebar.module.css"; // создадим CSS для hover и анимаций
@@ -139,6 +140,29 @@ export default function Sidebar() {
     setUser(u);
     if (!u) setOpen(false);
 
+    // Ensure avatar/link are fresh from server (DB) — overwrite local cached user where available
+    if (u && u.id) {
+      (async () => {
+        try {
+          const res = await fetch(`/api/profile?userId=${u.id}`, { credentials: 'include' });
+          if (!res.ok) return;
+          const data = await res.json();
+          if (data && data.user) {
+            // merge server fields into local user object and persist it so getUser() remains consistent
+            const merged = { ...(u || {}), ...(data.user || {}) };
+            setUser(merged);
+            try {
+              saveUser(merged as any);
+            } catch (e) {
+              // ignore save failures
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+      })();
+    }
+
     // Слушаем событие входа
     const handleLogin = () => {
       const u = getUser();
@@ -155,6 +179,56 @@ export default function Sidebar() {
     setUser(null);
     setOpen(false);
     router.push("/auth/login");
+  };
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  // Mobile swipe vertical offset (px)
+  const [dragY, setDragY] = useState(0);
+  const draggingRef = useRef(false);
+  const touchStartRef = useRef<number | null>(null);
+  const initialDragRef = useRef(0);
+  const MAX_UP = 140; // max pixels can drag upward (reveal footer)
+  const MAX_DOWN = 60; // max pixels can drag downward
+
+  // close menu when clicking outside
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (!menuRef.current) return;
+      if (!(e.target instanceof Node)) return;
+      if (!menuRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, [menuOpen]);
+
+  // touch handlers for mobile swipe up/down of sidebar
+  const onTouchStart = (e: any) => {
+    if (!isMobile || !open) return;
+    draggingRef.current = true;
+    touchStartRef.current = e.touches[0].clientY;
+    initialDragRef.current = dragY;
+  };
+
+  const onTouchMove = (e: any) => {
+    if (!draggingRef.current || touchStartRef.current === null) return;
+    const y = e.touches[0].clientY;
+    const delta = y - (touchStartRef.current || 0);
+    let next = initialDragRef.current + delta;
+    if (next < -MAX_UP) next = -MAX_UP;
+    if (next > MAX_DOWN) next = MAX_DOWN;
+    setDragY(next);
+  };
+
+  const onTouchEnd = () => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    touchStartRef.current = null;
+    initialDragRef.current = 0;
+    // snap back to 0 smoothly
+    setDragY(0);
   };
 
   if (!user || !mounted) return null;
@@ -196,8 +270,25 @@ export default function Sidebar() {
         />
       )}
       <aside
-        className={`${styles.sidebar} ${open ? styles.open : styles.closed}`}
-        style={mounted && isMobile ? { width: open ? '80vw' : 0, minWidth: 0, maxWidth: '320px', zIndex: 1000 } : {}}
+        className={`${styles.sidebar} ${!(mounted && isMobile) ? (open ? styles.open : styles.closed) : ''}`}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        style={(() => {
+          // compute inline style to include horizontal and vertical transform for mobile
+          if (mounted && isMobile) {
+            const translateX = open ? '0' : '-100%';
+            return {
+              width: open ? '80vw' : 0,
+              minWidth: 0,
+              maxWidth: '320px',
+              zIndex: 1000,
+              transform: `translateX(${translateX}) translateY(${dragY}px)`,
+              transition: draggingRef.current ? 'none' : 'transform 0.22s cubic-bezier(.2,.9,.2,1)',
+            };
+          }
+          return {};
+        })()}
       >
         <div className={styles.logo}>
           <img
@@ -208,7 +299,7 @@ export default function Sidebar() {
         </div>
 
         <nav className={styles.nav}>
-          <SidebarLink href="/chat" icon={<FaComments />} text="Чат" open={open} />
+          <SidebarLink href="/chat" icon={<FaComments />} text="Чат" open={open} isMobile={isMobile} />
           <SidebarLink
             href="/friends"
             icon={
@@ -231,15 +322,41 @@ export default function Sidebar() {
             }
             text="Друзья"
             open={open}
+            isMobile={isMobile}
           />
-          <SidebarLink href="/profile" icon={<FaUser />} text="Профиль" open={open} />
+          <SidebarLink href="/profile" icon={<FaUser />} text="Профиль" open={open} isMobile={isMobile} />
         </nav>
 
         <div className={styles.footer}>
-          <button className={styles.logoutBtn} onClick={logout}>
-            <FaSignOutAlt />
-            {open && <span>Выход</span>}
-          </button>
+          <div className={styles.userBlock} ref={menuRef}>
+            <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+              <img src={user.avatar || '/window.svg'} alt="avatar" className={styles.avatar} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/window.svg'; }} />
+              {!isMobile && (
+                <div style={{ flex: 1, marginLeft: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ fontWeight: 600 }}>{user.login}</div>
+                    {user.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" title="Админ" style={{ width: 14, height: 14 }} />}
+                    {user.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" title="Модератор" style={{ width: 14, height: 14 }} />}
+                    {user.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" title="Верифицирован" style={{ width: 14, height: 14 }} />}
+                    {user.role === 'pepe' && <img src="/role-icons/pepe.svg" alt="pepe" title="Пепешка" style={{ width: 14, height: 14 }} />}
+                  </div>
+                  {open && <div className={styles.userLink}>@{user.link || ''}</div>}
+                </div>
+              )}
+
+              {/* three dots menu */}
+              <div style={{ marginLeft: 8, position: 'relative' }}>
+                <button className={styles.menuBtn} onClick={() => setMenuOpen(s => !s)} aria-label="menu">⋯</button>
+                {menuOpen && (
+                  <div className={styles.menu}>
+                    <button className={styles.logoutMenuItem} onClick={() => { setMenuOpen(false); logout(); }}>
+                      <FaSignOutAlt style={{ marginRight: 8 }} /> Выйти
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </aside>
       {/* Кнопка открытия/закрытия всегда рядом с сайдбаром */}
@@ -273,12 +390,12 @@ export default function Sidebar() {
   );
 }
 
-function SidebarLink({ href, icon, text, open, onClick }: any) {
+function SidebarLink({ href, icon, text, open, onClick, isMobile }: any) {
   return (
     <Link href={href} className={styles.link} onClick={onClick}>
       <div className={styles.linkContent}>
         <span className={styles.icon}>{icon}</span>
-        {open && <span style={{ textDecoration: 'none', pointerEvents: 'none' }}>{text}</span>}
+        {open && !isMobile ? <span className={styles.text}>{text}</span> : null}
       </div>
     </Link>
   );

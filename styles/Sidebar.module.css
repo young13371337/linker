@@ -150,3 +150,66 @@
   background: #e74c3c;
   color: #fff;
 }
+
+.userBlock {
+  width: 100%;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  background: #111;
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+.userLink {
+  color: #9aa0a6;
+  font-size: 13px;
+  margin-top: 2px;
+  line-height: 1;
+}
+
+.menuBtn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.menuBtn:hover { background: rgba(255,255,255,0.03); }
+
+.menu {
+  position: absolute;
+  right: 0;
+  bottom: 44px;
+  background: #0b0b0c;
+  border: 1px solid rgba(255,255,255,0.04);
+  padding: 6px;
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+  min-width: 140px;
+  z-index: 1200;
+}
+
+.logoutMenuItem {
+  background: transparent;
+  border: none;
+  color: #fff;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.logoutMenuItem:hover { background: rgba(255,255,255,0.03); }
