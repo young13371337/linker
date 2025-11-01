@@ -331,18 +331,16 @@ export default function Sidebar() {
           <div className={styles.userBlock} ref={menuRef}>
             <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
               <img src={user.avatar || '/window.svg'} alt="avatar" className={styles.avatar} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/window.svg'; }} />
-              {!isMobile && (
-                <div style={{ flex: 1, marginLeft: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ fontWeight: 600 }}>{user.login}</div>
-                    {user.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" title="Админ" style={{ width: 14, height: 14 }} />}
-                    {user.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" title="Модератор" style={{ width: 14, height: 14 }} />}
-                    {user.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" title="Верифицирован" style={{ width: 14, height: 14 }} />}
-                    {user.role === 'pepe' && <img src="/role-icons/pepe.svg" alt="pepe" title="Пепешка" style={{ width: 14, height: 14 }} />}
-                  </div>
-                  {open && <div className={styles.userLink}>@{user.link || ''}</div>}
+              <div style={{ flex: 1, marginLeft: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ fontWeight: 600 }}>{user.login}</div>
+                  {user.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" title="Админ" style={{ width: 14, height: 14 }} />}
+                  {user.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" title="Модератор" style={{ width: 14, height: 14 }} />}
+                  {user.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" title="Верифицирован" style={{ width: 14, height: 14 }} />}
+                  {user.role === 'pepe' && <img src="/role-icons/pepe.svg" alt="pepe" title="Пепешка" style={{ width: 14, height: 14 }} />}
                 </div>
-              )}
+                {open && <div className={styles.userLink}>@{user.link || ''}</div>}
+              </div>
 
               {/* three dots menu */}
               <div style={{ marginLeft: 8, position: 'relative' }}>
@@ -395,7 +393,7 @@ function SidebarLink({ href, icon, text, open, onClick, isMobile }: any) {
     <Link href={href} className={styles.link} onClick={onClick}>
       <div className={styles.linkContent}>
         <span className={styles.icon}>{icon}</span>
-        {open && !isMobile ? <span className={styles.text}>{text}</span> : null}
+        {open ? <span className={styles.text}>{text}</span> : null}
       </div>
     </Link>
   );
