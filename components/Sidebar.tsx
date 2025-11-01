@@ -19,6 +19,25 @@ export default function Sidebar() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // helper: fetch latest profile from server and merge into local state/storage
+  const fetchAndMergeProfile = async (localUser: any) => {
+    if (!localUser || !localUser.id) return null;
+    try {
+      const res = await fetch(`/api/profile?userId=${localUser.id}`, { credentials: 'include' });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data && data.user) {
+        const merged = { ...(localUser || {}), ...(data.user || {}) };
+        setUser(merged);
+        try { saveUser(merged as any); } catch (e) {}
+        return merged;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return null;
+  };
   useEffect(() => {
     setIsMobile(window.innerWidth <= 600);
     const checkMobile = () => setIsMobile(window.innerWidth <= 600);
@@ -43,10 +62,15 @@ export default function Sidebar() {
     };
     fetchPending();
 
-    const handleVisibility = () => {
+    const handleVisibility = async () => {
       const u = getUser();
-      setUser(u);
-      if (!u) setOpen(false); // скрыть сайдбар если пользователь вышел
+      if (!u) {
+        setUser(null);
+        setOpen(false); // скрыть сайдбар если пользователь вышел
+        return;
+      }
+      // try refresh profile from server so avatar/role are up-to-date
+      await fetchAndMergeProfile(u);
     };
     window.addEventListener("focus", handleVisibility);
     window.addEventListener("visibilitychange", handleVisibility);
@@ -164,9 +188,13 @@ export default function Sidebar() {
     }
 
     // Слушаем событие входа
-    const handleLogin = () => {
+    const handleLogin = async () => {
       const u = getUser();
-      setUser(u);
+      if (!u) {
+        setUser(null);
+        return;
+      }
+      await fetchAndMergeProfile(u);
     };
     window.addEventListener("user-login", handleLogin);
     return () => {
