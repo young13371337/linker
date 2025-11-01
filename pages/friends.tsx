@@ -86,10 +86,22 @@ export default function FriendsPage() {
       return;
     }
     fetch(`/api/profile?userId=${u.id}`)
-      .then(r => r.json())
+      .then(r => r.json().catch(() => ({})))
       .then(data => {
-        setFriends(data.user.friends || []);
-        setRequests(data.user.friendRequests || []);
+        const profile = data && data.user ? data.user : null;
+        if (!profile) {
+          // profile not returned (maybe unauthorized or server error) - don't crash
+          console.warn('Profile fetch did not return user:', data);
+          setFriends([]);
+          setRequests([]);
+          return;
+        }
+        setFriends(Array.isArray(profile.friends) ? profile.friends : []);
+        setRequests(Array.isArray(profile.friendRequests) ? profile.friendRequests : []);
+      }).catch(e => {
+        console.error('Failed to fetch profile:', e);
+        setFriends([]);
+        setRequests([]);
       });
   }, []);
 

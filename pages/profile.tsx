@@ -1033,6 +1033,7 @@ export default function ProfilePage() {
                     .then(r => r.json())
                     .then(data => {
                       setAvatar(data.user.avatar || "");
+                      try { window.dispatchEvent(new Event('profile-updated')); } catch (e) {}
                     });
                 }}
               >Сохранить аватарку</button>

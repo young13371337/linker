@@ -27,8 +27,15 @@ export default function Sidebar() {
       const res = await fetch(`/api/profile?userId=${localUser.id}`, { credentials: 'include' });
       if (!res.ok) return null;
       const data = await res.json();
+      console.debug('[Sidebar] /api/profile response for', localUser.id, data?.user && { avatar: data.user.avatar, role: data.user.role });
       if (data && data.user) {
-        const merged = { ...(localUser || {}), ...(data.user || {}) };
+        const avatarChanged = typeof data.user.avatar === 'string' && data.user.avatar !== (localUser.avatar || null);
+        const merged: any = { ...(localUser || {}), ...(data.user || {}) };
+        if (avatarChanged) {
+          merged._avatarBust = Date.now();
+        } else {
+          merged._avatarBust = localUser._avatarBust || Date.now();
+        }
         setUser(merged);
         try { saveUser(merged as any); } catch (e) {}
         return merged;
@@ -168,19 +175,7 @@ export default function Sidebar() {
     if (u && u.id) {
       (async () => {
         try {
-          const res = await fetch(`/api/profile?userId=${u.id}`, { credentials: 'include' });
-          if (!res.ok) return;
-          const data = await res.json();
-          if (data && data.user) {
-            // merge server fields into local user object and persist it so getUser() remains consistent
-            const merged = { ...(u || {}), ...(data.user || {}) };
-            setUser(merged);
-            try {
-              saveUser(merged as any);
-            } catch (e) {
-              // ignore save failures
-            }
-          }
+          await fetchAndMergeProfile(u);
         } catch (e) {
           // ignore
         }
@@ -197,8 +192,16 @@ export default function Sidebar() {
       await fetchAndMergeProfile(u);
     };
     window.addEventListener("user-login", handleLogin);
+    // listen for explicit profile updates (e.g., after avatar saved in profile page)
+    const onProfileUpdated = async () => {
+      const u = getUser();
+      if (!u) return;
+      await fetchAndMergeProfile(u);
+    };
+    window.addEventListener('profile-updated', onProfileUpdated as any);
     return () => {
       window.removeEventListener("user-login", handleLogin);
+      window.removeEventListener('profile-updated', onProfileUpdated as any);
     };
   }, []);
 
@@ -358,7 +361,16 @@ export default function Sidebar() {
         <div className={styles.footer}>
           <div className={styles.userBlock} ref={menuRef}>
             <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-              <img src={user.avatar || '/window.svg'} alt="avatar" className={styles.avatar} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/window.svg'; }} />
+              {(() => {
+                const raw = user.avatar || '';
+                let src = '/window.svg';
+                if (raw) {
+                  const sep = raw.includes('?') ? '&' : '?';
+                  const bust = user._avatarBust ? user._avatarBust : Date.now();
+                  src = `${raw}${sep}v=${bust}`;
+                }
+                return <img src={src} alt="avatar" className={styles.avatar} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/window.svg'; }} />;
+              })()}
               <div style={{ flex: 1, marginLeft: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <div style={{ fontWeight: 600 }}>{user.login}</div>

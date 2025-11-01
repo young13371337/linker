@@ -11,9 +11,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!session || !session.user || !(session.user as any).id) return res.status(401).json({ error: 'Unauthorized' });
   const userId = (session.user as any).id;
   if (!friendId) return res.status(400).json({ error: "friendId required" });
+  // Prevent sending friend request to yourself
+  if (friendId === userId) return res.status(400).json({ error: "Cannot send friend request to yourself" });
+  // Ensure target user exists
+  const targetUser = await prisma.user.findUnique({ where: { id: friendId }, select: { id: true } });
+  if (!targetUser) return res.status(404).json({ error: "Target user not found" });
   // Проверка на существование заявки
   const existing = await prisma.friendRequest.findFirst({ where: { fromId: userId, toId: friendId } });
   if (existing) return res.status(400).json({ error: "Заявка уже отправлена." });
+  // Проверка на уже существующую дружбу (either direction)
+  const alreadyFriend = await prisma.friend.findFirst({ where: { OR: [ { userId: userId, friendId }, { userId: friendId, friendId: userId } ] } });
+  if (alreadyFriend) return res.status(400).json({ error: "Вы уже в друзьях" });
   const created = await prisma.friendRequest.create({ data: { fromId: userId, toId: friendId } });
 
   // Try to fetch sender info for notification
