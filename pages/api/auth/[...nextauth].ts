@@ -17,21 +17,24 @@ export const authOptions = {
   password: { label: "Password", type: "password" },
   twoFactorCode: { label: "2FA Code", type: "text", optional: true }
     },
-  async authorize(credentials, req: any) {
+      async authorize(credentials, req: any) {
+        console.info('[nextauth] authorize start', { login: credentials?.login });
         if (!credentials?.login || !credentials?.password) {
-          console.error('No login or password provided');
+          console.error('[nextauth] No login or password provided');
           return null;
         }
         const user = await prisma.user.findUnique({ where: { login: credentials.login } });
+        console.info('[nextauth] user found=', !!user, credentials?.login);
         if (!user) {
-          console.error('User not found:', credentials.login);
+          console.error('[nextauth] User not found:', credentials.login);
           return null;
         }
         // Сравниваем хэш пароля
         const bcrypt = require('bcryptjs');
         const valid = await bcrypt.compare(credentials.password, user.password);
+        console.info('[nextauth] password valid=', valid);
         if (!valid) {
-          console.error('Invalid password for user:', credentials.login);
+          console.error('[nextauth] Invalid password for user:', credentials.login);
           return null;
         }
         // Если у пользователя включена 2FA — проверяем TOTP код
@@ -68,6 +71,7 @@ export const authOptions = {
 
         // Создаём новую сессию в Redis (с IP)
         const newSession = await createSessionRedis(user.id, deviceName, ip as string | null);
+        console.info('[nextauth] created session=', newSession?.id);
         // Завершаем все остальные сессии пользователя, кроме текущей
         await deactivateOtherSessions(user.id, newSession.id);
         // Возвращаем пользователя с sessionId — jwt callback вставит его в токен

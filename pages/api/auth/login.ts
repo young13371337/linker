@@ -6,14 +6,18 @@ import { createSessionRedis, deactivateOtherSessions } from '../../../lib/redis'
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
   try {
+    console.info('[api/auth/login] handler start');
   const { login, password } = req.body;
     if (!login || !password) return res.status(400).json({ error: "Login and password required" });
+    console.info('[api/auth/login] login=', login);
     const user = await prisma.user.findUnique({
       where: { login },
       include: {}, // получаем все поля, включая role
     });
+    console.info('[api/auth/login] user found=', !!user);
     if (!user) return res.status(401).json({ error: "User not found" });
     const valid = await bcrypt.compare(password, user.password);
+    console.info('[api/auth/login] password valid=', valid);
     if (!valid) return res.status(401).json({ error: "Invalid password" });
     // ...удалено: проверка twoFactorToken...
     // Назначить роль админа пользователю 'young' при входе
@@ -40,11 +44,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const ip = (req.headers['x-forwarded-for'] as string) || (req.socket && req.socket.remoteAddress) || null;
   // Создаём новую сессию в Redis
   const newSession = await createSessionRedis(user.id, browserName, ip as string | null);
+    console.info('[api/auth/login] created session=', newSession?.id);
     // Завершаем все остальные сессии пользователя, кроме текущей
     await deactivateOtherSessions(user.id, newSession.id);
-    return res.status(200).json({ user: { id: user.id, login: user.login, role } });
+    return res.status(200).json({ user: { id: user.id, login: user.login, role }, sessionId: newSession.id });
   } catch (e: any) {
-    console.error("/api/auth/login error:", e);
+    console.error("/api/auth/login error:", e && e.stack ? e.stack : e);
     return res.status(500).json({ error: e.message || "Internal server error" });
   }
 }
