@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import prisma from "../../lib/prisma";
+import { getUserSessions } from '../../lib/redis';
 import { pusher } from "../../lib/pusher";
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
@@ -18,17 +19,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           where: { id: userId },
           include: {
             friends: true,
-            sessions: true,
           },
         });
+        if (user) {
+          // attach sessions from Redis
+          const rSessions = await getUserSessions(user.id);
+          (user as any).sessions = rSessions;
+        }
       } else if (login && typeof login === "string") {
         user = await prisma.user.findUnique({
           where: { login },
           include: {
             friends: true,
-            sessions: true,
           },
         });
+        if (user) {
+          const rSessions = await getUserSessions(user.id);
+          (user as any).sessions = rSessions;
+        }
       } else {
         return res.status(400).json({ error: "userId or login required" });
       }
@@ -37,8 +45,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         (user?.friends || []).map(async (fr: any) => {
           const friend = await prisma.user.findUnique({
             where: { id: fr.friendId },
-            include: { sessions: true }
           });
+          if (friend) {
+            (friend as any).sessions = await getUserSessions(friend.id);
+          }
           if (!friend) return null;
           const savedF = (friend as any).status;
           const allowedF = ['online', 'offline', 'dnd'];
@@ -66,8 +76,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         incomingRequests.map(async (req: any) => {
           const fromUser = await prisma.user.findUnique({
             where: { id: req.fromId },
-            include: { sessions: true }
           });
+          if (fromUser) {
+            (fromUser as any).sessions = await getUserSessions(fromUser.id);
+          }
           return fromUser ? {
             id: fromUser.id,
             login: fromUser.login,
@@ -91,7 +103,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const allowed = ['online', 'offline', 'dnd'];
       const mainStatus = (typeof saved === 'string' && allowed.includes(saved))
         ? saved
-        : ((user.sessions || []).some((s: any) => {
+        : (((user as any).sessions || []).some((s: any) => {
             if (!s.isActive) return false;
             const created = new Date(s.createdAt).getTime();
             const now = Date.now();
@@ -111,6 +123,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         favoriteTrackUrl: (user as any).favoriteTrackUrl ?? null,
         createdAt: (user as any).createdAt,
         status: mainStatus,
+        sessions: (user as any).sessions || [],
         friends: friendsFull.filter(Boolean),
         friendRequests: friendRequests.filter(Boolean)
       };

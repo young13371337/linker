@@ -3,7 +3,8 @@ import { useRef } from "react";
 import Link from "next/link";
 import { getUser, clearUser, saveUser } from "../lib/session";
 import { useRouter } from "next/router";
-import { FaComments, FaUser, FaSignOutAlt, FaRobot } from "react-icons/fa";
+import { signOut } from "next-auth/react";
+import { FaComments, FaUser, FaSignOutAlt, FaRegNewspaper, FaVideo } from "react-icons/fa";
 import styles from "../styles/Sidebar.module.css"; // создадим CSS для hover и анимаций
 import Pusher from 'pusher-js';
 import ToastNotification from '../pages/chat/ToastNotification';
@@ -206,13 +207,22 @@ export default function Sidebar() {
   }, []);
 
   const logout = () => {
-    clearUser();
+    // Clear local cache and perform a full sign out via NextAuth.
+    // Use the current origin as the callback (homepage).
+    try { clearUser(); } catch (e) {}
     setUser(null);
     setOpen(false);
-    router.push("/auth/login");
+    // trigger NextAuth signOut which will redirect the user to the homepage
+    try {
+      signOut({ callbackUrl: `${window.location.origin}/` as any });
+    } catch (e) {
+      // fallback: router push
+      router.push("/");
+    }
   };
 
   const [menuOpen, setMenuOpen] = useState(false);
+  
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   // Mobile swipe vertical offset (px)
@@ -355,6 +365,7 @@ export default function Sidebar() {
             open={open}
             isMobile={isMobile}
           />
+          {/* Separate buttons for Posts and Studio */}
           <SidebarLink href="/profile" icon={<FaUser />} text="Профиль" open={open} isMobile={isMobile} />
         </nav>
 

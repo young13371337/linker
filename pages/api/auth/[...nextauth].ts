@@ -7,6 +7,7 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
 import prisma from "../../../lib/prisma";
+import { createSessionRedis, deactivateOtherSessions, getSessionById } from '../../../lib/redis';
 export const authOptions = {
   providers: [
     CredentialsProvider({
@@ -51,8 +52,9 @@ export const authOptions = {
             return null;
           }
         }
-        // Получить user-agent из заголовка
+        // Получить user-agent из заголовка и IP
         let deviceName = '';
+        let ip: string | null = null;
         if (typeof window === 'undefined' && credentials) {
           // next-auth передаёт req в authorize через this (context)
           // @ts-ignore
@@ -60,25 +62,16 @@ export const authOptions = {
           if (req && req.headers && req.headers['user-agent']) {
             deviceName = req.headers['user-agent'];
           }
-        }
-        // Создаём новую сессию
-        const newSession = await prisma.session.create({
-          data: {
-            userId: user.id,
-            deviceName,
-            isActive: true
+          if (req) {
+            ip = (req.headers && (req.headers['x-forwarded-for'] as string)) || (req.socket && req.socket.remoteAddress) || null;
           }
-        });
+        }
+  // Создаём новую сессию в Redis (с IP)
+  const newSession = await createSessionRedis(user.id, deviceName, ip);
         // Завершаем все остальные сессии пользователя, кроме текущей
-        await prisma.session.updateMany({
-          where: {
-            userId: user.id,
-            id: { not: newSession.id }
-          },
-          data: { isActive: false }
-        });
+        await deactivateOtherSessions(user.id, newSession.id);
         // Если у пользователя нет 2FA, игнорируем credentials.twoFactorToken
-  return { id: user.id, name: user.login, role: (user as any).role, avatar: (user as any).avatar };
+  return { id: user.id, name: user.login, role: (user as any).role, avatar: (user as any).avatar, sessionId: newSession.id };
       }
     })
   ],
@@ -96,11 +89,26 @@ export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET || "dev-secret",
   callbacks: {
     async jwt({ token, user }: { token: any, user?: any }) {
+      // On sign in, attach user fields including sessionId
       if (user) {
         token.id = user.id;
         token.name = user.name;
         token.role = (user as any).role;
         token.avatar = (user as any).avatar;
+        if ((user as any).sessionId) token.sessionId = (user as any).sessionId;
+        return token;
+      }
+      // On subsequent requests, validate that the session still exists in Redis
+      if (token && token.sessionId) {
+        try {
+          const s = await getSessionById(token.sessionId as string);
+          if (!s || !s.isActive) {
+            // invalidate token -> force sign out
+            return {};
+          }
+        } catch (e) {
+          return {};
+        }
       }
       return token;
     },
@@ -110,6 +118,7 @@ export const authOptions = {
         session.user.name = token.name;
         session.user.role = token.role;
         session.user.avatar = token.avatar;
+        session.user.sessionId = token.sessionId;
       }
       return session;
     }

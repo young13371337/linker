@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import UserStatus, { UserStatusType, statusLabels } from "../components/UserStatus";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 // 2FA 6-digit input component
 type CodeInputProps = {
   value: string;
@@ -137,35 +137,21 @@ import { FaUserCircle, FaCog, FaShieldAlt, FaPalette, FaLaptop, FaMobileAlt, FaD
 // Функция для определения типа устройства и возврата иконки и названия
 function getDeviceIconAndName(deviceName: string) {
   const ua = (deviceName || "").toLowerCase();
+  // Return only an icon component based on detected device type (no text)
   if (ua.includes("android") || ua.includes("iphone") || ua.includes("mobile")) {
-    return React.createElement(React.Fragment, null,
-      React.createElement(FaMobileAlt, { style: { fontSize: 18 } }),
-      " Телефон"
-    );
+    return React.createElement(FaMobileAlt, { style: { fontSize: 18 } });
   }
   if ((ua.includes("windows") && ua.includes("touch")) || ua.includes("notebook") || ua.includes("laptop")) {
-    return React.createElement(React.Fragment, null,
-      React.createElement(FaLaptop, { style: { fontSize: 18 } }),
-      " Ноутбук"
-    );
+    return React.createElement(FaLaptop, { style: { fontSize: 18 } });
   }
   if (ua.includes("macintosh") || ua.includes("macbook")) {
-    return React.createElement(React.Fragment, null,
-      React.createElement(FaLaptop, { style: { fontSize: 18 } }),
-      " MacBook"
-    );
+    return React.createElement(FaLaptop, { style: { fontSize: 18 } });
   }
   if (ua.includes("windows") || ua.includes("linux")) {
-    return React.createElement(React.Fragment, null,
-      React.createElement(FaDesktop, { style: { fontSize: 18 } }),
-      " ПК"
-    );
+    return React.createElement(FaDesktop, { style: { fontSize: 18 } });
   }
-  // Если не удалось определить, выводим user-agent
-  return React.createElement(React.Fragment, null,
-    React.createElement(FaDesktop, { style: { fontSize: 18 } }),
-    ` ${deviceName || 'Неизвестное устройство'}`
-  );
+  // Fallback: generic desktop icon
+  return React.createElement(FaDesktop, { style: { fontSize: 18 } });
 }
 
 function generate2FAToken() {
@@ -210,6 +196,8 @@ export default function ProfilePage() {
   const [toastType, setToastType] = useState<'success'|'error'>('success');
   const [friends, setFriends] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const currentSessionId = session && session.user ? (session.user as any).sessionId : null;
 
   // Загружаем профиль пользователя после успешного входа
   useEffect(() => {
@@ -595,23 +583,26 @@ export default function ProfilePage() {
     )}
         <div style={{ display: "flex", gap: 24, marginTop: 24, transition: "gap 0.3s" }}>
       {/* Список друзей */}
-      <div style={{ flex: 1, background: "rgba(35,36,42,0.35)", borderRadius: 14, padding: 16, boxShadow: "0 1px 8px #0003" }}>
-        <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>Список друзей</div>
+  <div style={{ flex: 1, background: "rgba(35,36,42,0.16)", borderRadius: 14, padding: 16, boxShadow: "0 1px 8px #0003" }}>
+  <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>{`Список друзей (${friends?.length || 0})`}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div
+            <div
             className={isFriendsScrollable ? "custom-scrollbar" : undefined}
-            style={isFriendsScrollable ? { maxHeight: 220, overflowY: 'auto', paddingRight: 4, scrollbarWidth: 'thin', scrollbarColor: 'rgba(187,187,187,0.6) #23242a' } : { paddingRight: 4 }}
+            // make the container shorter so 3+ friends will trigger scrolling on most screens
+            style={isFriendsScrollable ? { maxHeight: 160, overflowY: 'auto', paddingRight: 4, scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.12) transparent' } : { paddingRight: 4 }}
           >
             <style>{`
-              .custom-scrollbar::-webkit-scrollbar { width: 8px; background: #23242a; }
-              .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(187,187,187,0.6); border-radius: 8px; }
-              .custom-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(187,187,187,0.6) #23242a; overflow-x: hidden; }
+              /* thin, subtle scrollbar for the friends list when it's scrollable */
+              .custom-scrollbar::-webkit-scrollbar { width: 6px; background: transparent; }
+              .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+              .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.16); border-radius: 6px; }
+              .custom-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.16) transparent; overflow-x: hidden; }
             `}</style>
             <div style={{ overflowX: 'hidden' }}>
               {friends.length === 0 ? (
                 <div style={{ color: "#bbb", fontSize: 16 }}>У вас нет друзей</div>
               ) : friends.map(f => (
-                <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(35,36,42,0.35)", borderRadius: 14, padding: "12px 16px", boxShadow: "0 2px 12px #0006", transition: "background 0.2s, box-shadow 0.2s", position: "relative" }} onMouseOver={e => {e.currentTarget.style.background="rgba(35,36,42,0.5)";e.currentTarget.style.boxShadow="0 2px 16px #229ED944"}} onMouseOut={e => {e.currentTarget.style.background="rgba(35,36,42,0.35)";e.currentTarget.style.boxShadow="0 2px 12px #0006"}}>
+                <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(35,36,42,0.10)", borderRadius: 14, padding: "12px 16px", boxShadow: "none", transition: "background 0.18s, box-shadow 0.18s", position: "relative", border: '1px solid rgba(255,255,255,0.02)' }} onMouseOver={e => {e.currentTarget.style.background="rgba(35,36,42,0.18)"; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.25)'; }} onMouseOut={e => {e.currentTarget.style.background="rgba(35,36,42,0.10)"; e.currentTarget.style.boxShadow = 'none'; }}>
                   <div style={{ position: "relative", width: 44, height: 44, borderRadius: "50%", background: "#444", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: 'none' }} onClick={() => window.location.href = `/profile/${f.id}`}> 
                     <img src={f.avatar || "https://www.svgrepo.com/show/452030/avatar-default.svg"} alt="avatar" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", background: "#444", boxShadow: 'none' }} />
                     <span style={{ position: "absolute", left: 32, top: 32, width: 12, height: 12, borderRadius: "50%", background: f.isOnline ? "#1ed760" : "#888", border: "2px solid #23242a" }} />
@@ -639,57 +630,74 @@ export default function ProfilePage() {
             </div>
           </div>
           {removeFriendId && (
-            <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <div style={{ background: "#23242a", borderRadius: 18, padding: 32, minWidth: 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", textAlign: "center" }}>
-                <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 18 }}>Вы уверены, что хотите удалить друга? Это приведет к удалению чата с ним.</div>
-                <div style={{ display: "flex", gap: 18, justifyContent: "center" }}>
-                  <button onClick={handleRemoveFriend} style={{ background: "#e74c3c", color: "#fff", border: "none", borderRadius: 8, padding: "8px 22px", fontSize: 16, fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 8px #e74c3f44" }}>Да</button>
-                  <button onClick={() => setRemoveFriendId(null)} style={{ background: "#444", color: "#fff", border: "none", borderRadius: 8, padding: "8px 22px", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Отменить</button>
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: 'blur(6px)' }}>
+              <style>{`\n                @keyframes modalPop { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }\n              `}</style>
+              <div style={{ background: "linear-gradient(180deg, rgba(35,36,42,0.98), rgba(28,29,32,0.98))", borderRadius: 16, padding: 28, minWidth: 420, maxWidth: '90vw', boxShadow: "0 10px 40px rgba(0,0,0,0.6)", color: "#fff", position: "relative", textAlign: "center", animation: 'modalPop 220ms cubic-bezier(.2,.9,.2,1) both' }}>
+                {/* Close button removed as it's redundant - use Отменить to close */}
+                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 12, color: '#fff' }}>Вы уверены, что хотите удалить друга?</div>
+                <div style={{ color: '#bfc9cf', marginBottom: 20 }}>Это действие удалит чат и историю сообщений с этим пользователем.</div>
+                <div style={{ display: "flex", gap: 14, justifyContent: "center", alignItems: 'center' }}>
+                  <button onClick={handleRemoveFriend} style={{ background: "linear-gradient(180deg,#ff6b6b,#e04141)", color: "#fff", border: "none", borderRadius: 10, padding: "10px 26px", fontSize: 15, fontWeight: 700, cursor: "pointer", boxShadow: "0 6px 18px rgba(224,65,65,0.26)" }}>Да, удалить</button>
+                  <button onClick={() => setRemoveFriendId(null)} style={{ background: "transparent", color: "#d1d7db", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "10px 22px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Отменить</button>
                 </div>
               </div>
             </div>
           )}
         </div>
       </div>
-      {/* Новости */}
-      <div style={{ flex: 1, background: "rgba(35,36,42,0.35)", borderRadius: 14, padding: 16, boxShadow: "0 1px 8px #0003" }}>
-        <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>Новости</div>
-        <div
-          style={{
-            cursor: 'pointer',
-            borderRadius: 12,
-            overflow: 'hidden',
-            // use same semi-transparent panel background so it's visually consistent
-            background: 'rgba(35,36,42,0.35)',
-            // lighter shadow to match other panels
-            boxShadow: '0 1px 8px #0003',
-            marginBottom: 14,
-            transition: 'box-shadow 0.22s, transform 0.14s',
-            border: '1px solid rgba(0,0,0,0.18)',
-            maxWidth: 260,
-            marginLeft: 'auto',
-            marginRight: 'auto',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-          }}
-          onClick={() => setShowNewsModal(true)}
-          onMouseOver={e => {
-            e.currentTarget.style.boxShadow = '0 4px 16px #229ED944';
-            e.currentTarget.style.transform = 'translateY(-1px) scale(1.01)';
-          }}
-          onMouseOut={e => {
-            e.currentTarget.style.boxShadow = '0 1px 8px #0006';
-            e.currentTarget.style.transform = 'none';
-          }}
-        >
-          <img src="/news-images/update.jpg" alt="Новое обновление" style={{ width: '100%', height: 70, objectFit: 'cover', display: 'block', borderTopLeftRadius: 12, borderTopRightRadius: 12 }} />
-          <div style={{ padding: '10px 12px 8px 12px', textAlign: 'center', width: '100%' }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', letterSpacing: 0.1 }}>Новое обновление!</div>
-          </div>
+  {/* Сессии */}
+  <div style={{ flex: 1, background: "rgba(35,36,42,0.16)", borderRadius: 14, padding: 16, boxShadow: "0 1px 8px #0003" }}>
+        <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>Сессии</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {sessions && sessions.length > 0 ? sessions.map((s: any) => {
+            const isCurrent = s.id === currentSessionId;
+            return (
+            <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0,0,0,0.05)', padding: 10, borderRadius: 10, position: 'relative' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+                  {React.cloneElement(getDeviceIconAndName(s.deviceName) as any, { style: { fontSize: 18, color: '#fff' } })}
+                </div>
+                <div>
+                  <div style={{ color: '#fff', fontWeight: 600 }}>{s.deviceName || 'Неизвестное устройство'} {isCurrent ? <span style={{ display:'inline-block', marginLeft:8, padding:'2px 8px', background:'#1ed760', color:'#022', borderRadius:12, fontSize:12, fontWeight:700 }}>Это вы</span> : null}</div>
+                  <div style={{ color: '#bbb', fontSize: 13 }}>{s.ip || 'IP неизвестен'}</div>
+                  <div style={{ color: '#999', fontSize: 12, marginTop: 4 }}>{new Date(s.createdAt).toLocaleString()}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div style={{ position: 'relative' }}>
+                  <button onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === s.id ? null : s.id); }} aria-label="Меню сессии" style={{ width: 34, height: 34, borderRadius: 8, border: 'none', background: 'transparent', color: '#fff', cursor: 'pointer' }}>⋯</button>
+                  {openMenuId === s.id && (
+                    <div style={{ position: 'absolute', right: 8, top: 44, background: '#23242a', border: '1px solid #333', borderRadius: 10, padding: 8, zIndex: 60, boxShadow: '0 4px 16px #0008' }}>
+                      <button onClick={async () => {
+                        if (!user) return;
+                        if (!confirm('Завершить эту сессию?')) return;
+                        try {
+                          const resp = await fetch('/api/session-end', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: user.id, sessionId: s.id }) });
+                              if (resp.ok) {
+                            setOpenMenuId(null);
+                            // Optimistically remove session from local UI
+                            setSessions(prev => prev.filter((ss: any) => ss.id !== s.id));
+                            setToastMsg('Сессия завершена'); setToastType('success'); setShowToast(true);
+                            // If user ended the current session, sign them out (same as logout)
+                            if (isCurrent) {
+                              // small delay to allow UI update
+                              setTimeout(() => signOut({ callbackUrl: `${window.location.origin}/` }), 300);
+                              return;
+                            }
+                          } else {
+                            alert('Не удалось завершить сессию');
+                          }
+                        } catch (e) { alert('Ошибка'); }
+                      }} style={{ background: 'transparent', color: '#ff6b6b', border: 'none', padding: '6px 10px', cursor: 'pointer', fontWeight: 600 }}>Завершить</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}) : (
+            <div style={{ color: '#bbb' }}>Активных сессий не найдено.</div>
+          )}
         </div>
-        {/* Можно добавить другие новости ниже */}
       </div>
 
       

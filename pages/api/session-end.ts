@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import prisma from "../../lib/prisma";
+import { endSession } from '../../lib/redis';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 
@@ -15,10 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Only allow ending sessions for yourself
   if (String(currentUserId) !== String(userId)) return res.status(403).json({ error: 'Forbidden' });
 
-  // Завершаем сессию (только свою)
-  await prisma.session.update({
-    where: { id: sessionId },
-    data: { isActive: false }
-  });
+  // Завершаем сессию (только свою) — помечаем неактивной в Redis
+  await endSession(sessionId);
   return res.status(200).json({ ok: true });
 }

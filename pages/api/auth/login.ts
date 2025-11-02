@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import bcrypt from "bcryptjs";
 import prisma from "../../../lib/prisma";
+import { createSessionRedis, deactivateOtherSessions } from '../../../lib/redis';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
@@ -35,22 +36,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       else if (deviceName.includes('Safari')) browserName = 'Safari';
       else browserName = deviceName.split(' ')[0];
     }
-    // Создаём новую сессию
-    const newSession = await prisma.session.create({
-      data: {
-        userId: user.id,
-        deviceName: browserName,
-        isActive: true,
-      }
-    });
+  // Определяем IP клиента
+  const ip = (req.headers['x-forwarded-for'] as string) || (req.socket && req.socket.remoteAddress) || null;
+  // Создаём новую сессию в Redis
+  const newSession = await createSessionRedis(user.id, browserName, ip as string | null);
     // Завершаем все остальные сессии пользователя, кроме текущей
-    await prisma.session.updateMany({
-      where: {
-        userId: user.id,
-        id: { not: newSession.id }
-      },
-      data: { isActive: false }
-    });
+    await deactivateOtherSessions(user.id, newSession.id);
     return res.status(200).json({ user: { id: user.id, login: user.login, role } });
   } catch (e: any) {
     console.error("/api/auth/login error:", e);
