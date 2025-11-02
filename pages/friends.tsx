@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Head from "next/head";
 import { getUser } from "../lib/session";
 import Sidebar from "../components/Sidebar";
 import ToastNotification from "./chat/ToastNotification";

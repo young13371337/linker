@@ -6,14 +6,16 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Получить профиль пользователя, друзей, устройства
   if (req.method === "GET") {
     try {
       let userId = req.query.userId;
       let login = req.query.login;
+
       if (Array.isArray(userId)) userId = userId[0];
       if (Array.isArray(login)) login = login[0];
+
       let user;
+
       if (userId && typeof userId === "string") {
         user = await prisma.user.findUnique({
           where: { id: userId },
@@ -21,8 +23,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             friends: true,
           },
         });
+
         if (user) {
-          // attach sessions from Redis
           const rSessions = await getUserSessions(user.id);
           (user as any).sessions = rSessions;
         }
@@ -33,6 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             friends: true,
           },
         });
+
         if (user) {
           const rSessions = await getUserSessions(user.id);
           (user as any).sessions = rSessions;
@@ -40,26 +43,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } else {
         return res.status(400).json({ error: "userId or login required" });
       }
-      // Получить друзей с login, role, isOnline
+
       const friendsFull = await Promise.all(
         (user?.friends || []).map(async (fr: any) => {
           const friend = await prisma.user.findUnique({
             where: { id: fr.friendId },
           });
+
           if (friend) {
             (friend as any).sessions = await getUserSessions(friend.id);
           }
           if (!friend) return null;
+
           const savedF = (friend as any).status;
           const allowedF = ['online', 'offline', 'dnd'];
-          const friendStatus = (typeof savedF === 'string' && allowedF.includes(savedF))
-            ? savedF
-            : ((friend.sessions || []).some((s: any) => {
-                if (!s.isActive) return false;
-                const created = new Date(s.createdAt).getTime();
-                const now = Date.now();
-                return now - created < 2 * 60 * 1000; // 2 минуты
-              }) ? 'online' : 'offline');
+
+          const friendSessions = ((friend as any).sessions || []);
+
+          const friendStatus =
+            (typeof savedF === 'string' && allowedF.includes(savedF))
+              ? savedF
+              : (friendSessions.some((s: any) => {
+                  if (!s.isActive) return false;
+                  const created = new Date(s.createdAt).getTime();
+                  const now = Date.now();
+                  return now - created < 2 * 60 * 1000;
+                }) ? 'online' : 'offline');
+
           return {
             id: friend.id,
             login: friend.login,
@@ -70,46 +80,59 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           };
         })
       );
-      // Получить входящие заявки (FriendRequest), показать login, role, isOnline
-      const incomingRequests = await prisma.friendRequest.findMany({ where: { toId: user?.id } });
+
+      const incomingRequests = await prisma.friendRequest.findMany({
+        where: { toId: user?.id }
+      });
+
       const friendRequests = await Promise.all(
         incomingRequests.map(async (req: any) => {
           const fromUser = await prisma.user.findUnique({
             where: { id: req.fromId },
           });
+
           if (fromUser) {
             (fromUser as any).sessions = await getUserSessions(fromUser.id);
           }
-          return fromUser ? {
-            id: fromUser.id,
-            login: fromUser.login,
-            link: fromUser.link || null,
-            avatar: fromUser.avatar,
-            role: fromUser.role,
-            isOnline: fromUser.sessions.some((s: any) => {
+
+          const fSessions = (fromUser ? (fromUser as any).sessions || [] : []);
+
+          return fromUser
+            ? {
+                id: fromUser.id,
+                login: fromUser.login,
+                link: fromUser.link || null,
+                avatar: fromUser.avatar,
+                role: fromUser.role,
+                isOnline: fSessions.some((s: any) => {
+                  if (!s.isActive) return false;
+                  const created = new Date(s.createdAt).getTime();
+                  const now = Date.now();
+                  return now - created < 2 * 60 * 1000;
+                })
+              }
+            : null;
+        })
+      );
+
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      const saved = (user as any).status;
+      const allowed = ['online', 'offline', 'dnd'];
+      const userSessions = ((user as any).sessions || []);
+
+      const mainStatus =
+        (typeof saved === 'string' && allowed.includes(saved))
+          ? saved
+          : (userSessions.some((s: any) => {
               if (!s.isActive) return false;
               const created = new Date(s.createdAt).getTime();
               const now = Date.now();
               return now - created < 2 * 60 * 1000;
             })
-          } : null;
-        })
-      );
-      // verified: удалено полностью
-      if (!user) return res.status(404).json({ error: "User not found" });
-      // If user has an explicit saved status (online/offline/dnd), use it.
-      // Otherwise compute online/offline from active sessions.
-      const saved = (user as any).status;
-      const allowed = ['online', 'offline', 'dnd'];
-      const mainStatus = (typeof saved === 'string' && allowed.includes(saved))
-        ? saved
-        : (((user as any).sessions || []).some((s: any) => {
-            if (!s.isActive) return false;
-            const created = new Date(s.createdAt).getTime();
-            const now = Date.now();
-            return now - created < 2 * 60 * 1000;
-          }) ? 'online' : 'offline');
-      // Build a safe user object to avoid leaking sensitive fields (password, sessions, etc.)
+            ? 'online'
+            : 'offline');
+
       const safeUser = {
         id: (user as any).id,
         login: (user as any).login,
@@ -123,7 +146,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         favoriteTrackUrl: (user as any).favoriteTrackUrl ?? null,
         createdAt: (user as any).createdAt,
         status: mainStatus,
-        sessions: (user as any).sessions || [],
+        sessions: userSessions,
         friends: friendsFull.filter(Boolean),
         friendRequests: friendRequests.filter(Boolean)
       };
@@ -133,67 +156,95 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: e.message || "Internal server error" });
     }
   }
-  // Ошибочный дублирующийся код удалён. Всё внутри handler.
-  // Обновить профиль (описание, аватар)
+
   if (req.method === "POST") {
-    // Only allow authenticated users to modify their own profile.
     const session = (await getServerSession(req, res, authOptions as any)) as any;
+
     if (!session || !session.user || !(session.user as any).id) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+
     const currentUserId = (session.user as any).id;
 
-  const { description, avatar, twoFactorToken, password, backgroundUrl, bgOpacity, favoriteTrackUrl, status } = req.body;
+    const {
+      description,
+      avatar,
+      password,
+      backgroundUrl,
+      bgOpacity,
+      favoriteTrackUrl,
+      status
+    } = req.body;
+
     try {
       const data: any = {};
+
       if (typeof description !== "undefined") data.description = description;
       if (typeof avatar === "string") data.avatar = avatar;
-  // ...удалено: обработка twoFactorToken...
-  if (typeof backgroundUrl === "string" || backgroundUrl === null) data.backgroundUrl = backgroundUrl;
-  if (typeof bgOpacity === "number") data.bgOpacity = bgOpacity;
-      if (typeof favoriteTrackUrl === "string" || favoriteTrackUrl === null) data.favoriteTrackUrl = favoriteTrackUrl;
-      // Persist explicit user status if provided (online/offline/dnd)
+
+      if (typeof backgroundUrl === "string" || backgroundUrl === null)
+        data.backgroundUrl = backgroundUrl;
+
+      if (typeof bgOpacity === "number") data.bgOpacity = bgOpacity;
+
+      if (typeof favoriteTrackUrl === "string" || favoriteTrackUrl === null)
+        data.favoriteTrackUrl = favoriteTrackUrl;
+
       if (typeof status === 'string') {
         const allowed = ['online', 'offline', 'dnd'];
         if (allowed.includes(status)) data.status = status;
       }
+
       if (typeof password === "string" && password.length > 0) {
-        const { forbiddenPasswords } = require('../../lib/forbidden-passwords');
+        const { forbiddenPasswords } =
+          require('../../lib/forbidden-passwords');
+
         if (forbiddenPasswords.includes(password)) {
-          return res.status(400).json({ error: "Слишком простой пароль", code: "FORBIDDEN_PASSWORD" });
+          return res.status(400).json({
+            error: "Слишком простой пароль",
+            code: "FORBIDDEN_PASSWORD"
+          });
         }
+
         const bcrypt = require('bcryptjs');
         data.password = await bcrypt.hash(password, 8);
       }
-      // Note: login and link updates are handled by dedicated endpoints
-      // If status is being updated, check previous value so we can broadcast change
+
       let prevStatus: string | null = null;
+
       if (typeof data.status !== 'undefined') {
-        const prev = await prisma.user.findUnique({ where: { id: currentUserId } }) as any;
+        const prev = await prisma.user.findUnique({
+          where: { id: currentUserId }
+        }) as any;
+
         prevStatus = prev?.status || null;
       }
+
       const user = await prisma.user.update({
         where: { id: currentUserId },
         data,
       });
 
-      // Broadcast status change if it was updated and actually changed
       try {
         if (typeof data.status !== 'undefined') {
           const newStatus = (user as any).status || null;
+
           if (newStatus !== prevStatus) {
-              try {
-                await pusher.trigger(`user-${currentUserId}`, 'status-changed', { userId: currentUserId, status: newStatus });
-              } catch (pErr) {
-                console.error('[PROFILE] Failed to trigger pusher status-changed:', String(pErr));
-              }
+            try {
+              await pusher.trigger(
+                `user-${currentUserId}`,
+                'status-changed',
+                { userId: currentUserId, status: newStatus }
+              );
+            } catch (pErr) {
+              console.error('[PROFILE] Failed to trigger pusher status-changed:', String(pErr));
+            }
           }
         }
       } catch (bErr) {
         console.error('[PROFILE] Broadcast error:', String(bErr));
       }
 
-      // Return sanitized user to avoid leaking password/sessions
       const returnedUser = {
         id: (user as any).id,
         login: (user as any).login,
@@ -213,5 +264,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: e.message || "Internal server error" });
     }
   }
+
   return res.status(405).end();
 }
