@@ -17,7 +17,7 @@ export const authOptions = {
   password: { label: "Password", type: "password" },
   twoFactorCode: { label: "2FA Code", type: "text", optional: true }
     },
-      async authorize(credentials) {
+  async authorize(credentials, req: any) {
         if (!credentials?.login || !credentials?.password) {
           console.error('No login or password provided');
           return null;
@@ -52,26 +52,26 @@ export const authOptions = {
             return null;
           }
         }
-        // Получить user-agent из заголовка и IP
+        // Получить user-agent из заголовка и IP (req передаётся как второй аргумент)
         let deviceName = '';
         let ip: string | null = null;
-        if (typeof window === 'undefined' && credentials) {
-          // next-auth передаёт req в authorize через this (context)
-          // @ts-ignore
-          const req = this && this.req;
+        try {
           if (req && req.headers && req.headers['user-agent']) {
-            deviceName = req.headers['user-agent'];
+            deviceName = req.headers['user-agent'] as string;
           }
           if (req) {
-            ip = (req.headers && (req.headers['x-forwarded-for'] as string)) || (req.socket && req.socket.remoteAddress) || null;
+            ip = (req.headers && (req.headers['x-forwarded-for'] as string)) || (req.socket && (req.socket as any).remoteAddress) || null;
           }
+        } catch (e) {
+          // ignore
         }
-  // Создаём новую сессию в Redis (с IP)
-  const newSession = await createSessionRedis(user.id, deviceName, ip);
+
+        // Создаём новую сессию в Redis (с IP)
+        const newSession = await createSessionRedis(user.id, deviceName, ip as string | null);
         // Завершаем все остальные сессии пользователя, кроме текущей
         await deactivateOtherSessions(user.id, newSession.id);
-        // Если у пользователя нет 2FA, игнорируем credentials.twoFactorToken
-  return { id: user.id, name: user.login, role: (user as any).role, avatar: (user as any).avatar, sessionId: newSession.id };
+        // Возвращаем пользователя с sessionId — jwt callback вставит его в токен
+        return { id: user.id, name: user.login, role: (user as any).role, avatar: (user as any).avatar, sessionId: newSession.id };
       }
     })
   ],
