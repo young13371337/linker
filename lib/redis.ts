@@ -2,50 +2,7 @@ import Redis from 'ioredis';
 import crypto from 'crypto';
 
 // Create a shared Redis client. Uses REDIS_URL env or defaults to localhost.
-// Configure retry options to avoid hitting ioredis per-request retry limit which
-// can surface as: "Reached the max retries per request limit (which is 20)".
-// Setting `maxRetriesPerRequest: null` disables the per-request limit and
-// allows the client to use the global reconnect strategy. We also provide
-// a simple retryStrategy and reconnectOnError handler to make reconnects
-// more resilient and observable.
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
-  // allow commands to be queued/retried while reconnecting
-  maxRetriesPerRequest: null,
-  // backoff for reconnect attempts (ms)
-  retryStrategy(times) {
-    // exponential backoff capped at 2s
-    const delay = Math.min(times * 50, 2000);
-    return delay;
-  },
-  // when Redis replies with READONLY or similar errors, try reconnecting
-  reconnectOnError(err) {
-    if (!err) return false;
-    const message = String(err.message || '').toUpperCase();
-    // reconnect on MOVED/ASK/READONLY or connection issues
-    if (message.includes('READONLY') || message.includes('MOVED') || message.includes('ASK')) return true;
-    return false;
-  },
-  // enable offline queue so commands issued while disconnected are queued
-  enableOfflineQueue: true,
-});
-
-// Basic logging to help debug connection/retry issues in development
-redis.on('error', (err) => {
-  // eslint-disable-next-line no-console
-  console.error('[redis] error', err && err.message ? err.message : err);
-});
-redis.on('connect', () => {
-  // eslint-disable-next-line no-console
-  console.info('[redis] connecting');
-});
-redis.on('ready', () => {
-  // eslint-disable-next-line no-console
-  console.info('[redis] ready');
-});
-redis.on('end', () => {
-  // eslint-disable-next-line no-console
-  console.warn('[redis] connection closed');
-});
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
 export default redis;
 

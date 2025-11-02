@@ -17,24 +17,21 @@ export const authOptions = {
   password: { label: "Password", type: "password" },
   twoFactorCode: { label: "2FA Code", type: "text", optional: true }
     },
-      async authorize(credentials, req: any) {
-        console.info('[nextauth] authorize start', { login: credentials?.login });
+      async authorize(credentials) {
         if (!credentials?.login || !credentials?.password) {
-          console.error('[nextauth] No login or password provided');
+          console.error('No login or password provided');
           return null;
         }
         const user = await prisma.user.findUnique({ where: { login: credentials.login } });
-        console.info('[nextauth] user found=', !!user, credentials?.login);
         if (!user) {
-          console.error('[nextauth] User not found:', credentials.login);
+          console.error('User not found:', credentials.login);
           return null;
         }
         // Сравниваем хэш пароля
         const bcrypt = require('bcryptjs');
         const valid = await bcrypt.compare(credentials.password, user.password);
-        console.info('[nextauth] password valid=', valid);
         if (!valid) {
-          console.error('[nextauth] Invalid password for user:', credentials.login);
+          console.error('Invalid password for user:', credentials.login);
           return null;
         }
         // Если у пользователя включена 2FA — проверяем TOTP код
@@ -55,27 +52,26 @@ export const authOptions = {
             return null;
           }
         }
-        // Получить user-agent из заголовка и IP (req передаётся как второй аргумент)
+        // Получить user-agent из заголовка и IP
         let deviceName = '';
         let ip: string | null = null;
-        try {
+        if (typeof window === 'undefined' && credentials) {
+          // next-auth передаёт req в authorize через this (context)
+          // @ts-ignore
+          const req = this && this.req;
           if (req && req.headers && req.headers['user-agent']) {
-            deviceName = req.headers['user-agent'] as string;
+            deviceName = req.headers['user-agent'];
           }
           if (req) {
-            ip = (req.headers && (req.headers['x-forwarded-for'] as string)) || (req.socket && (req.socket as any).remoteAddress) || null;
+            ip = (req.headers && (req.headers['x-forwarded-for'] as string)) || (req.socket && req.socket.remoteAddress) || null;
           }
-        } catch (e) {
-          // ignore
         }
-
-        // Создаём новую сессию в Redis (с IP)
-        const newSession = await createSessionRedis(user.id, deviceName, ip as string | null);
-        console.info('[nextauth] created session=', newSession?.id);
+  // Создаём новую сессию в Redis (с IP)
+  const newSession = await createSessionRedis(user.id, deviceName, ip);
         // Завершаем все остальные сессии пользователя, кроме текущей
         await deactivateOtherSessions(user.id, newSession.id);
-        // Возвращаем пользователя с sessionId — jwt callback вставит его в токен
-        return { id: user.id, name: user.login, role: (user as any).role, avatar: (user as any).avatar, sessionId: newSession.id };
+        // Если у пользователя нет 2FA, игнорируем credentials.twoFactorToken
+  return { id: user.id, name: user.login, role: (user as any).role, avatar: (user as any).avatar, sessionId: newSession.id };
       }
     })
   ],
