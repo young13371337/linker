@@ -1,3 +1,4 @@
+import Head from 'next/head';
 import ToastNotification from "../chat/ToastNotification";
 import Lottie from "lottie-react";
 import registerAnimation from "../../public/aui/register.json";
@@ -57,7 +58,14 @@ export default function RegisterPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#111" }}>
+    <>
+      <Head>
+        {/* Load reCAPTCHA only on the registration page when site key is configured */}
+        {process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
+          <script src={`https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`} async />
+        )}
+      </Head>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#111" }}>
       {/* Slightly raise the auth card for better button visibility while keeping centered */}
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', transform: 'translateY(-6vh)' }}>
         <div style={{ display: "flex", justifyContent: "center", marginTop: 64, marginBottom: 18 }}>
@@ -106,5 +114,6 @@ export default function RegisterPage() {
       </div>
       {/* end raised wrapper */}
     </div>
+    </>
   );
 }

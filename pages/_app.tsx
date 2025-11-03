@@ -373,6 +373,7 @@ function MainApp({ Component, pageProps }: AppProps) {
         {/* Mobile meta tags for responsive layout and theme color */}
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#0f1214" />
+        {/* reCAPTCHA script moved to registration page to avoid loading globally */}
       </Head>
       {showSidebar && <Sidebar />}
       {/* (removed) previously-blocking ban overlay — UI not blocked here anymore */}
