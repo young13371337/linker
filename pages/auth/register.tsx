@@ -14,6 +14,27 @@ export default function RegisterPage() {
   const router = useRouter();
   const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY as string | undefined;
   const [greReady, setGreReady] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Helper: try to obtain a recaptcha token with retries and exponential backoff
+  const getRecaptchaToken = async (attempts = 3): Promise<string> => {
+    if (!siteKey) throw new Error('no-site-key');
+    let lastErr: any = null;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        await (window as any).grecaptcha.ready();
+        const tok = await (window as any).grecaptcha.execute(siteKey, { action: 'register' });
+        if (tok && typeof tok === 'string' && tok.length > 20) return tok;
+        lastErr = new Error('empty-token');
+      } catch (e) {
+        lastErr = e;
+      }
+      // backoff: 400ms, 800ms, 1600ms
+      const wait = 400 * Math.pow(2, i);
+      await new Promise(r => setTimeout(r, wait));
+    }
+    throw lastErr || new Error('recaptcha-failed');
+  };
 
   // Poll for grecaptcha availability (the script is loaded async in <Head>) and mark ready.
   useEffect(() => {
@@ -52,6 +73,7 @@ export default function RegisterPage() {
       return;
     }
     try {
+      setSubmitting(true);
       // If reCAPTCHA is configured, obtain a token first
       let recaptchaToken: string | null = null;
       if (siteKey) {
@@ -60,8 +82,7 @@ export default function RegisterPage() {
           return;
         }
         try {
-          await (window as any).grecaptcha.ready();
-          recaptchaToken = await (window as any).grecaptcha.execute(siteKey, { action: 'register' });
+          recaptchaToken = await getRecaptchaToken(3);
         } catch (e) {
           console.warn('reCAPTCHA execution failed', e);
           setToast({ type: 'error', message: 'Не удалось получить reCAPTCHA токен. Попробуйте позже.' });
@@ -84,6 +105,9 @@ export default function RegisterPage() {
       }
     } catch (e) {
       setToast({ type: 'error', message: "Сервер недоступен" });
+    }
+    finally {
+      setSubmitting(false);
     }
   };
 
@@ -130,10 +154,10 @@ export default function RegisterPage() {
         />
         <button
           type="submit"
-          disabled={!!siteKey && !greReady}
-          style={{ width: "100%", padding: "12px 0", borderRadius: 8, border: "none", background: "#4fc3f7", color: "#111", fontWeight: 600, fontSize: 18, cursor: "pointer", transition: "background .2s", opacity: (!!siteKey && !greReady) ? 0.6 : 1 }}
+          disabled={submitting || (!!siteKey && !greReady)}
+          style={{ width: "100%", padding: "12px 0", borderRadius: 8, border: "none", background: "#4fc3f7", color: "#111", fontWeight: 600, fontSize: 18, cursor: submitting ? 'default' : 'pointer', transition: "background .2s", opacity: (submitting || (!!siteKey && !greReady)) ? 0.6 : 1 }}
         >
-          {siteKey && !greReady ? 'Инициализация reCAPTCHA...' : 'Зарегистрироваться'}
+          {submitting ? 'Отправка...' : (siteKey && !greReady ? 'Инициализация reCAPTCHA...' : 'Зарегистрироваться')}
         </button>
         {toast && (
           <ToastNotification
