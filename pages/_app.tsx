@@ -69,7 +69,7 @@ function MainApp({ Component, pageProps }: AppProps) {
         // If user is on the homepage, redirect them to the chats page so chats are visible immediately
         try {
           if (router.pathname === '/' ) {
-            router.replace('/chat');
+            router.replace('/profile');
           }
         } catch (e) {}
         // done prefetching — dismiss the bottom loading toast and show success briefly if we showed it
@@ -370,6 +370,9 @@ function MainApp({ Component, pageProps }: AppProps) {
     <>
       <Head>
         <title>Linker Social</title>
+        {/* Mobile meta tags for responsive layout and theme color */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+        <meta name="theme-color" content="#0f1214" />
       </Head>
       {showSidebar && <Sidebar />}
       {/* (removed) previously-blocking ban overlay — UI not blocked here anymore */}

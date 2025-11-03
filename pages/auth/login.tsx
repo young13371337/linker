@@ -76,7 +76,6 @@ export default function LoginPage() {
           }
           // Notify the app this is an explicit login so we can show the bottom loading toast only now
           try { window.dispatchEvent(new Event("user-login")); } catch (e) {}
-          setToast({ type: "success", message: "Загрузка данных..." });
           setTimeout(() => router.push("/profile"), 800);
         }
       } else {
@@ -104,7 +103,6 @@ export default function LoginPage() {
 
           // Successful 2FA sign-in: dispatch explicit login event so prefetch shows bottom toast once
           try { window.dispatchEvent(new Event("user-login")); } catch (e) {}
-          setToast({ type: "success", message: "Загрузка данных..." });
           setTimeout(() => router.push("/profile"), 800);
         }
       }
@@ -133,12 +131,14 @@ export default function LoginPage() {
 
   return (
   <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#111", paddingTop: "7vh" }}>
+    {/* Slightly raise the auth card for better button visibility while keeping centered */}
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', transform: 'translateY(-6vh)' }}>
       <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
         <div style={{ width: 220, height: 220 }}>
           <Lottie animationData={loginAnimation} loop={true} />
         </div>
       </div>
-  <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: show2FA ? 8 : 16, width: 360, maxWidth: "90vw", margin: "0 auto" }}>
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: show2FA ? 8 : 16, width: 360, maxWidth: "90vw", margin: "0 auto" }}>
         <input
           type="text"
           placeholder="Логин"
@@ -182,6 +182,8 @@ export default function LoginPage() {
       <div style={{ marginTop: 18, textAlign: "center", fontSize: 15 }}>
         Нет аккаунта? <a href="/auth/register" style={{ color: "#4fc3f7" }}>Зарегистрироваться</a>
       </div>
+    </div>
+    {/* end raised wrapper */}
     </div>
   );
 }

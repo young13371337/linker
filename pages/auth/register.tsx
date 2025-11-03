@@ -25,10 +25,23 @@ export default function RegisterPage() {
       return;
     }
     try {
+      // If reCAPTCHA is configured, obtain a token first
+      let recaptchaToken: string | null = null;
+      const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY as string | undefined;
+      if (siteKey && (window as any).grecaptcha && (window as any).grecaptcha.execute) {
+        try {
+          await (window as any).grecaptcha.ready();
+          recaptchaToken = await (window as any).grecaptcha.execute(siteKey, { action: 'register' });
+        } catch (e) {
+          console.warn('reCAPTCHA execution failed', e);
+          // proceed without token; server will reject if required
+        }
+      }
+
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ login, password, link }),
+        body: JSON.stringify({ login, password, link, recaptchaToken }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -45,12 +58,14 @@ export default function RegisterPage() {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#111" }}>
-      <div style={{ display: "flex", justifyContent: "center", marginTop: 64, marginBottom: 18 }}>
-        <div style={{ width: 220, height: 220 }}>
-          <Lottie animationData={registerAnimation} loop={true} />
+      {/* Slightly raise the auth card for better button visibility while keeping centered */}
+      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', transform: 'translateY(-6vh)' }}>
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 64, marginBottom: 18 }}>
+          <div style={{ width: 220, height: 220 }}>
+            <Lottie animationData={registerAnimation} loop={true} />
+          </div>
         </div>
-      </div>
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16, width: 360, maxWidth: "90vw", margin: "0 auto" }}>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16, width: 360, maxWidth: "90vw", margin: "0 auto" }}>
         <input
           type="text"
           placeholder="Логин"
@@ -84,10 +99,12 @@ export default function RegisterPage() {
             duration={4000}
           />
         )}
-      </form>
-      <div style={{ marginTop: 18, textAlign: "center", fontSize: 15 }}>
-        Уже есть аккаунт? <a href="/auth/login" style={{ color: "#4fc3f7" }}>Войти</a>
+        </form>
+        <div style={{ marginTop: 18, textAlign: "center", fontSize: 15 }}>
+          Уже есть аккаунт? <a href="/auth/login" style={{ color: "#4fc3f7" }}>Войти</a>
+        </div>
       </div>
+      {/* end raised wrapper */}
     </div>
   );
 }

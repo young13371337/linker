@@ -103,8 +103,10 @@ html, body {
   font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
     Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
   background: #111;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100%;
+  /* Allow natural scrolling on mobile devices */
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 a {
@@ -118,6 +120,33 @@ a:hover {
 button {
   font-family: inherit;
 }
+
+/* Mobile-friendly defaults */
+html, body {
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Reduce heavy shadows and radii on small screens for performance and layout */
+@media (max-width: 768px) {
+  :root {
+    --card-radius: 12px;
+    --card-shadow: 0 6px 20px rgba(0,0,0,0.48);
+  }
+  body { font-size: 15px; }
+  .chat-messages-scroll { border-radius: 10px; }
+}
+
+/* Safe area padding for iOS devices */
+body {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Increase tap targets for mobile */
+button, a, input, textarea { touch-action: manipulation; }
+button { min-height: 44px; }
+input, textarea { font-size: 16px; }
 [class*="chat-messages-scroll"]::-webkit-scrollbar {
   width: 8px;
   background: transparent;
