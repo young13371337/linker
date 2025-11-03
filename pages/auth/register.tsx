@@ -1,9 +1,8 @@
-import Head from 'next/head';
 import ToastNotification from "../chat/ToastNotification";
 import Lottie from "lottie-react";
 import registerAnimation from "../../public/aui/register.json";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/router";
 
 export default function RegisterPage() {
@@ -12,53 +11,6 @@ export default function RegisterPage() {
   const [link, setLink] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
-  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY as string | undefined;
-  const [greReady, setGreReady] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  // Helper: try to obtain a recaptcha token with retries and exponential backoff
-  const getRecaptchaToken = async (attempts = 3): Promise<string> => {
-    if (!siteKey) throw new Error('no-site-key');
-    let lastErr: any = null;
-    for (let i = 0; i < attempts; i++) {
-      try {
-        await (window as any).grecaptcha.ready();
-        const tok = await (window as any).grecaptcha.execute(siteKey, { action: 'register' });
-        if (tok && typeof tok === 'string' && tok.length > 20) return tok;
-        lastErr = new Error('empty-token');
-      } catch (e) {
-        lastErr = e;
-      }
-      // backoff: 400ms, 800ms, 1600ms
-      const wait = 400 * Math.pow(2, i);
-      await new Promise(r => setTimeout(r, wait));
-    }
-    throw lastErr || new Error('recaptcha-failed');
-  };
-
-  // Poll for grecaptcha availability (the script is loaded async in <Head>) and mark ready.
-  useEffect(() => {
-    if (!siteKey) return;
-    let cancelled = false;
-    const tryReady = () => {
-      const g = (window as any).grecaptcha;
-      if (g && typeof g.execute === 'function') {
-        try {
-          // prefer grecaptcha.ready callback if available
-          g.ready(() => { if (!cancelled) setGreReady(true); });
-        } catch (e) {
-          if (!cancelled) setGreReady(true);
-        }
-        return true;
-      }
-      return false;
-    };
-
-    if (tryReady()) return;
-    const iv = setInterval(() => { if (tryReady()) clearInterval(iv); }, 300);
-    const to = setTimeout(() => { clearInterval(iv); if (!cancelled) setGreReady(false); }, 15000);
-    return () => { cancelled = true; clearInterval(iv); clearTimeout(to); };
-  }, [siteKey]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Пример логики, можно заменить на свою
@@ -73,27 +25,10 @@ export default function RegisterPage() {
       return;
     }
     try {
-      setSubmitting(true);
-      // If reCAPTCHA is configured, obtain a token first
-      let recaptchaToken: string | null = null;
-      if (siteKey) {
-        if (!greReady) {
-          setToast({ type: 'error', message: 'reCAPTCHA инициализируется, подождите чуть-чуть' });
-          return;
-        }
-        try {
-          recaptchaToken = await getRecaptchaToken(3);
-        } catch (e) {
-          console.warn('reCAPTCHA execution failed', e);
-          setToast({ type: 'error', message: 'Не удалось получить reCAPTCHA токен. Попробуйте позже.' });
-          return;
-        }
-      }
-
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ login, password, link, recaptchaToken }),
+        body: JSON.stringify({ login, password, link }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -106,28 +41,16 @@ export default function RegisterPage() {
     } catch (e) {
       setToast({ type: 'error', message: "Сервер недоступен" });
     }
-    finally {
-      setSubmitting(false);
-    }
   };
 
   return (
-    <>
-      <Head>
-        {/* Load reCAPTCHA only on the registration page when site key is configured */}
-        {process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
-          <script src={`https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`} async />
-        )}
-      </Head>
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#111" }}>
-      {/* Slightly raise the auth card for better button visibility while keeping centered */}
-      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', transform: 'translateY(-6vh)' }}>
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 64, marginBottom: 18 }}>
-          <div style={{ width: 220, height: 220 }}>
-            <Lottie animationData={registerAnimation} loop={true} />
-          </div>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#111" }}>
+      <div style={{ display: "flex", justifyContent: "center", marginTop: 64, marginBottom: 18 }}>
+        <div style={{ width: 220, height: 220 }}>
+          <Lottie animationData={registerAnimation} loop={true} />
         </div>
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16, width: 360, maxWidth: "90vw", margin: "0 auto" }}>
+      </div>
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16, width: 360, maxWidth: "90vw", margin: "0 auto" }}>
         <input
           type="text"
           placeholder="Логин"
@@ -152,13 +75,7 @@ export default function RegisterPage() {
           required
           style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid #333", background: "#222", color: "#fff", fontSize: 16, outline: "none" }}
         />
-        <button
-          type="submit"
-          disabled={submitting || (!!siteKey && !greReady)}
-          style={{ width: "100%", padding: "12px 0", borderRadius: 8, border: "none", background: "#4fc3f7", color: "#111", fontWeight: 600, fontSize: 18, cursor: submitting ? 'default' : 'pointer', transition: "background .2s", opacity: (submitting || (!!siteKey && !greReady)) ? 0.6 : 1 }}
-        >
-          {submitting ? 'Отправка...' : (siteKey && !greReady ? 'Инициализация reCAPTCHA...' : 'Зарегистрироваться')}
-        </button>
+        <button type="submit" style={{ width: "100%", padding: "12px 0", borderRadius: 8, border: "none", background: "#4fc3f7", color: "#111", fontWeight: 600, fontSize: 18, cursor: "pointer", transition: "background .2s" }}>Зарегистрироваться</button>
         {toast && (
           <ToastNotification
             type={toast.type}
@@ -167,13 +84,10 @@ export default function RegisterPage() {
             duration={4000}
           />
         )}
-        </form>
-        <div style={{ marginTop: 18, textAlign: "center", fontSize: 15 }}>
-          Уже есть аккаунт? <a href="/auth/login" style={{ color: "#4fc3f7" }}>Войти</a>
-        </div>
+      </form>
+      <div style={{ marginTop: 18, textAlign: "center", fontSize: 15 }}>
+        Уже есть аккаунт? <a href="/auth/login" style={{ color: "#4fc3f7" }}>Войти</a>
       </div>
-      {/* end raised wrapper */}
     </div>
-    </>
   );
 }
