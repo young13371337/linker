@@ -221,8 +221,8 @@ export default function ProfilePage() {
         setSessions((data.user.sessions || []).filter((s: any) => s.isActive));
         try {
           localStorage.setItem("user", JSON.stringify({ id: data.user.id, login: data.user.login, link: data.user.link || null }));
-            // После успешной загрузки профиля вызываем событие для Sidebar
-            window.dispatchEvent(new Event("user-login"));
+          // После успешной загрузки профиля вызываем событие для Sidebar only — use profile-updated so we don't trigger login-only UI
+          window.dispatchEvent(new Event("profile-updated"));
         } catch {}
       })
       .catch(() => {
@@ -542,6 +542,11 @@ export default function ProfilePage() {
                   </div>
                 </span>
               )}
+              {userRole === "ban" && (
+                <span style={{ position: 'relative', display: 'inline-block' }}>
+                  <img src="/role-icons/ban.svg" alt="ban" style={{width:24, height:24, marginLeft:2, verticalAlign:'middle', cursor:'default'}} title="Заблокирован" />
+                </span>
+              )}
             </span>
           </div>
           <div style={{ fontSize: 15, color: "#bbb", marginTop: 2 }}>{desc || "Нет описания"}</div>
@@ -620,6 +625,9 @@ export default function ProfilePage() {
                     )}
                     {f.role === "pepe" && (
                       <img src="/role-icons/pepe.svg" alt="pepe" style={{width:32, height:32, marginLeft:4, verticalAlign:'middle'}} title="Linker Developer" />
+                    )}
+                    {f.role === "ban" && (
+                      <img src="/role-icons/ban.svg" alt="ban" style={{width:24, height:24, marginLeft:4, verticalAlign:'middle'}} title="Заблокирован" />
                     )}
                   </span>
                   <button onClick={() => setRemoveFriendId(f.id)} style={{ position: "absolute", right: 8, top: 12, background: "transparent", color: "#fff", border: "none", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, cursor: "pointer", opacity: 0.5, transition: "opacity 0.2s", zIndex: 2, boxShadow: 'none' }} title="Удалить друга" onMouseOver={e => e.currentTarget.style.opacity = "0.8"} onMouseOut={e => e.currentTarget.style.opacity = "0.5"}>

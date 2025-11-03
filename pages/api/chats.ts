@@ -1,5 +1,6 @@
                                                                                                                                                                                                                                                                       import type { NextApiRequest, NextApiResponse } from 'next';
 import prisma from '../../lib/prisma';
+import { decryptMessage } from '../../lib/encryption';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 
@@ -76,22 +77,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
     // Получить все чаты пользователя
+    // Fetch chats and include users (with sessions) and the latest message to avoid N+1 queries
     const chats = await prisma.chat.findMany({
-      where: {
-        users: {
-          some: { id: user.id }
-        }
-      },
+      where: { users: { some: { id: user.id } } },
       include: {
-        users: true
+        users: {
+          select: {
+            id: true,
+            login: true,
+            link: true,
+            avatar: true,
+            role: true,
+            backgroundUrl: true,
+            status: true,
+            sessions: { select: { id: true, createdAt: true, isActive: true } }
+          }
+        },
+        messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { id: true, text: true, createdAt: true, senderId: true, audioUrl: true, videoUrl: true }
+        }
       }
     });
-    // Ensure each user entry includes a computed 'status' (online/offline/dnd)
-    const chatsWithStatus = await Promise.all(chats.map(async (chat: any) => {
-      const usersWithStatus = await Promise.all((chat.users || []).map(async (u: any) => {
-        const full = await prisma.user.findUnique({ where: { id: u.id }, include: { sessions: true } });
-  if (!full) return { id: u.id, login: u.login, avatar: u.avatar, role: u.role, status: 'offline', link: null };
-        const saved = (full as any).status;
+
+    const chatsWithStatus = chats.map((chat: any) => {
+      const usersWithStatus = (chat.users || []).map((full: any) => {
+        const saved = full.status;
         const allowed = ['online', 'offline', 'dnd'];
         const status = (typeof saved === 'string' && allowed.includes(saved))
           ? saved
@@ -107,11 +119,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           link: full.link || null,
           avatar: full.avatar,
           role: full.role,
-          status
+          status,
+          backgroundUrl: full.backgroundUrl || null,
         };
-      }));
-      return { ...chat, users: usersWithStatus };
-    }));
+      });
+      // Attach lastMessage as a simple object (or null) and decrypt its text if present
+      let lastMessage = Array.isArray(chat.messages) && chat.messages.length > 0 ? chat.messages[0] : null;
+      if (lastMessage && typeof lastMessage.text === 'string') {
+        try {
+          lastMessage = { ...lastMessage, text: decryptMessage(lastMessage.text, chat.id) };
+        } catch (e) {
+          // if decryption fails, keep a placeholder
+          lastMessage = { ...lastMessage, text: '[Ошибка шифрования]' };
+        }
+      }
+      return { ...chat, users: usersWithStatus, lastMessage };
+    });
+
     console.log('API /api/chats: found chats for user', user.id, chatsWithStatus);
     return res.status(200).json({ chats: chatsWithStatus });
   }

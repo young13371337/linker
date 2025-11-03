@@ -2,21 +2,23 @@ import "../styles/globals.css";
 import Head from "next/head";
 import type { AppProps } from "next/app";
 import dynamic from "next/dynamic";
-import { SessionProvider, useSession } from "next-auth/react";
-import { useEffect } from "react";
+import { SessionProvider, useSession, signOut } from "next-auth/react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { SWRConfig, mutate } from "swr";
 import { swrConfig, profileKey, chatsKey, messagesKey } from "../lib/hooks";
 import { Toaster, toast } from 'react-hot-toast';
 import { MessageToast } from '../components/MessageToast';
+import ToastNotification from './chat/ToastNotification';
 import { getPusherClient } from '../lib/pusher';
-import { useRef } from 'react';
+import { getUser as getLocalUser } from '../lib/session';
 
 const Sidebar = dynamic(() => import("../components/Sidebar"), { ssr: false });
 
 function MainApp({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const { data: session } = useSession();
+  const [bottomToast, setBottomToast] = useState<null | { type: 'error' | 'success'; message: string; duration?: number; actions?: any[] }>(null);
 
   // Главная страница доступна всем, редирект убран
   const hideSidebarRoutes = ["/auth/login", "/auth/register", "/"];
@@ -27,13 +29,23 @@ function MainApp({ Component, pageProps }: AppProps) {
     const userId = (session.user as any).id;
     let cancelled = false;
 
-    const prefetch = async () => {
+    const prefetchData = async (showToast: boolean) => {
+      // show a persistent bottom loading toast while we prefetch user data if requested
+      if (showToast) setBottomToast({ type: 'success', message: 'Загрузка данных...', duration: 60000 });
       // prefetch profile
       try {
         const pKey = profileKey(userId);
         const profileRes = await fetch(pKey, { credentials: 'include' });
         const profileJson = await profileRes.json().catch(() => null);
         if (!cancelled) await mutate(pKey, profileJson, false);
+        // if we got a profile, save it to local storage so Sidebar and other local helpers can pick it up
+        try {
+          if (profileJson && profileJson.user) {
+            // save to local session cache and notify listeners
+            try { (await import('../lib/session')).saveUser(profileJson.user); } catch (e) {}
+            try { window.dispatchEvent(new Event('profile-updated')); } catch (e) {}
+          }
+        } catch (e) {}
       } catch (e) {}
 
       // prefetch chats and recent messages for top chats
@@ -42,7 +54,7 @@ function MainApp({ Component, pageProps }: AppProps) {
         const chatsJson = await chatsRes.json().catch(() => null);
         if (!cancelled) await mutate(chatsKey, chatsJson, false);
 
-        const chatsList = (chatsJson && (chatsJson.chats || chatsJson)) || [];
+  const chatsList = (chatsJson && (chatsJson.chats || chatsJson)) || [];
         const top = chatsList.slice(0, 6);
         await Promise.all(
           top.map(async (c: any) => {
@@ -54,20 +66,81 @@ function MainApp({ Component, pageProps }: AppProps) {
             } catch (e) {}
           })
         );
+        // If user is on the homepage, redirect them to the chats page so chats are visible immediately
+        try {
+          if (router.pathname === '/' ) {
+            router.replace('/chat');
+          }
+        } catch (e) {}
+        // done prefetching — dismiss the bottom loading toast and show success briefly if we showed it
+        try { if (showToast) { setBottomToast(null); setBottomToast({ type: 'success', message: 'Данные загружены', duration: 2000 }); } } catch (e) {}
       } catch (e) {}
+      finally {
+        // ensure we dismiss the bottom toast if something threw earlier
+        try { if (showToast) setBottomToast(null); } catch (e) {}
+      }
     };
 
-    prefetch();
+    // Run a silent prefetch on mount (no bottom toast)
+    prefetchData(false);
+
+    // Also listen for explicit 'user-login' events and show the bottom toast only then
+    const onUserLogin = () => { prefetchData(true); };
+    window.addEventListener('user-login', onUserLogin);
 
     return () => {
       cancelled = true;
+      window.removeEventListener('user-login', onUserLogin);
     };
   }, [session?.user?.id]);
+
+  // If a user's role becomes 'ban', show a short toast and sign them out after a delay.
+  useEffect(() => {
+    if (!session || !session.user) return;
+    try {
+      const role = (session.user as any).role;
+      if (role === 'ban') {
+        toast.error('Аккаунт заблокирован. Вы будете выведены из аккаунта.', { duration: 3500 });
+        const t = setTimeout(() => {
+          try {
+            signOut({ callbackUrl: `${window.location.origin}/` as any });
+          } catch (e) {
+            try { window.location.href = '/'; } catch (er) {}
+          }
+        }, 2500);
+        return () => clearTimeout(t);
+      }
+    } catch (e) {}
+  }, [session?.user?.role]);
+
+  // Prevent any further navigation for banned users: on the next route change attempt
+  // redirect them to the homepage immediately.
+  useEffect(() => {
+    const handler = (url: string) => {
+      try {
+        // Prefer NextAuth session role, fallback to client-side stored user info
+        const role = (session && (session.user as any)?.role) || (getLocalUser() as any)?.role || null;
+        // allow staying on homepage
+        if (role === 'ban' && url !== '/') {
+          // Inform the user and force redirect to home
+          toast.error('Аккаунт заблокирован. Вы будете перенаправлены на главную.');
+          // Use replace to avoid adding the blocked URL to history
+          router.replace('/');
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    router.events.on('routeChangeStart', handler);
+    return () => router.events.off('routeChangeStart', handler);
+  }, [session?.user?.role, router.events]);
 
   // Global Pusher listener for incoming messages -> show toast on any page
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const synthFallbackRef = useRef<boolean>(false);
   const audioContextRef = useRef<any>(null);
+  const audioBufferRef = useRef<any>(null);
 
   // Try to detect whether notification file exists; if not, enable synth fallback
   useEffect(() => {
@@ -82,6 +155,28 @@ function MainApp({ Component, pageProps }: AppProps) {
           synthFallbackRef.current = !res2.ok;
         } else {
           synthFallbackRef.current = false;
+        }
+        // If we have a real file, try to prefetch and decode it into an AudioBuffer for low-latency playback.
+        if (!synthFallbackRef.current) {
+          try {
+            // Create AudioContext if possible (some browsers restrict before user gesture but decoding is usually allowed)
+            if (!audioContextRef.current) audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const audioUrl = res.ok ? '/sounds/notification.mp3' : '/sound/notification.mp3';
+            // Fetch the file as arrayBuffer and decode once
+            const abResp = await fetch(audioUrl);
+            if (abResp.ok) {
+              const arrayBuffer = await abResp.arrayBuffer();
+              try {
+                const decoded = await audioContextRef.current.decodeAudioData(arrayBuffer.slice(0));
+                audioBufferRef.current = decoded;
+              } catch (dErr) {
+                // decodeAudioData may reject on some browsers; fall back to audio element preload
+                try { if (audioRef.current) audioRef.current.preload = 'auto'; } catch (e) {}
+              }
+            }
+          } catch (e) {
+            // ignore prefetch/decode errors
+          }
         }
       } catch (e) {
         synthFallbackRef.current = true;
@@ -114,12 +209,32 @@ function MainApp({ Component, pageProps }: AppProps) {
         playSynth();
         return;
       }
+      // Prefer decoded AudioBuffer playback for lowest latency if available
+      if (audioBufferRef.current && (audioContextRef.current || (audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()))) {
+        try {
+          const ctx = audioContextRef.current;
+          const src = ctx.createBufferSource();
+          src.buffer = audioBufferRef.current;
+          const g = ctx.createGain();
+          g.gain.value = 0.12;
+          src.connect(g);
+          g.connect(ctx.destination);
+          src.start();
+          // auto-stop after short duration to avoid leaks
+          setTimeout(() => { try { src.stop(); } catch (e) {} }, 1000);
+          return;
+        } catch (e) {
+          // fallback to audio element below
+        }
+      }
       const audio = audioRef.current;
       if (audio) {
+        // ensure preloaded if possible
+        try { audio.preload = 'auto'; } catch (e) {}
         const p = audio.play();
         if (p && typeof p.then === 'function') {
           await p.catch(() => {
-            // autoplay blocked — don't crash, fallback to synth
+            // autoplay blocked — fallback to synth
             playSynth();
           });
         }
@@ -151,20 +266,45 @@ function MainApp({ Component, pageProps }: AppProps) {
           }
         } catch (e) {}
 
-        try {
-          playSound();
-        } catch (e) {}
+        (async () => {
+          try { playSound(); } catch (e) {}
 
-        toast.custom((t) => (
-          <MessageToast
-            t={t}
-            avatar={data.senderAvatar || '/media/linker/hello.png'}
-            username={data.senderName || 'Новый пользователь'}
-            role={data.senderRole}
-            message={data.content || ''}
-            chatId={data.chatId}
-          />
-        ));
+          // The server intentionally doesn't include plaintext in the user-level pusher payload.
+          // If `data.content` is missing, fetch the last message for the chat and use that decrypted text.
+          let messageText = '';
+          try {
+            if (data.content && typeof data.content === 'string' && data.content.trim()) {
+              messageText = data.content;
+            } else if (data.chatId) {
+              const resp = await fetch(`/api/messages?chatId=${encodeURIComponent(String(data.chatId))}`, { credentials: 'include' });
+              if (resp.ok) {
+                const json = await resp.json().catch(() => null);
+                const msgs = (json && json.messages) || [];
+                if (Array.isArray(msgs) && msgs.length) {
+                  const last = msgs[msgs.length - 1];
+                  messageText = last && (last.text || last.message || '') ? (last.text || last.message || '') : '';
+                }
+              }
+            }
+          } catch (e) {
+            // ignore fetch errors and show empty message if we couldn't load plaintext
+            console.warn('Failed to fetch last message for toast', e);
+          }
+
+          toast.custom(
+            (t) => (
+              <MessageToast
+                t={t}
+                avatar={data.senderAvatar || '/media/linker/hello.png'}
+                username={data.senderName || 'Новый пользователь'}
+                role={data.senderRole}
+                message={messageText || ''}
+                chatId={data.chatId}
+              />
+            ),
+            { position: 'bottom-right', duration: 7000 }
+          );
+        })();
       };
 
       channel.bind('new-message', handler);
@@ -232,7 +372,17 @@ function MainApp({ Component, pageProps }: AppProps) {
         <title>Linker Social</title>
       </Head>
       {showSidebar && <Sidebar />}
+      {/* (removed) previously-blocking ban overlay — UI not blocked here anymore */}
       <Component {...pageProps} />
+      {bottomToast && (
+        <ToastNotification
+          type={bottomToast.type}
+          message={bottomToast.message}
+          duration={bottomToast.duration}
+          onClose={() => setBottomToast(null)}
+          actions={bottomToast.actions}
+        />
+      )}
       <Toaster position="top-right" />
       {/* Audio fallback: try /sounds first (existing), then /sound */}
       <audio ref={audioRef} preload="none">

@@ -4,7 +4,7 @@ import { useRouter } from "next/router";
 import Lottie from "lottie-react";
 import ToastNotification from "../chat/ToastNotification";
 import loginAnimation from "../../public/aui/login.json";
-import { signIn } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 
 export default function LoginPage() {
   const [login, setLogin] = useState("");
@@ -61,7 +61,21 @@ export default function LoginPage() {
             setToast({ type: "error", message: res.error });
           }
         } else {
-          // Успешный вход без 2FA
+          // Успешный вход without 2FA — check whether account is banned
+          try {
+            const resp = await fetch(`/api/profile?login=${encodeURIComponent(login)}`);
+            const data = await resp.json().catch(() => null);
+            if (data && data.user && data.user.role === 'ban') {
+              // show persistent toast informing about ban and force sign out
+              setToast({ type: 'error', message: 'Аккаунт заблокирован за нарушение правил. Войти нельзя.' });
+              try { await signOut({ redirect: false }); } catch (e) {}
+              return;
+            }
+          } catch (e) {
+            // ignore and proceed
+          }
+          // Notify the app this is an explicit login so we can show the bottom loading toast only now
+          try { window.dispatchEvent(new Event("user-login")); } catch (e) {}
           setToast({ type: "success", message: "Загрузка данных..." });
           setTimeout(() => router.push("/profile"), 800);
         }
@@ -77,6 +91,19 @@ export default function LoginPage() {
         if (res?.error) {
           setToast({ type: "error", message: res.error === "CredentialsSignin" ? "Ошибка входа, проверьте данные" : res.error });
         } else {
+          // Successful 2FA sign-in — verify ban status
+          try {
+            const resp = await fetch(`/api/profile?login=${encodeURIComponent(login)}`);
+            const data = await resp.json().catch(() => null);
+            if (data && data.user && data.user.role === 'ban') {
+              setToast({ type: 'error', message: 'Аккаунт заблокирован за нарушение правил. Войти нельзя.' });
+              try { await signOut({ redirect: false }); } catch (e) {}
+              return;
+            }
+          } catch (e) {}
+
+          // Successful 2FA sign-in: dispatch explicit login event so prefetch shows bottom toast once
+          try { window.dispatchEvent(new Event("user-login")); } catch (e) {}
           setToast({ type: "success", message: "Загрузка данных..." });
           setTimeout(() => router.push("/profile"), 800);
         }

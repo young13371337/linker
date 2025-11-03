@@ -107,24 +107,24 @@ const ChatPage: React.FC = () => {
     const chatsList: Chat[] = data.chats || [];
     setChats(chatsList);
     console.log('chatsList', chatsList);
-    // Получить последние сообщения для каждого чата
+    // Use lastMessage included by the API to avoid N additional requests
+    const lm: Record<string, LastMessage | null> = {};
     for (const chat of chatsList) {
-      const msgRes = await fetch(`/api/messages?chatId=${chat.id}`);
-      const msgData = await msgRes.json();
-      if (Array.isArray(msgData.messages) && msgData.messages.length > 0) {
-        const lastMsg = msgData.messages[msgData.messages.length - 1];
-        setLastMessages(prev => ({ ...prev, [chat.id]: {
-          id: lastMsg.id,
-          text: lastMsg.text || '',
-          createdAt: lastMsg.createdAt,
-          senderId: lastMsg.senderId,
-          audioUrl: lastMsg.audioUrl,
-          videoUrl: lastMsg.videoUrl
-        }}));
+      const m = (chat as any).lastMessage;
+      if (m) {
+        lm[chat.id] = {
+          id: m.id,
+          text: m.text || '',
+          createdAt: m.createdAt,
+          senderId: m.senderId,
+          audioUrl: m.audioUrl,
+          videoUrl: m.videoUrl
+        };
       } else {
-        setLastMessages(prev => ({ ...prev, [chat.id]: null }));
+        lm[chat.id] = null;
       }
     }
+    setLastMessages(lm);
   };
 
   // Pusher подписка на новые сообщения для обновления последних сообщений

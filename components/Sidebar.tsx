@@ -376,11 +376,25 @@ export default function Sidebar() {
                 const raw = user.avatar || '';
                 let src = '/window.svg';
                 if (raw) {
-                  const sep = raw.includes('?') ? '&' : '?';
-                  const bust = user._avatarBust ? user._avatarBust : Date.now();
-                  src = `${raw}${sep}v=${bust}`;
+                  // If avatar is a data URI, don't append cache-busting query (it breaks data URIs)
+                  if (typeof raw === 'string' && raw.startsWith('data:')) {
+                    src = raw;
+                  } else {
+                    const sep = raw.includes('?') ? '&' : '?';
+                    const bust = (user as any)._avatarBust ? (user as any)._avatarBust : Date.now();
+                    src = `${raw}${sep}v=${bust}`;
+                  }
                 }
-                return <img src={src} alt="avatar" className={styles.avatar} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/window.svg'; }} />;
+                return (
+                  <img
+                    src={src}
+                    alt="avatar"
+                    className={styles.avatar}
+                    onError={(e) => {
+                      try { (e.currentTarget as HTMLImageElement).src = '/window.svg'; } catch (er) {}
+                    }}
+                  />
+                );
               })()}
               <div style={{ flex: 1, marginLeft: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -389,6 +403,7 @@ export default function Sidebar() {
                   {user.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" title="Модератор" style={{ width: 14, height: 14 }} />}
                   {user.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" title="Верифицирован" style={{ width: 14, height: 14 }} />}
                   {user.role === 'pepe' && <img src="/role-icons/pepe.svg" alt="pepe" title="Пепешка" style={{ width: 14, height: 14 }} />}
+                  {user.role === 'ban' && <img src="/role-icons/ban.svg" alt="ban" title="Заблокирован" style={{ width: 14, height: 14 }} />}
                 </div>
                 {open && <div className={styles.userLink}>@{user.link || ''}</div>}
               </div>

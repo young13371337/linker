@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import Head from "next/head";
 import { getUser } from "../lib/session";
 import Sidebar from "../components/Sidebar";
 import ToastNotification from "./chat/ToastNotification";
@@ -108,7 +107,8 @@ export default function FriendsPage() {
 
   return (
     <>
-      <h2 style={{ textAlign: "center", fontSize: 44, fontWeight: 700, margin: "72px 0 56px 0", color: "#fff" }}></h2>
+      <h2 style={{ textAlign: "center", fontSize: 36, fontWeight: 800, margin: "48px 0 24px 0", color: "#fff" }}>Меню друзей</h2>
+      <p style={{ textAlign: 'center', color: '#bfc9cf', marginTop: 0, marginBottom: 28 }}>Поиск и заявки, взаимная дружба создана для общения в чатах</p>
       {toast && (
         <ToastNotification
           type={toast.type}
@@ -117,104 +117,96 @@ export default function FriendsPage() {
           onClose={() => setToast(null)}
         />
       )}
-      <div style={{ display: "flex", flexDirection: "row", gap: 60, justifyContent: "center", alignItems: "flex-start", width: "100%", marginTop: 32, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-        {/* Поиск друзей смещён правее */}
-        <div style={{ flex: 1, minWidth: 320, maxWidth: 400, padding: "18px 10px 18px 0", marginLeft: 180 }}>
-            <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 18, color: "#fff", display: "flex", alignItems: "center", gap: 8 }}>
-            <FiSearch style={{ fontSize: 22, color: "#229ED9" }} /> Поиск друзей
-          </div>
-          <div style={{ marginBottom: 8 }}>
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Поиск по линку"
-              style={{
-                padding: "12px 16px",
-                borderRadius: "10px",
-                border: "none",
-                background: "none",
-                color: "#e3e8f0",
-                fontSize: "16px",
-                width: "100%",
-                outline: "none",
-                boxShadow: "none",
-                fontWeight: 500,
-                letterSpacing: "0.1px",
-                transition: "box-shadow 0.2s",
-              }}
-            />
-          </div>
-          {loading && <div style={{ color: "#bbb", marginTop: 12, fontSize: 16 }}>Поиск...</div>}
-          {Array.isArray(searchResult) && searchResult.length === 0 && !loading && (
-            <div style={{ background: "none", borderRadius: 0, padding: "12px 18px", marginTop: 22, textAlign: "center", color: "#bbb", fontSize: 17, boxShadow: "none" }}></div>
-          )}
-          {Array.isArray(searchResult) && searchResult.length > 0 && (
-            <div style={{ marginTop: 14 }}>
-              {searchResult.map(foundUser => (
-                <div key={foundUser.id} style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '10px 0', borderBottom: '1px solid #2a2b3d' }}>
-                  <div style={{ position: 'relative' }}>
-                    <img src={foundUser.avatar || '/window.svg'} alt="avatar" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', background: 'none', marginRight: 8, boxShadow: 'none' }} />
-                    {foundUser.status === 'dnd' ? (
-                      <img src="/moon-dnd.svg" alt="dnd" style={{ position: 'absolute', left: 34, top: 34, width: 18, height: 18 }} />
-                    ) : (
-                      <span style={{ position: 'absolute', left: 36, top: 36, width: 10, height: 10, borderRadius: '50%', background: foundUser.status === 'online' ? '#1ed760' : '#888', border: '2px solid #23242a' }} />
-                    )}
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ color: '#e3e8f0', fontWeight: 500 }}>{foundUser.link ? `@${foundUser.link}` : foundUser.login}</div>
-                    {foundUser.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" style={{ width: 24, height: 24 }} />}
-                    {foundUser.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" style={{ width: 24, height: 24 }} />}
-                    {foundUser.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" style={{ width: 24, height: 24 }} />}
-                  </div>
-                  {foundUser.isFriend ? (
-                    <span style={{ color: '#aaa', fontSize: 13 }}>Уже друг</span>
-                  ) : (foundUser.id === user?.id) ? (
-                    <span style={{ color: '#229ed9', fontSize: 15, fontWeight: 600 }}>Это вы</span>
-                  ) : (
-                    <span title="Добавить" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#229ed9', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', color: '#fff', fontSize: 22, fontWeight: 700 }} onClick={() => sendRequest(foundUser.id)}>
-                      +
-                    </span>
-                  )}
-                </div>
-              ))}
+      <div style={{ display: 'flex', gap: 36, justifyContent: 'center', alignItems: 'flex-start', width: '100%', marginTop: 8, padding: '0 20px', boxSizing: 'border-box' }}>
+        <div style={{ width: 720, maxWidth: '100%', display: 'flex', gap: 20 }}>
+          <div style={{ flex: 1, background: '#1e2124', borderRadius: 14, padding: 18, boxShadow: '0 8px 30px rgba(0,0,0,0.55)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <FiSearch style={{ fontSize: 22, color: '#4fc3f7' }} />
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>Поиск друзей</div>
             </div>
-          )}
-        </div>
-        {/* Входящие заявки справа */}
-        <div style={{ flex: 1, minWidth: 280, maxWidth: 400, padding: "18px 0 18px 22px" }}>
-          <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 18, color: "#fff", display: "flex", alignItems: "center", gap: 8 }}>
-            <FiUserPlus style={{ fontSize: 22, color: "#229ED9" }} /> Входящие заявки
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {Array.isArray(requests) && requests.length > 0 ? requests.map(r => (
-              r && typeof r.login === "string" ? (
-                <div key={r.id} style={{ background: "none", borderRadius: 0, padding: "10px 16px", display: "flex", alignItems: "center", gap: 8, boxShadow: "none", border: "none", transition: "none" }}>
-                  <div style={{ position: 'relative' }}>
-                    <img src={r.avatar || '/window.svg'} alt="avatar" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', background: 'none', marginRight: 6, boxShadow: 'none' }} />
-                    {r.status === 'dnd' ? (
-                      <img src="/moon-dnd.svg" alt="dnd" style={{ position: 'absolute', left: 26, top: 26, width: 16, height: 16 }} />
-                    ) : (
-                      <span style={{ position: 'absolute', left: 28, top: 28, width: 10, height: 10, borderRadius: '50%', background: r.status === 'online' ? '#1ed760' : '#888', border: '2px solid #23242a' }} />
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 15, fontWeight: 500, cursor: "pointer", color: "#fff" }} onClick={() => window.location.href = `/profile/${r.id}`}>{r.link ? `@${r.link}` : r.login}</span>
-                    {r.role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" style={{ width: 22, height: 22 }} />}
-                    {r.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" style={{ width: 22, height: 22 }} />}
-                    {r.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" style={{ width: 22, height: 22 }} />}
-                    {/* Принять: плюс */}
-                    <span title="Принять" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#229ed9', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', color: '#fff', fontSize: 22, fontWeight: 700, marginLeft: 8 }} onClick={() => handleAccept(r.id)}>
-                      +
-                    </span>
-                    {/* Отклонить: крестик */}
-                    <span title="Отклонить" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#ff1a1a', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', color: '#fff', fontSize: 22, fontWeight: 700, marginLeft: 4 }} onClick={() => handleDecline(r.id)}>
-                      ×
-                    </span>
-                  </div>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Поиск по линку или имени"
+                style={{ flex: 1, padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)', background: 'rgba(10,12,18,0.4)', color: '#e6eef8', fontSize: 15, outline: 'none' }}
+              />
+              <button onClick={() => setSearch('')} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.04)', color: '#bfc9cf', padding: '10px 12px', borderRadius: 10, cursor: 'pointer' }}>Очистить</button>
+            </div>
+
+            <div style={{ marginTop: 14 }}>
+              {loading && <div style={{ color: '#9fbfe6' }}>Поиск...</div>}
+              {Array.isArray(searchResult) && searchResult.length === 0 && !loading && (
+                <div style={{ color: '#99a2b6', padding: 18 }}>Ничего не найдено</div>
+              )}
+              {Array.isArray(searchResult) && searchResult.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {searchResult.map(foundUser => (
+                    <div key={foundUser.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: 12, borderRadius: 10, background: 'rgba(20,22,26,0.6)' }}>
+                      <div style={{ position: 'relative' }}>
+                        <img src={foundUser.avatar || '/window.svg'} alt="avatar" style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', boxShadow: '0 4px 14px rgba(2,6,23,0.6)' }} />
+                        {foundUser.status === 'dnd' ? (
+                          <img src="/moon-dnd.svg" alt="dnd" style={{ position: 'absolute', left: 36, top: 36, width: 16, height: 16 }} />
+                        ) : (
+                          <span style={{ position: 'absolute', left: 40, top: 40, width: 10, height: 10, borderRadius: '50%', background: foundUser.status === 'online' ? '#1ed760' : '#888', border: '2px solid #0f1113' }} />
+                        )}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ color: '#e6eef8', fontWeight: 700 }}>{foundUser.link ? `@${foundUser.link}` : foundUser.login}</div>
+                          <img src={`/role-icons/${foundUser.role || 'user'}.svg`} alt={foundUser.role || 'user'} style={{ width: 16, height: 16 }} />
+                        </div>
+                        <div style={{ color: '#9fbfe6', fontSize: 13 }}>{foundUser.description || ''}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {foundUser.isFriend ? (
+                          <div style={{ padding: '8px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', color: '#bfc9cf' }}>Уже друг</div>
+                        ) : (foundUser.id === user?.id) ? (
+                          <div style={{ color: '#4fc3f7', fontWeight: 700 }}>Это вы</div>
+                        ) : (
+                          <button onClick={() => sendRequest(foundUser.id)} style={{ background: '#4fc3f7', color: '#06121a', border: 'none', padding: '10px 14px', borderRadius: 10, cursor: 'pointer', fontWeight: 800 }}>Добавить</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ) : null
-            )) : <div style={{ color: "#bbb", fontSize: 16, textAlign: "left", marginTop: 0, paddingLeft: 0 }}>Нет входящих заявок</div>}
+              )}
+            </div>
+          </div>
+
+          <div style={{ width: 320, background: '#1e2124', borderRadius: 14, padding: 18, boxShadow: '0 8px 30px rgba(0,0,0,0.55)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <FiUserPlus style={{ fontSize: 20, color: '#4fc3f7' }} />
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>Входящие заявки</div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {Array.isArray(requests) && requests.length > 0 ? requests.map(r => (
+                r && typeof r.login === 'string' ? (
+                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 10, borderRadius: 10, background: 'rgba(20,22,26,0.55)' }}>
+                    <div style={{ position: 'relative' }}>
+                      <img src={r.avatar || '/window.svg'} alt="avatar" style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover', boxShadow: '0 6px 18px rgba(2,6,23,0.6)' }} />
+                      {r.status === 'dnd' ? (
+                        <img src="/moon-dnd.svg" alt="dnd" style={{ position: 'absolute', left: 30, top: 30, width: 14, height: 14 }} />
+                      ) : (
+                        <span style={{ position: 'absolute', left: 32, top: 32, width: 9, height: 9, borderRadius: '50%', background: r.status === 'online' ? '#1ed760' : '#888', border: '2px solid #0f1113' }} />
+                      )}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ color: '#fff', fontWeight: 700, cursor: 'pointer' }} onClick={() => window.location.href = `/profile/${r.id}`}>{r.link ? `@${r.link}` : r.login}</div>
+                        <img src={`/role-icons/${r.role || 'user'}.svg`} alt={r.role || 'user'} style={{ width: 16, height: 16 }} />
+                      </div>
+                      <div style={{ color: '#9fbfe6', fontSize: 13 }}>{r.description || ''}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button title="Принять" onClick={() => handleAccept(r.id)} style={{ background: '#4fc3f7', color: '#06121a', padding: '8px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 700 }}>Принять</button>
+                      <button title="Отклонить" onClick={() => handleDecline(r.id)} style={{ background: 'transparent', color: '#ff6b6b', padding: '8px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer', fontWeight: 700 }}>Отклонить</button>
+                    </div>
+                  </div>
+                ) : null
+              )) : <div style={{ color: '#99a2b6' }}>Нет входящих заявок</div>}
+            </div>
           </div>
         </div>
       </div>

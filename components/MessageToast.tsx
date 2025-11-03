@@ -1,5 +1,4 @@
 import { Toast, toast } from 'react-hot-toast';
-import Image from 'next/image';
 import { useRouter } from 'next/router';
 
 interface MessageToastProps {
@@ -28,33 +27,46 @@ export const MessageToast = ({ t, avatar, username, role, message, chatId }: Mes
       onClick={openChat}
       role="button"
       tabIndex={0}
-      className={`${
-        t.visible ? 'animate-enter' : 'animate-leave'
-      } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 cursor-pointer hover:shadow-xl transition-shadow`}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        minWidth: 300,
+        maxWidth: 520,
+        background: '#0f1214',
+        color: '#fff',
+        padding: '12px 14px',
+        borderRadius: 12,
+        boxShadow: '0 8px 30px rgba(0,0,0,0.6)',
+        cursor: 'pointer',
+        pointerEvents: 'auto',
+  // entrance animation: slightly longer duration and smoother easing for a more natural feel
+  transition: 'opacity .28s cubic-bezier(.16,.84,.24,1), transform .28s cubic-bezier(.16,.84,.24,1)',
+  willChange: 'transform, opacity',
+  transform: t.visible ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.985)',
+  opacity: t.visible ? 1 : 0,
+      }}
     >
-      <div className="flex-1 w-0 p-4">
-        <div className="flex items-start">
-          <div className="flex-shrink-0 pt-0.5">
-            <Image
-              className="h-10 w-10 rounded-full"
-              src={avatar}
-              alt={username}
-              width={40}
-              height={40}
-            />
-          </div>
-          <div className="ml-3 flex-1">
-            <p className="text-sm font-medium text-gray-900">
-              {username}
-              {role && (
-                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                  {role}
-                </span>
-              )}
-            </p>
-            <p className="mt-1 text-sm text-gray-500">{message}</p>
+      <div style={{ width: 44, height: 44, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: '#222', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <img src={avatar} alt={username} width={44} height={44} style={{ objectFit: 'cover', display: 'block' }} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{username}</div>
+            {role && (
+              <div style={{ width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <img
+                  src={`/role-icons/${role}.svg`}
+                  alt={role}
+                  style={{ width: 18, height: 18, display: 'block' }}
+                  onError={(e) => { try { (e.currentTarget as HTMLImageElement).style.display = 'none'; } catch (err) {} }}
+                />
+              </div>
+            )}
           </div>
         </div>
+        <div style={{ color: '#e6eef0', fontSize: 14, lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any, wordBreak: 'break-word' }}>{message}</div>
       </div>
     </div>
   );
