@@ -3,7 +3,7 @@ import ToastNotification from "../chat/ToastNotification";
 import Lottie from "lottie-react";
 import registerAnimation from "../../public/aui/register.json";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 
 export default function RegisterPage() {
@@ -12,6 +12,32 @@ export default function RegisterPage() {
   const [link, setLink] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY as string | undefined;
+  const [greReady, setGreReady] = useState(false);
+
+  // Poll for grecaptcha availability (the script is loaded async in <Head>) and mark ready.
+  useEffect(() => {
+    if (!siteKey) return;
+    let cancelled = false;
+    const tryReady = () => {
+      const g = (window as any).grecaptcha;
+      if (g && typeof g.execute === 'function') {
+        try {
+          // prefer grecaptcha.ready callback if available
+          g.ready(() => { if (!cancelled) setGreReady(true); });
+        } catch (e) {
+          if (!cancelled) setGreReady(true);
+        }
+        return true;
+      }
+      return false;
+    };
+
+    if (tryReady()) return;
+    const iv = setInterval(() => { if (tryReady()) clearInterval(iv); }, 300);
+    const to = setTimeout(() => { clearInterval(iv); if (!cancelled) setGreReady(false); }, 15000);
+    return () => { cancelled = true; clearInterval(iv); clearTimeout(to); };
+  }, [siteKey]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Пример логики, можно заменить на свою
@@ -28,14 +54,18 @@ export default function RegisterPage() {
     try {
       // If reCAPTCHA is configured, obtain a token first
       let recaptchaToken: string | null = null;
-      const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY as string | undefined;
-      if (siteKey && (window as any).grecaptcha && (window as any).grecaptcha.execute) {
+      if (siteKey) {
+        if (!greReady) {
+          setToast({ type: 'error', message: 'reCAPTCHA инициализируется, подождите чуть-чуть' });
+          return;
+        }
         try {
           await (window as any).grecaptcha.ready();
           recaptchaToken = await (window as any).grecaptcha.execute(siteKey, { action: 'register' });
         } catch (e) {
           console.warn('reCAPTCHA execution failed', e);
-          // proceed without token; server will reject if required
+          setToast({ type: 'error', message: 'Не удалось получить reCAPTCHA токен. Попробуйте позже.' });
+          return;
         }
       }
 
@@ -98,7 +128,13 @@ export default function RegisterPage() {
           required
           style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid #333", background: "#222", color: "#fff", fontSize: 16, outline: "none" }}
         />
-        <button type="submit" style={{ width: "100%", padding: "12px 0", borderRadius: 8, border: "none", background: "#4fc3f7", color: "#111", fontWeight: 600, fontSize: 18, cursor: "pointer", transition: "background .2s" }}>Зарегистрироваться</button>
+        <button
+          type="submit"
+          disabled={!!siteKey && !greReady}
+          style={{ width: "100%", padding: "12px 0", borderRadius: 8, border: "none", background: "#4fc3f7", color: "#111", fontWeight: 600, fontSize: 18, cursor: "pointer", transition: "background .2s", opacity: (!!siteKey && !greReady) ? 0.6 : 1 }}
+        >
+          {siteKey && !greReady ? 'Инициализация reCAPTCHA...' : 'Зарегистрироваться'}
+        </button>
         {toast && (
           <ToastNotification
             type={toast.type}
