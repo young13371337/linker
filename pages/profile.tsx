@@ -733,13 +733,26 @@ export default function ProfilePage() {
         <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", animation: "fadeIn 0.3s" }}>
           <div style={{ background: "#23242a", borderRadius: 18, padding: 32, minWidth: 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", transition: "box-shadow 0.3s, background 0.3s", maxHeight: "80vh", overflowY: "auto", scrollbarWidth: "none" }}>
             <button onClick={() => setShowSettings(false)} style={{ position: "sticky", top: 0, right: 0, float: "right", zIndex: 100, background: "none", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", transition: "color 0.2s", marginLeft: "calc(100% - 40px)", marginBottom: 8 }} onMouseOver={e => {e.currentTarget.style.color="#4fc3f7"}} onMouseOut={e => {e.currentTarget.style.color="#fff"}}>✕</button>
-            <h3 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Настройки профиля</h3>
+            <h3 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Настройки профиля</h3>
 
-            {/* Tabs */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-              <button onClick={() => setSettingsTab('customization')} style={{ padding: '8px 12px', borderRadius: 10, background: settingsTab === 'customization' ? '#23242a' : 'transparent', border: settingsTab === 'customization' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>Кастомизация</button>
-              <button onClick={() => setSettingsTab('security')} style={{ padding: '8px 12px', borderRadius: 10, background: settingsTab === 'security' ? '#23242a' : 'transparent', border: settingsTab === 'security' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>Безопасность</button>
-              <button onClick={() => setSettingsTab('privacy')} style={{ padding: '8px 12px', borderRadius: 10, background: settingsTab === 'privacy' ? '#23242a' : 'transparent', border: settingsTab === 'privacy' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>Конфиденциальность</button>
+            {/* Compact header with avatar + vertical menu (matches provided mock) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 64, height: 64, borderRadius: 12, overflow: 'hidden', background: '#444', flexShrink: 0 }}>
+                  <img src={avatar || "https://www.svgrepo.com/show/452030/avatar-default.svg"} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>{user?.link ? `@${user.link}` : (user?.login || 'Профиль')}</div>
+                  <div style={{ fontSize: 13, color: '#bfbfbf' }}>{desc || 'Нет описания'}</div>
+                </div>
+              </div>
+              <div style={{ height: 1, background: 'linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))', borderRadius: 2 }} />
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button onClick={() => setSettingsTab('customization')} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 10, background: settingsTab === 'customization' ? '#23242a' : 'transparent', border: settingsTab === 'customization' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>Кастомизация</button>
+                <button onClick={() => setSettingsTab('security')} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 10, background: settingsTab === 'security' ? '#23242a' : 'transparent', border: settingsTab === 'security' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>Безопасность</button>
+                <button onClick={() => setSettingsTab('privacy')} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 10, background: settingsTab === 'privacy' ? '#23242a' : 'transparent', border: settingsTab === 'privacy' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>Конфиденциальность</button>
+              </div>
             </div>
 
             {/* Panels */}
