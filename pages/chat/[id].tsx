@@ -1314,7 +1314,17 @@ const ChatWithFriend: React.FC = () => {
                     muted
                     playsInline
                     className="circle-anim"
-                    style={{ width: 280, height: 280, borderRadius: '50%', background: '#111', objectFit: 'cover', border: '4px solid #229ed9', boxShadow: '0 4px 32px #000a' }}
+                    style={{
+                      width: 280,
+                      height: 280,
+                      borderRadius: '50%',
+                      background: '#111',
+                      objectFit: 'cover',
+                      border: '4px solid #229ed9',
+                      boxShadow: '0 4px 32px #000a',
+                      transition: 'transform 0.35s ease',
+                      transform: videoRecording ? 'rotate(90deg)' : 'none' // поворот камеры при записи
+                    }}
                   />
                 <div style={{ color: '#fff', fontWeight: 600, fontSize: 18, textAlign: 'center', marginTop: 18, marginBottom: 10 }}>
                   {videoRecording ? ` ${videoTime}s` : 'Готово'}
@@ -1422,7 +1432,7 @@ const ChatWithFriend: React.FC = () => {
                 style={{
                   ...buttonStyle,
                   padding: 0,
-                  background: inputStyle.background,
+                  background: '#4a4a4a', // серый фон для кнопки отправки
                   border: 'none',
                   display: 'flex',
                   alignItems: 'center',
@@ -1437,10 +1447,10 @@ const ChatWithFriend: React.FC = () => {
                 }}
                 aria-label="Отправить"
                 title="Отправить"
-                onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.background = '#23232a'; }}
-                onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.background = String(inputStyle.background); }}
+                onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.background = '#3e3e3e'; }}
+                onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.background = '#4a4a4a'; }}
               >
-                <img src="/send.svg" alt="Отправить" style={{ display: 'block', width: isMobile ? 20 : 16, height: isMobile ? 20 : 16 }} />
+                <img src="/send.svg" alt="Отправить" style={{ display: 'block', width: isMobile ? 20 : 16, height: isMobile ? 20 : 16, filter: 'brightness(0.8)' }} />
               </button>
             ) : (
               <button
@@ -1550,15 +1560,10 @@ const ChatWithFriend: React.FC = () => {
                   }
                 }}
               >
-                <svg
-                  width={isMobile ? 26 : 20}
-                  height={isMobile ? 26 : 20}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  style={{ display: 'block' }}
-                >
-                  <path d="M12 17a44 0 004-4V7a4 4 0 10-8 0v6a4 4 0 004 4zm5-4a1 1 0 112 0 7 7 0 01-14 0 1 1 0 112 0 5 5 0 0010 0z" fill="#fff"/>
+                {/* восстановленная иконка микрофона */}
+                <svg width={isMobile ? 22 : 18} height={isMobile ? 22 : 18} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                  <path d="M12 14a3.99 3.99 0 003.995-3.8L16 10V7a4 4 0 10-8 0v3c0 1.657 1.343 3 3 3z" fill="#fff"/>
+                  <path d="M19 11v-1a1 1 0 10-2 0v1a5 5 0 01-10 0v-1a1 1 0 10-2 0v1a7 7 0 006 6.92V21H9a1 1 0 100 2h6a1 1 0 100-2h-2v-3.08A7 7 0 0019 11z" fill="#fff"/>
                 </svg>
               </button>
             )}
