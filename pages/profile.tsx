@@ -186,7 +186,8 @@ export default function ProfilePage() {
   const menuButtonHeight = 44; // px
   const menuButtonGap = 8; // px
   const menuIndex = settingsTab === 'customization' ? 0 : settingsTab === 'security' ? 1 : settingsTab === 'privacy' ? 2 : -1;
-  const menuIndicatorTop = menuIndex >= 0 ? (menuIndex * (menuButtonHeight + menuButtonGap)) : -9999;
+  // offset indicator by container padding (6px) so it aligns exactly behind buttons
+  const menuIndicatorTop = menuIndex >= 0 ? (6 + menuIndex * (menuButtonHeight + menuButtonGap)) : -9999;
   const [token, setToken] = useState<string>("");
   const [setupQr, setSetupQr] = useState<string | null>(null);
   const [setupSecret, setSetupSecret] = useState<string | null>(null);
@@ -737,7 +738,7 @@ export default function ProfilePage() {
 
       {/* Модальное окно настроек */}
       {showSettings && (
-        <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: '6vh', animation: "fadeIn 0.3s" }}>
+  <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: '3vh', animation: "fadeIn 0.3s" }}>
           <div style={{ background: "#23242a", borderRadius: 18, padding: 28, minWidth: 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", transition: "box-shadow 0.3s, background 0.3s", maxHeight: "80vh", overflowY: "auto", scrollbarWidth: "none" }}>
       <button onClick={() => setShowSettings(false)} style={{ position: "sticky", top: 0, right: 0, float: "right", zIndex: 100, background: "none", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", transition: "color 0.2s", marginLeft: "calc(100% - 40px)", marginBottom: 8 }} onMouseOver={e => {e.currentTarget.style.color="#4fc3f7"}} onMouseOut={e => {e.currentTarget.style.color="#fff"}}>✕</button>
 
