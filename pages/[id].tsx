@@ -1476,7 +1476,7 @@ const ChatWithFriend: React.FC = () => {
                     }
                   }}
                 >
-                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 20 : 16, height: isMobile ? 20 : 16, display: 'block', filter: 'brightness(1.05) invert(0)' }} />
+                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 20 : 16, height: isMobile ? 20 : 16, display: 'block', filter: 'invert(1) brightness(1.2)' }} />
                 </button>
               </div>
             </div>
@@ -1529,7 +1529,7 @@ const ChatWithFriend: React.FC = () => {
                   style={{
                     ...buttonStyle,
                     padding: 0,
-                    background: inputStyle.background,
+                    background: '#229ed9',
                     border: 'none',
                     display: 'flex',
                     alignItems: 'center',
@@ -1544,10 +1544,10 @@ const ChatWithFriend: React.FC = () => {
                   }}
                   aria-label="Отправить"
                   title="Отправить"
-                  onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.background = '#23232a'; }}
-                  onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.background = String(inputStyle.background); }}
+                  onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.background = '#1a8bbf'; }}
+                  onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.background = '#229ed9'; }}
                 >
-                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 20 : 16, height: isMobile ? 20 : 16, display: 'block', filter: 'brightness(1.05) invert(0)' }} />
+                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 20 : 16, height: isMobile ? 20 : 16, display: 'block', filter: 'invert(1) brightness(1.2)' }} />
                 </button>
               ) : (
                 <button
@@ -1657,7 +1657,7 @@ const ChatWithFriend: React.FC = () => {
                     }
                   }}
                 >
-                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 26 : 20, height: isMobile ? 26 : 20, display: 'block', filter: 'brightness(1.05) invert(0)' }} />
+                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 26 : 20, height: isMobile ? 26 : 20, display: 'block', filter: 'invert(1) brightness(1.2)' }} />
                 </button>
               )}
             </>
