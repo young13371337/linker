@@ -734,13 +734,15 @@ export default function ProfilePage() {
       {showSettings && (
         <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", animation: "fadeIn 0.3s" }}>
           <div style={{ background: "#23242a", borderRadius: 18, padding: 32, minWidth: 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", transition: "box-shadow 0.3s, background 0.3s", maxHeight: "80vh", overflowY: "auto", scrollbarWidth: "none" }}>
-            <button onClick={() => setShowSettings(false)} style={{ position: "sticky", top: 0, right: 0, float: "right", zIndex: 100, background: "none", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", transition: "color 0.2s", marginLeft: "calc(100% - 40px)", marginBottom: 8 }} onMouseOver={e => {e.currentTarget.style.color="#4fc3f7"}} onMouseOut={e => {e.currentTarget.style.color="#fff"}}>✕</button>
-            <h3 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Настройки профиля</h3>
+      <button onClick={() => setShowSettings(false)} style={{ position: "sticky", top: 0, right: 0, float: "right", zIndex: 100, background: "none", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", transition: "color 0.2s", marginLeft: "calc(100% - 40px)", marginBottom: 8 }} onMouseOver={e => {e.currentTarget.style.color="#4fc3f7"}} onMouseOut={e => {e.currentTarget.style.color="#fff"}}>✕</button>
 
-            {/* Compact header with avatar + vertical menu (matches provided mock) */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 18 }}>
+      {/* Compact header with avatar + vertical menu (matches provided mock)
+        the header block shows user's profile background up to the divider line */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 18,
+              background: backgroundUrl ? `linear-gradient(rgba(10,11,13,0.64), rgba(10,11,13,0.64)), url('${backgroundUrl}') center/cover no-repeat` : 'transparent',
+              borderRadius: 12, padding: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ position: 'relative', width: 76, height: 76, borderRadius: 12, overflow: 'hidden', background: backgroundUrl ? `url('${backgroundUrl}') center/cover no-repeat` : '#444', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ position: 'relative', width: 76, height: 76, borderRadius: 12, overflow: 'hidden', background: '#444', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', background: '#222', position: 'relative' }}>
                     <img src={avatar || "https://www.svgrepo.com/show/452030/avatar-default.svg"} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                     {/* status indicator */}
@@ -749,14 +751,15 @@ export default function ProfilePage() {
                     ) : (
                       <span style={{ position: 'absolute', right: 8, bottom: 8, width: 12, height: 12, borderRadius: '50%', background: user?.status === 'online' ? '#1ed760' : '#bbb', border: '2px solid #23242a' }} />
                     )}
-                    {/* role icon */}
-                    {roleIconSrc && (
-                      <img src={roleIconSrc} alt="role" style={{ position: 'absolute', left: -8, top: -8, width: 28, height: 28, borderRadius: 6, background: 'transparent' }} />
-                    )}
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>{user?.link ? `@${user.link}` : (user?.login || 'Профиль')}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>{user?.link ? `@${user.link}` : (user?.login || 'Профиль')}</div>
+                    {roleIconSrc && (
+                      <img src={roleIconSrc} alt="role" style={{ width: 18, height: 18, borderRadius: 6 }} />
+                    )}
+                  </div>
                   <div style={{ fontSize: 13, color: '#bfbfbf' }}>{desc || 'Нет описания'}</div>
                 </div>
               </div>
