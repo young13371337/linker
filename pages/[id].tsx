@@ -1476,9 +1476,7 @@ const ChatWithFriend: React.FC = () => {
                     }
                   }}
                 >
-                  <svg width={isMobile ? 20 : 16} height={isMobile ? 20 : 16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <polygon points="5,3 19,12 5,21" fill="#fff" />
-                  </svg>
+                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 20 : 16, height: isMobile ? 20 : 16, display: 'block', filter: 'brightness(1.05) invert(0)' }} />
                 </button>
               </div>
             </div>
