@@ -182,6 +182,11 @@ export default function ProfilePage() {
   const [settingsTab, setSettingsTab] = useState<'customization'|'security'|'privacy' | null>(null);
   // role icon src mapping for modal display
   const roleIconSrc = userRole === 'admin' ? '/role-icons/admin.svg' : userRole === 'moderator' ? '/role-icons/moderator.svg' : userRole === 'verif' ? '/role-icons/verif.svg' : userRole === 'pepe' ? '/role-icons/pepe.svg' : null;
+  // menu indicator animation settings
+  const menuButtonHeight = 44; // px
+  const menuButtonGap = 8; // px
+  const menuIndex = settingsTab === 'customization' ? 0 : settingsTab === 'security' ? 1 : settingsTab === 'privacy' ? 2 : -1;
+  const menuIndicatorTop = menuIndex >= 0 ? (menuIndex * (menuButtonHeight + menuButtonGap)) : -9999;
   const [token, setToken] = useState<string>("");
   const [setupQr, setSetupQr] = useState<string | null>(null);
   const [setupSecret, setSetupSecret] = useState<string | null>(null);
@@ -732,20 +737,20 @@ export default function ProfilePage() {
 
       {/* Модальное окно настроек */}
       {showSettings && (
-        <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", animation: "fadeIn 0.3s" }}>
-          <div style={{ background: "#23242a", borderRadius: 18, padding: 32, minWidth: 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", transition: "box-shadow 0.3s, background 0.3s", maxHeight: "80vh", overflowY: "auto", scrollbarWidth: "none" }}>
+        <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: '6vh', animation: "fadeIn 0.3s" }}>
+          <div style={{ background: "#23242a", borderRadius: 18, padding: 28, minWidth: 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", transition: "box-shadow 0.3s, background 0.3s", maxHeight: "80vh", overflowY: "auto", scrollbarWidth: "none" }}>
       <button onClick={() => setShowSettings(false)} style={{ position: "sticky", top: 0, right: 0, float: "right", zIndex: 100, background: "none", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", transition: "color 0.2s", marginLeft: "calc(100% - 40px)", marginBottom: 8 }} onMouseOver={e => {e.currentTarget.style.color="#4fc3f7"}} onMouseOut={e => {e.currentTarget.style.color="#fff"}}>✕</button>
 
       {/* Compact header with avatar + vertical menu (matches provided mock)
         the header block shows user's profile background up to the divider line */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 18,
         background: 'transparent',
-        borderRadius: 12, padding: 14 }}>
+        borderRadius: 12, padding: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ position: 'relative', width: 76, height: 76, borderRadius: 12, overflow: 'hidden', background: '#444', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', background: '#222', position: 'relative' }}>
+                <div style={{ position: 'relative', width: 76, height: 76, borderRadius: 12, overflow: 'hidden', background: 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', background: 'transparent', position: 'relative' }}>
                     <img src={avatar || "https://www.svgrepo.com/show/452030/avatar-default.svg"} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                    {/* status indicator */}
+                    {/* status indicator (small dot without border/outline) */}
                     {user?.status === 'dnd' ? (
                       <img src="/moon-dnd.svg" alt="dnd" style={{ position: 'absolute', right: 6, bottom: 6, width: 18, height: 18 }} />
                     ) : (
@@ -765,23 +770,22 @@ export default function ProfilePage() {
               </div>
               <div style={{ height: 1, background: 'linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))', borderRadius: 2 }} />
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <button onClick={() => setSettingsTab('customization')} style={{ textAlign: 'left', padding: '10px 12px', borderRadius: 10, background: settingsTab === 'customization' ? '#23242a' : 'transparent', border: settingsTab === 'customization' ? '1px solid rgba(79,195,247,0.12)' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 8, height: 36, borderRadius: 8, background: settingsTab === 'customization' ? '#4fc3f7' : 'transparent', boxShadow: settingsTab === 'customization' ? '0 6px 18px rgba(79,195,247,0.12)' : 'none', flexShrink: 0 }} />
-                  <FaPalette style={{ fontSize: 16, color: settingsTab === 'customization' ? '#4fc3f7' : '#bbb', marginLeft: 2 }} />
-                  <span>Кастомизация</span>
-                </button>
-                <button onClick={() => setSettingsTab('security')} style={{ textAlign: 'left', padding: '10px 12px', borderRadius: 10, background: settingsTab === 'security' ? '#23242a' : 'transparent', border: settingsTab === 'security' ? '1px solid rgba(79,195,247,0.12)' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 8, height: 36, borderRadius: 8, background: settingsTab === 'security' ? '#4fc3f7' : 'transparent', boxShadow: settingsTab === 'security' ? '0 6px 18px rgba(79,195,247,0.12)' : 'none', flexShrink: 0 }} />
-                  <FaShieldAlt style={{ fontSize: 16, color: settingsTab === 'security' ? '#4fc3f7' : '#bbb', marginLeft: 2 }} />
-                  <span>Безопасность</span>
-                </button>
-                <button onClick={() => setSettingsTab('privacy')} style={{ textAlign: 'left', padding: '10px 12px', borderRadius: 10, background: settingsTab === 'privacy' ? '#23242a' : 'transparent', border: settingsTab === 'privacy' ? '1px solid rgba(79,195,247,0.12)' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 8, height: 36, borderRadius: 8, background: settingsTab === 'privacy' ? '#4fc3f7' : 'transparent', boxShadow: settingsTab === 'privacy' ? '0 6px 18px rgba(79,195,247,0.12)' : 'none', flexShrink: 0 }} />
-                  <FaUserCircle style={{ fontSize: 16, color: settingsTab === 'privacy' ? '#4fc3f7' : '#bbb', marginLeft: 2 }} />
-                  <span>Конфиденциальность</span>
-                </button>
-              </div>
+                <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 8, padding: 6 }}>
+                  {/* animated grey rounded indicator behind selected button */}
+                  <div style={{ position: 'absolute', left: 6, right: 6, height: menuButtonHeight, borderRadius: 10, background: '#2e3033', top: menuIndicatorTop, transition: 'top 220ms cubic-bezier(.2,.9,.2,1), opacity 160ms', zIndex: settingsTab ? 0 : -1, opacity: settingsTab ? 1 : 0 }} />
+                  <button onClick={() => setSettingsTab('customization')} style={{ textAlign: 'left', padding: '10px 12px', height: menuButtonHeight, borderRadius: 10, background: settingsTab === 'customization' ? 'transparent' : 'transparent', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 12, position: 'relative', zIndex: 1, transition: 'color 180ms' }}>
+                    <FaPalette style={{ fontSize: 16, color: settingsTab === 'customization' ? '#fff' : '#bbb', marginLeft: 2 }} />
+                    <span style={{ color: settingsTab === 'customization' ? '#fff' : '#ddd' }}>Кастомизация</span>
+                  </button>
+                  <button onClick={() => setSettingsTab('security')} style={{ textAlign: 'left', padding: '10px 12px', height: menuButtonHeight, borderRadius: 10, background: settingsTab === 'security' ? 'transparent' : 'transparent', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 12, position: 'relative', zIndex: 1, transition: 'color 180ms' }}>
+                    <FaShieldAlt style={{ fontSize: 16, color: settingsTab === 'security' ? '#fff' : '#bbb', marginLeft: 2 }} />
+                    <span style={{ color: settingsTab === 'security' ? '#fff' : '#ddd' }}>Безопасность</span>
+                  </button>
+                  <button onClick={() => setSettingsTab('privacy')} style={{ textAlign: 'left', padding: '10px 12px', height: menuButtonHeight, borderRadius: 10, background: settingsTab === 'privacy' ? 'transparent' : 'transparent', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 12, position: 'relative', zIndex: 1, transition: 'color 180ms' }}>
+                    <FaUserCircle style={{ fontSize: 16, color: settingsTab === 'privacy' ? '#fff' : '#bbb', marginLeft: 2 }} />
+                    <span style={{ color: settingsTab === 'privacy' ? '#fff' : '#ddd' }}>Конфиденциальность</span>
+                  </button>
+                </div>
             </div>
 
             {/* Panels */}
