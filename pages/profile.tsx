@@ -988,130 +988,132 @@ export default function ProfilePage() {
                   } catch {}
                 }}
               >Сохранить фон и выделенность</button>
-            </div>
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <FaUserCircle style={{ color: '#bbb', fontSize: 22 }} />
-                  <span style={{ color: '#bbb', fontWeight: 700, fontSize: 17, letterSpacing: 0.5 }}>Конфиденциальность</span>
-                </div>
-                <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s", background: '#18191c', borderRadius: 10, boxShadow: '0 1px 6px #0002', padding: '16px 0' }}>
-                  <label style={{ fontSize: 15, fontWeight: 500, marginBottom: 8, display: 'block' }}>Статус аккаунта</label>
-                  <div style={{ display: 'flex', gap: 24, alignItems: 'center', marginTop: 8, justifyContent: 'center' }}>
-                    <button
-                      key="online_priv"
-                      style={{
-                        background: user?.status === 'online' ? '#23242a' : '#18191c',
-                        border: user?.status === 'online' ? '2px solid #4caf50' : '1px solid #444',
-                        borderRadius: '50%',
-                        width: 38,
-                        height: 38,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        transition: 'border 0.2s',
-                        outline: 'none',
-                        boxShadow: user?.status === 'online' ? '0 2px 8px #4caf5044' : 'none'
-                      }}
-                      title={statusLabels['online']}
-                      onClick={async () => {
-                        if (!user) return;
-                        await fetch('/api/profile', {
-                          method: 'POST',
-                          credentials: 'include',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ userId: user.id, status: 'online' })
-                        });
-                        setUser({ ...user, status: 'online' });
-                      }}
-                    >
-                      <UserStatus status="online" size={18} />
-                    </button>
-                    <button
-                      key="offline_priv"
-                      style={{
-                        background: user?.status === 'offline' ? '#23242a' : '#18191c',
-                        border: user?.status === 'offline' ? '2px solid #9e9e9e' : '1px solid #444',
-                        borderRadius: '50%',
-                        width: 38,
-                        height: 38,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        transition: 'border 0.2s',
-                        outline: 'none',
-                        boxShadow: user?.status === 'offline' ? '0 2px 8px #9e9e9e44' : 'none'
-                      }}
-                      title={statusLabels['offline']}
-                      onClick={async () => {
-                        if (!user) return;
-                        await fetch('/api/profile', {
-                          method: 'POST',
-                          credentials: 'include',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ userId: user.id, status: 'offline' })
-                        });
-                        setUser({ ...user, status: 'offline' });
-                      }}
-                    >
-                      <UserStatus status="offline" size={18} />
-                    </button>
-                    <button
-                      key="dnd_priv"
-                      style={{
-                        background: user?.status === 'dnd' ? '#23242a' : '#18191c',
-                        border: user?.status === 'dnd' ? '2px solid #b8b814' : '1px solid #444',
-                        borderRadius: '50%',
-                        width: 38,
-                        height: 38,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        transition: 'border 0.2s',
-                        outline: 'none',
-                        boxShadow: user?.status === 'dnd' ? '0 2px 8px #4fc3f744' : 'none'
-                      }}
-                      title={statusLabels['dnd']}
-                      onClick={async () => {
-                        if (!user) return;
-                        await fetch('/api/profile', {
-                          method: 'POST',
-                          credentials: 'include',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ userId: user.id, status: 'dnd' })
-                        });
-                        setUser({ ...user, status: 'dnd' });
-                      }}
-                    >
-                      <img src="/moon-dnd.svg" alt="Не беспокоить" style={{ width: 18, height: 18, verticalAlign: 'middle' }} />
-                    </button>
-                  </div>
-                  <div style={{ marginTop: 18, padding: '0', color: '#fff', fontSize: 15, fontWeight: 500, textAlign: 'center', minHeight: 44 }}>
-                    {user?.status === 'online' && (
-                      <>
-                        <span style={{ color: '#4caf50', fontWeight: 700 }}>В сети</span><br />
-                        Все ваши друзья будут видеть что вы в онлайне.
-                      </>
-                    )}
-                    {user?.status === 'offline' && (
-                      <>
-                        <span style={{ color: '#9e9e9e', fontWeight: 700 }}>Не в сети</span><br />
-                        Анонимный статус, никто не сможет видеть вас, зато сможете видеть вы.
-                      </>
-                    )}
-                    {user?.status === 'dnd' && (
-                      <>
-                        <span style={{ color: '#b8b814', fontWeight: 700 }}>Не беспокоить</span><br />
-                        Уведомления о новых сообщениях и заявках отключены, но вы в сети.
-                      </>
-                    )}
-                  </div>
-                </div>
+              </div>
               </>
-            </>
             )}
+              {settingsTab === 'privacy' && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <FaUserCircle style={{ color: '#bbb', fontSize: 22 }} />
+                    <span style={{ color: '#bbb', fontWeight: 700, fontSize: 17, letterSpacing: 0.5 }}>Конфиденциальность</span>
+                  </div>
+                  <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s", background: '#18191c', borderRadius: 10, boxShadow: '0 1px 6px #0002', padding: '16px 0' }}>
+                    <label style={{ fontSize: 15, fontWeight: 500, marginBottom: 8, display: 'block' }}>Статус аккаунта</label>
+                    <div style={{ display: 'flex', gap: 24, alignItems: 'center', marginTop: 8, justifyContent: 'center' }}>
+                      <button
+                        key="online_priv"
+                        style={{
+                          background: user?.status === 'online' ? '#23242a' : '#18191c',
+                          border: user?.status === 'online' ? '2px solid #4caf50' : '1px solid #444',
+                          borderRadius: '50%',
+                          width: 38,
+                          height: 38,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          transition: 'border 0.2s',
+                          outline: 'none',
+                          boxShadow: user?.status === 'online' ? '0 2px 8px #4caf5044' : 'none'
+                        }}
+                        title={statusLabels['online']}
+                        onClick={async () => {
+                          if (!user) return;
+                          await fetch('/api/profile', {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ userId: user.id, status: 'online' })
+                          });
+                          setUser({ ...user, status: 'online' });
+                        }}
+                      >
+                        <UserStatus status="online" size={18} />
+                      </button>
+                      <button
+                        key="offline_priv"
+                        style={{
+                          background: user?.status === 'offline' ? '#23242a' : '#18191c',
+                          border: user?.status === 'offline' ? '2px solid #9e9e9e' : '1px solid #444',
+                          borderRadius: '50%',
+                          width: 38,
+                          height: 38,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          transition: 'border 0.2s',
+                          outline: 'none',
+                          boxShadow: user?.status === 'offline' ? '0 2px 8px #9e9e9e44' : 'none'
+                        }}
+                        title={statusLabels['offline']}
+                        onClick={async () => {
+                          if (!user) return;
+                          await fetch('/api/profile', {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ userId: user.id, status: 'offline' })
+                          });
+                          setUser({ ...user, status: 'offline' });
+                        }}
+                      >
+                        <UserStatus status="offline" size={18} />
+                      </button>
+                      <button
+                        key="dnd_priv"
+                        style={{
+                          background: user?.status === 'dnd' ? '#23242a' : '#18191c',
+                          border: user?.status === 'dnd' ? '2px solid #b8b814' : '1px solid #444',
+                          borderRadius: '50%',
+                          width: 38,
+                          height: 38,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          transition: 'border 0.2s',
+                          outline: 'none',
+                          boxShadow: user?.status === 'dnd' ? '0 2px 8px #4fc3f744' : 'none'
+                        }}
+                        title={statusLabels['dnd']}
+                        onClick={async () => {
+                          if (!user) return;
+                          await fetch('/api/profile', {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ userId: user.id, status: 'dnd' })
+                          });
+                          setUser({ ...user, status: 'dnd' });
+                        }}
+                      >
+                        <img src="/moon-dnd.svg" alt="Не беспокоить" style={{ width: 18, height: 18, verticalAlign: 'middle' }} />
+                      </button>
+                    </div>
+                    <div style={{ marginTop: 18, padding: '0', color: '#fff', fontSize: 15, fontWeight: 500, textAlign: 'center', minHeight: 44 }}>
+                      {user?.status === 'online' && (
+                        <>
+                          <span style={{ color: '#4caf50', fontWeight: 700 }}>В сети</span><br />
+                          Все ваши друзья будут видеть что вы в онлайне.
+                        </>
+                      )}
+                      {user?.status === 'offline' && (
+                        <>
+                          <span style={{ color: '#9e9e9e', fontWeight: 700 }}>Не в сети</span><br />
+                          Анонимный статус, никто не сможет видеть вас, зато сможете видеть вы.
+                        </>
+                      )}
+                      {user?.status === 'dnd' && (
+                        <>
+                          <span style={{ color: '#b8b814', fontWeight: 700 }}>Не беспокоить</span><br />
+                          Уведомления о новых сообщениях и заявках отключены, но вы в сети.
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             {/* Вставка любимой песни удалена по запросу пользователя */}
           </div>
         </div>
