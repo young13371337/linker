@@ -738,7 +738,7 @@ export default function ProfilePage() {
 
       {/* Модальное окно настроек */}
       {showSettings && (
-  <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: '3vh', animation: "fadeIn 0.3s" }}>
+  <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: 12, animation: "fadeIn 0.3s" }}>
           <div style={{ background: "#23242a", borderRadius: 18, padding: 28, minWidth: 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", transition: "box-shadow 0.3s, background 0.3s", maxHeight: "80vh", overflowY: "auto", scrollbarWidth: "none" }}>
       <button onClick={() => setShowSettings(false)} style={{ position: "sticky", top: 0, right: 0, float: "right", zIndex: 100, background: "none", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", transition: "color 0.2s", marginLeft: "calc(100% - 40px)", marginBottom: 8 }} onMouseOver={e => {e.currentTarget.style.color="#4fc3f7"}} onMouseOut={e => {e.currentTarget.style.color="#fff"}}>✕</button>
 
@@ -753,9 +753,9 @@ export default function ProfilePage() {
                     <img src={avatar || "https://www.svgrepo.com/show/452030/avatar-default.svg"} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                     {/* status indicator (small dot without border/outline) */}
                     {user?.status === 'dnd' ? (
-                      <img src="/moon-dnd.svg" alt="dnd" style={{ position: 'absolute', right: 6, bottom: 6, width: 18, height: 18 }} />
+                      <img src="/moon-dnd.svg" alt="dnd" style={{ position: 'absolute', right: 6, bottom: 6, width: 18, height: 18, zIndex: 3 }} />
                     ) : (
-                      <span style={{ position: 'absolute', right: 8, bottom: 8, width: 12, height: 12, borderRadius: '50%', background: user?.status === 'online' ? '#1ed760' : '#bbb' }} />
+                      <span style={{ position: 'absolute', right: 6, bottom: 6, width: 12, height: 12, borderRadius: '50%', background: user?.status === 'online' ? '#1ed760' : '#bbb', zIndex: 3 }} />
                     )}
                   </div>
                 </div>
