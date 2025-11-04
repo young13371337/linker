@@ -1306,18 +1306,10 @@ const ChatWithFriend: React.FC = () => {
           {/* Кнопка скрепки слева */}
           <button
             type="button"
+            className={"chat-btn-circle " + (isMobile ? '' : 'small')}
             style={{
-              width: isMobile ? 44 : 36,
-              height: isMobile ? 44 : 36,
-              borderRadius: '50%',
-              background: inputStyle.background,
-              border: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 2,
+              marginRight: 8,
               cursor: 'pointer',
-              boxShadow: 'none',
               color: '#bbb',
               fontSize: isMobile ? 22 : 18,
               transition: 'background .14s',
@@ -1494,18 +1486,10 @@ const ChatWithFriend: React.FC = () => {
               {/* Кнопка видеокружка рядом с микрофоном */}
               <button
                 type="button"
+                className={"chat-btn-circle " + (isMobile ? '' : 'small')}
                 style={{
-                  width: isMobile ? 44 : 36,
-                  height: isMobile ? 44 : 36,
-                  borderRadius: '50%',
-                  background: inputStyle.background,
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginLeft: 4,
+                  marginLeft: 8,
                   cursor: 'pointer',
-                  boxShadow: 'none',
                   color: '#bbb',
                   fontSize: isMobile ? 22 : 18,
                   transition: 'background .14s',
@@ -1526,18 +1510,10 @@ const ChatWithFriend: React.FC = () => {
               {newMessage.trim() ? (
                 <button
                   type="submit"
+                  className={"chat-btn-circle chat-btn-send " + (isMobile ? '' : 'small')}
                   style={{
-                    ...buttonStyle,
                     padding: 0,
-                    background: '#229ed9',
                     border: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '50%',
-                    width: isMobile ? 44 : 36,
-                    height: isMobile ? 44 : 36,
-                    boxShadow: 'none',
                     transition: 'background .14s, opacity .12s',
                     cursor: 'pointer',
                     opacity: 1,
@@ -1552,22 +1528,15 @@ const ChatWithFriend: React.FC = () => {
               ) : (
                 <button
                   type="button"
+                  className={"chat-btn-circle " + (isMobile ? '' : 'small')}
                   style={{
-                    ...buttonStyle,
                     padding: 0,
-                    background: isRecording ? '#d32f2f' : inputStyle.background,
+                    background: isRecording ? '#d32f2f' : undefined,
                     border: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '50%',
-                    width: isMobile ? 44 : 36,
-                    height: isMobile ? 44 : 36,
-                    boxShadow: 'none',
                     transition: 'background .14s, opacity .12s',
                     cursor: 'pointer',
                     opacity: 0.85,
-                    marginLeft: 4, // небольшой отступ между кружком и микрофоном
+                    marginLeft: 8, // небольшой отступ между кружком и микрофоном
                   }}
                   aria-label="Голосовое сообщение"
                   title="Голосовое сообщение"

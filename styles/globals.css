@@ -147,6 +147,28 @@ body {
 button, a, input, textarea { touch-action: manipulation; }
 button { min-height: 44px; }
 input, textarea { font-size: 16px; }
+
+/* Utility: force circular chat buttons (attach/camera/send/record) */
+.chat-btn-circle {
+  border-radius: 50% !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  width: 44px !important;
+  height: 44px !important;
+}
+.chat-btn-circle.small {
+  width: 36px !important;
+  height: 36px !important;
+}
+.chat-btn-send {
+  background: #229ed9 !important;
+  box-shadow: 0 2px 8px #229ed933 !important;
+}
+.chat-btn-send img { filter: invert(1) brightness(1.2) !important; display: block !important; }
+.chat-btn-neutral { background: var(--input-bg, #18191c) !important; }
 [class*="chat-messages-scroll"]::-webkit-scrollbar {
   width: 8px;
   background: transparent;
