@@ -198,6 +198,13 @@ export default function ProfilePage() {
   const [disableLoading, setDisableLoading] = useState<boolean>(false);
   const [isAnonymized, setIsAnonymized] = useState<boolean>(false);
   const [anonymizeLoading, setAnonymizeLoading] = useState<boolean>(false);
+  // initialize anonymize from localStorage if present
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('anonymize');
+      if (stored !== null) setIsAnonymized(stored === 'true');
+    } catch (e) {}
+  }, []);
   const [newPassword, setNewPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [passwordChanged, setPasswordChanged] = useState<boolean>(false);
@@ -741,7 +748,7 @@ export default function ProfilePage() {
       {/* Модальное окно настроек */}
       {showSettings && (
   <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: 6, animation: "fadeIn 0.3s" }}>
-          <div style={{ background: "#23242a", borderRadius: 18, padding: 28, minWidth: 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", transition: "box-shadow 0.3s, background 0.3s", maxHeight: "80vh", overflowY: "auto", scrollbarWidth: "none" }}>
+          <div style={{ background: "#23242a", borderRadius: 18, padding: 28, minWidth: settingsTab === 'privacy' ? 420 : 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", transition: "box-shadow 0.3s, background 0.3s, min-width 200ms", maxHeight: "80vh", overflowY: "auto", scrollbarWidth: "none" }}>
   <button onClick={() => setShowSettings(false)} aria-label="Close settings" style={{ position: "absolute", top: 12, right: 12, zIndex: 120, background: "none", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", transition: "color 0.2s" }} onMouseOver={e => {e.currentTarget.style.color="#4fc3f7"}} onMouseOut={e => {e.currentTarget.style.color="#fff"}}>✕</button>
 
       {/* Compact header with avatar + vertical menu (matches provided mock)
@@ -1202,7 +1209,7 @@ export default function ProfilePage() {
                         disabled={anonymizeLoading}
                         style={{ padding: '10px 14px', borderRadius: 8, background: anonymizeLoading ? '#2b2d2f' : (isAnonymized ? '#3a3c3f' : '#1ed760'), color: isAnonymized ? '#fff' : '#022', border: 'none', cursor: anonymizeLoading ? 'default' : 'pointer', fontWeight: 700 }}
                       >
-                        {anonymizeLoading ? (isAnonymized ? 'Отключаем...' : 'Включаем...') : (isAnonymized ? 'Анонимизация включена' : 'Включить анонимизацию')}
+                        {anonymizeLoading ? (isAnonymized ? 'Отключаем...' : 'Включаем...') : (isAnonymized ? 'Включено' : 'Включить')}
                       </button>
                       <div style={{ color: '#999', fontSize: 13 }}>{isAnonymized ? 'Анонимный режим активен' : 'Анонимизация выключена'}</div>
                     </div>
