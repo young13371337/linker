@@ -60,9 +60,11 @@ const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUr
       {!playing ? (
         <button
           onClick={playAudio}
+          className="chat-btn-circle small"
           style={{
-            width: 36, height: 36, borderRadius: '50%', background: '#fff',
-            border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px #229ed933', cursor: 'pointer', transition: 'background .2s', marginRight: 2
+            background: '#fff',
+            boxShadow: '0 2px 6px #229ed933',
+            marginRight: 2,
           }}
           aria-label="Воспроизвести"
         >
@@ -71,9 +73,11 @@ const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUr
       ) : (
         <button
           onClick={pauseAudio}
+          className="chat-btn-circle small"
           style={{
-            width: 36, height: 36, borderRadius: '50%', background: '#229ed9',
-            border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px #229ed933', cursor: 'pointer', transition: 'background .2s', marginRight: 2
+            background: '#229ed9',
+            boxShadow: '0 2px 6px #229ed933',
+            marginRight: 2,
           }}
           aria-label="Пауза"
         >

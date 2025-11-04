@@ -145,9 +145,9 @@ export default function FriendsPage() {
                   ) : (foundUser.id === user?.id) ? (
                     <span style={{ color: '#229ed9', fontSize: 15, fontWeight: 600 }}>Это вы</span>
                   ) : (
-                    <span title="Добавить" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#229ed9', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', color: '#fff', fontSize: 22, fontWeight: 700 }} onClick={() => sendRequest(foundUser.id)}>
+                    <button type="button" title="Добавить" className="chat-btn-circle xs" style={{ background: '#229ed9', color: '#fff', fontSize: 22, fontWeight: 700 }} onClick={() => sendRequest(foundUser.id)}>
                       +
-                    </span>
+                    </button>
                   )}
                 </div>
               ))}
@@ -177,13 +177,13 @@ export default function FriendsPage() {
                     {r.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" style={{ width: 22, height: 22 }} />}
                     {r.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" style={{ width: 22, height: 22 }} />}
                     {/* Принять: плюс */}
-                    <span title="Принять" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#229ed9', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', color: '#fff', fontSize: 22, fontWeight: 700, marginLeft: 8 }} onClick={() => handleAccept(r.id)}>
+                    <button type="button" title="Принять" className="chat-btn-circle xs" style={{ background: '#229ed9', color: '#fff', fontSize: 22, fontWeight: 700, marginLeft: 8 }} onClick={() => handleAccept(r.id)}>
                       +
-                    </span>
+                    </button>
                     {/* Отклонить: крестик */}
-                    <span title="Отклонить" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#ff1a1a', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', color: '#fff', fontSize: 22, fontWeight: 700, marginLeft: 4 }} onClick={() => handleDecline(r.id)}>
+                    <button type="button" title="Отклонить" className="chat-btn-circle xs" style={{ background: '#ff1a1a', color: '#fff', fontSize: 22, fontWeight: 700, marginLeft: 4 }} onClick={() => handleDecline(r.id)}>
                       ×
-                    </span>
+                    </button>
                   </div>
                 </div>
               ) : null

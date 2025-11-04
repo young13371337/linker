@@ -169,6 +169,13 @@ input, textarea { font-size: 16px; }
   height: 36px !important;
 }
 
+/* extra small circular icon (32x32) used for compact action icons */
+.chat-btn-circle.xs {
+  width: 32px !important;
+  height: 32px !important;
+  font-size: 18px !important;
+}
+
 /* Send button visual style */
 .chat-btn-send {
   background: #229ed9 !important;
