@@ -1336,9 +1336,6 @@ const ChatWithFriend: React.FC = () => {
                 @keyframes fadeInOverlay { from { opacity: 0; } to { opacity: 1; } }
                 @keyframes popInCircle { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
                 .circle-anim { animation: popInCircle 0.32s cubic-bezier(.23,1.02,.36,1) both; }
-                .circle-btn-anim { transition: background .18s, box-shadow .18s, transform .18s; }
-                .circle-btn-anim:hover { transform: scale(1.08); box-shadow: 0 4px 16px #229ed9aa; }
-                .circle-btn-cancel:hover { background: #b71c1c !important; }
               `}</style>
               {/* Затемнение */}
               <div style={{
@@ -1363,11 +1360,11 @@ const ChatWithFriend: React.FC = () => {
                 </div>
                 <div style={{ display: 'flex', gap: 22, justifyContent: 'center', marginTop: 2 }}>
                   {videoRecording && (
-                    <button onClick={stopVideoRecording} className="circle-btn-anim" style={{ background: '#229ed9', color: '#fff', border: 'none', borderRadius: '50%', width: 56, height: 56, fontSize: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px #229ed933', fontWeight: 700, transition: 'background .18s, box-shadow .18s, transform .18s' }} title="Остановить запись">
+                    <button onClick={stopVideoRecording} className="circle-btn-anim primary" title="Остановить запись">
                       ■
                     </button>
                   )}
-                  <button onClick={cancelVideo} className="circle-btn-anim circle-btn-cancel" style={{ background: '#d32f2f', color: '#fff', border: 'none', borderRadius: '50%', width: 56, height: 56, fontSize: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px #d32f2f44', fontWeight: 700, transition: 'background .18s, box-shadow .18s, transform .18s' }} title="Отмена">
+                  <button onClick={cancelVideo} className="circle-btn-anim danger circle-btn-cancel" title="Отмена">
                     ×
                   </button>
                 </div>
@@ -1454,7 +1451,7 @@ const ChatWithFriend: React.FC = () => {
                     }
                   }}
                 >
-                  <img src="/send.svg" alt="Отправить" style={{ display: 'block', filter: 'invert(1) brightness(1.2)' }} />
+                  <img src="/send.svg" alt="Отправить" style={{ display: 'block' }} />
                 </button>
               </div>
             </div>
@@ -1509,7 +1506,7 @@ const ChatWithFriend: React.FC = () => {
                   onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.background = '#1a8bbf'; }}
                   onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.background = '#229ed9'; }}
                 >
-                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 20 : 16, height: isMobile ? 20 : 16, display: 'block', filter: 'invert(1) brightness(1.2)' }} />
+                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 20 : 16, height: isMobile ? 20 : 16, display: 'block' }} />
                 </button>
               ) : (
                 <button
@@ -1612,7 +1609,7 @@ const ChatWithFriend: React.FC = () => {
                     }
                   }}
                 >
-                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 26 : 20, height: isMobile ? 26 : 20, display: 'block', filter: 'invert(1) brightness(1.2)' }} />
+                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 26 : 20, height: isMobile ? 26 : 20, display: 'block' }} />
                 </button>
               )}
             </>

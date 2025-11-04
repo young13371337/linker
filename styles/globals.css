@@ -192,6 +192,24 @@ input, textarea { font-size: 16px; }
 
 /* Specific tweak for send icon color/contrast when using /send.svg */
 .chat-btn-send img { filter: invert(1) brightness(1.2) !important; }
+.circle-btn-anim {
+  /* Large circular action buttons (stop recording, big confirm buttons) */
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 32px !important;
+  font-weight: 700 !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: background .18s, box-shadow .18s, transform .18s !important;
+}
+.circle-btn-anim:hover { transform: scale(1.08); }
+.circle-btn-anim.primary { background: #229ed9 !important; color: #fff !important; box-shadow: 0 2px 8px #229ed933 !important; }
+.circle-btn-anim.danger { background: #d32f2f !important; color: #fff !important; box-shadow: 0 2px 8px #d32f2f44 !important; }
+.circle-btn-cancel:hover { background: #b71c1c !important; }
 [class*="chat-messages-scroll"]::-webkit-scrollbar {
   width: 8px;
   background: transparent;
