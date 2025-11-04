@@ -179,7 +179,9 @@ export default function ProfilePage() {
   const [showNewsModal, setShowNewsModal] = useState(false);
   const [removeFriendId, setRemoveFriendId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState<boolean>(false);
-  const [settingsTab, setSettingsTab] = useState<'customization'|'security'|'privacy'>('customization');
+  const [settingsTab, setSettingsTab] = useState<'customization'|'security'|'privacy' | null>(null);
+  // role icon src mapping for modal display
+  const roleIconSrc = userRole === 'admin' ? '/role-icons/admin.svg' : userRole === 'moderator' ? '/role-icons/moderator.svg' : userRole === 'verif' ? '/role-icons/verif.svg' : userRole === 'pepe' ? '/role-icons/pepe.svg' : null;
   const [token, setToken] = useState<string>("");
   const [setupQr, setSetupQr] = useState<string | null>(null);
   const [setupSecret, setSetupSecret] = useState<string | null>(null);
@@ -549,7 +551,7 @@ export default function ProfilePage() {
           <div style={{ fontSize: 15, color: "#bbb", marginTop: 2 }}>{desc || "Нет описания"}</div>
           {/* ...удалено: любимый трек... */}
         </div>
-  <button onClick={() => setShowSettings(true)} style={{ background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,0.04)", borderRadius: 12, padding: "8px 18px", fontSize: 15, cursor: "pointer", fontWeight: 500, display: "flex", alignItems: "center", gap: 8, transition: "background 0.18s, box-shadow 0.18s" }} onMouseOver={e => {e.currentTarget.style.background="rgba(255,255,255,0.02)";e.currentTarget.style.boxShadow="0 2px 12px rgba(79,195,247,0.12)"}} onMouseOut={e => {e.currentTarget.style.background="transparent";e.currentTarget.style.boxShadow="none"}}>
+  <button onClick={() => { setSettingsTab(null); setShowSettings(true); }} style={{ background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,0.04)", borderRadius: 12, padding: "8px 18px", fontSize: 15, cursor: "pointer", fontWeight: 500, display: "flex", alignItems: "center", gap: 8, transition: "background 0.18s, box-shadow 0.18s" }} onMouseOver={e => {e.currentTarget.style.background="rgba(255,255,255,0.02)";e.currentTarget.style.boxShadow="0 2px 12px rgba(79,195,247,0.12)"}} onMouseOut={e => {e.currentTarget.style.background="transparent";e.currentTarget.style.boxShadow="none"}}>
           <FaCog /> 
         </button>
       </div>
@@ -738,8 +740,20 @@ export default function ProfilePage() {
             {/* Compact header with avatar + vertical menu (matches provided mock) */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 18 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 64, height: 64, borderRadius: 12, overflow: 'hidden', background: '#444', flexShrink: 0 }}>
-                  <img src={avatar || "https://www.svgrepo.com/show/452030/avatar-default.svg"} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                <div style={{ position: 'relative', width: 76, height: 76, borderRadius: 12, overflow: 'hidden', background: backgroundUrl ? `url('${backgroundUrl}') center/cover no-repeat` : '#444', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', background: '#222', position: 'relative' }}>
+                    <img src={avatar || "https://www.svgrepo.com/show/452030/avatar-default.svg"} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    {/* status indicator */}
+                    {user?.status === 'dnd' ? (
+                      <img src="/moon-dnd.svg" alt="dnd" style={{ position: 'absolute', right: 6, bottom: 6, width: 18, height: 18 }} />
+                    ) : (
+                      <span style={{ position: 'absolute', right: 8, bottom: 8, width: 12, height: 12, borderRadius: '50%', background: user?.status === 'online' ? '#1ed760' : '#bbb', border: '2px solid #23242a' }} />
+                    )}
+                    {/* role icon */}
+                    {roleIconSrc && (
+                      <img src={roleIconSrc} alt="role" style={{ position: 'absolute', left: -8, top: -8, width: 28, height: 28, borderRadius: 6, background: 'transparent' }} />
+                    )}
+                  </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>{user?.link ? `@${user.link}` : (user?.login || 'Профиль')}</div>
@@ -748,10 +762,19 @@ export default function ProfilePage() {
               </div>
               <div style={{ height: 1, background: 'linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))', borderRadius: 2 }} />
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <button onClick={() => setSettingsTab('customization')} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 10, background: settingsTab === 'customization' ? '#23242a' : 'transparent', border: settingsTab === 'customization' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>Кастомизация</button>
-                <button onClick={() => setSettingsTab('security')} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 10, background: settingsTab === 'security' ? '#23242a' : 'transparent', border: settingsTab === 'security' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>Безопасность</button>
-                <button onClick={() => setSettingsTab('privacy')} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 10, background: settingsTab === 'privacy' ? '#23242a' : 'transparent', border: settingsTab === 'privacy' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>Конфиденциальность</button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button onClick={() => setSettingsTab('customization')} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 10, background: settingsTab === 'customization' ? '#23242a' : 'transparent', border: settingsTab === 'customization' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700, boxShadow: settingsTab === 'customization' ? 'inset 6px 0 0 #4fc3f7' : 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <FaPalette style={{ fontSize: 16, color: settingsTab === 'customization' ? '#4fc3f7' : '#bbb', marginLeft: 2 }} />
+                  <span>Кастомизация</span>
+                </button>
+                <button onClick={() => setSettingsTab('security')} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 10, background: settingsTab === 'security' ? '#23242a' : 'transparent', border: settingsTab === 'security' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700, boxShadow: settingsTab === 'security' ? 'inset 6px 0 0 #4fc3f7' : 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <FaShieldAlt style={{ fontSize: 16, color: settingsTab === 'security' ? '#4fc3f7' : '#bbb', marginLeft: 2 }} />
+                  <span>Безопасность</span>
+                </button>
+                <button onClick={() => setSettingsTab('privacy')} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 10, background: settingsTab === 'privacy' ? '#23242a' : 'transparent', border: settingsTab === 'privacy' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700, boxShadow: settingsTab === 'privacy' ? 'inset 6px 0 0 #4fc3f7' : 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <FaUserCircle style={{ fontSize: 16, color: settingsTab === 'privacy' ? '#4fc3f7' : '#bbb', marginLeft: 2 }} />
+                  <span>Конфиденциальность</span>
+                </button>
               </div>
             </div>
 
