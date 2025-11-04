@@ -739,8 +739,8 @@ export default function ProfilePage() {
       {/* Compact header with avatar + vertical menu (matches provided mock)
         the header block shows user's profile background up to the divider line */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 18,
-              background: backgroundUrl ? `linear-gradient(rgba(10,11,13,0.64), rgba(10,11,13,0.64)), url('${backgroundUrl}') center/cover no-repeat` : 'transparent',
-              borderRadius: 12, padding: 14 }}>
+        background: 'transparent',
+        borderRadius: 12, padding: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ position: 'relative', width: 76, height: 76, borderRadius: 12, overflow: 'hidden', background: '#444', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', background: '#222', position: 'relative' }}>
@@ -749,7 +749,7 @@ export default function ProfilePage() {
                     {user?.status === 'dnd' ? (
                       <img src="/moon-dnd.svg" alt="dnd" style={{ position: 'absolute', right: 6, bottom: 6, width: 18, height: 18 }} />
                     ) : (
-                      <span style={{ position: 'absolute', right: 8, bottom: 8, width: 12, height: 12, borderRadius: '50%', background: user?.status === 'online' ? '#1ed760' : '#bbb', border: '2px solid #23242a' }} />
+                      <span style={{ position: 'absolute', right: 8, bottom: 8, width: 12, height: 12, borderRadius: '50%', background: user?.status === 'online' ? '#1ed760' : '#bbb' }} />
                     )}
                   </div>
                 </div>
@@ -766,15 +766,18 @@ export default function ProfilePage() {
               <div style={{ height: 1, background: 'linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))', borderRadius: 2 }} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <button onClick={() => setSettingsTab('customization')} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 10, background: settingsTab === 'customization' ? '#23242a' : 'transparent', border: settingsTab === 'customization' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700, boxShadow: settingsTab === 'customization' ? 'inset 6px 0 0 #4fc3f7' : 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button onClick={() => setSettingsTab('customization')} style={{ textAlign: 'left', padding: '10px 12px', borderRadius: 10, background: settingsTab === 'customization' ? '#23242a' : 'transparent', border: settingsTab === 'customization' ? '1px solid rgba(79,195,247,0.12)' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 8, height: 36, borderRadius: 8, background: settingsTab === 'customization' ? '#4fc3f7' : 'transparent', boxShadow: settingsTab === 'customization' ? '0 6px 18px rgba(79,195,247,0.12)' : 'none', flexShrink: 0 }} />
                   <FaPalette style={{ fontSize: 16, color: settingsTab === 'customization' ? '#4fc3f7' : '#bbb', marginLeft: 2 }} />
                   <span>Кастомизация</span>
                 </button>
-                <button onClick={() => setSettingsTab('security')} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 10, background: settingsTab === 'security' ? '#23242a' : 'transparent', border: settingsTab === 'security' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700, boxShadow: settingsTab === 'security' ? 'inset 6px 0 0 #4fc3f7' : 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button onClick={() => setSettingsTab('security')} style={{ textAlign: 'left', padding: '10px 12px', borderRadius: 10, background: settingsTab === 'security' ? '#23242a' : 'transparent', border: settingsTab === 'security' ? '1px solid rgba(79,195,247,0.12)' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 8, height: 36, borderRadius: 8, background: settingsTab === 'security' ? '#4fc3f7' : 'transparent', boxShadow: settingsTab === 'security' ? '0 6px 18px rgba(79,195,247,0.12)' : 'none', flexShrink: 0 }} />
                   <FaShieldAlt style={{ fontSize: 16, color: settingsTab === 'security' ? '#4fc3f7' : '#bbb', marginLeft: 2 }} />
                   <span>Безопасность</span>
                 </button>
-                <button onClick={() => setSettingsTab('privacy')} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 10, background: settingsTab === 'privacy' ? '#23242a' : 'transparent', border: settingsTab === 'privacy' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700, boxShadow: settingsTab === 'privacy' ? 'inset 6px 0 0 #4fc3f7' : 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button onClick={() => setSettingsTab('privacy')} style={{ textAlign: 'left', padding: '10px 12px', borderRadius: 10, background: settingsTab === 'privacy' ? '#23242a' : 'transparent', border: settingsTab === 'privacy' ? '1px solid rgba(79,195,247,0.12)' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 8, height: 36, borderRadius: 8, background: settingsTab === 'privacy' ? '#4fc3f7' : 'transparent', boxShadow: settingsTab === 'privacy' ? '0 6px 18px rgba(79,195,247,0.12)' : 'none', flexShrink: 0 }} />
                   <FaUserCircle style={{ fontSize: 16, color: settingsTab === 'privacy' ? '#4fc3f7' : '#bbb', marginLeft: 2 }} />
                   <span>Конфиденциальность</span>
                 </button>
