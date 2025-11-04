@@ -1309,7 +1309,7 @@ const ChatWithFriend: React.FC = () => {
             style={{
               width: isMobile ? 44 : 36,
               height: isMobile ? 44 : 36,
-              borderRadius: isMobile ? 10 : 8,
+              borderRadius: '50%',
               background: inputStyle.background,
               border: 'none',
               display: 'flex',
@@ -1499,7 +1499,7 @@ const ChatWithFriend: React.FC = () => {
                 style={{
                   width: isMobile ? 44 : 36,
                   height: isMobile ? 44 : 36,
-                  borderRadius: isMobile ? 10 : 8,
+                  borderRadius: '50%',
                   background: inputStyle.background,
                   border: 'none',
                   display: 'flex',
@@ -1549,9 +1549,7 @@ const ChatWithFriend: React.FC = () => {
                   onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.background = '#23232a'; }}
                   onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.background = String(inputStyle.background); }}
                 >
-                  <svg width={isMobile ? 20 : 16} height={isMobile ? 20 : 16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <polygon points="5,3 19,12 5,21" fill="none" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 20 : 16, height: isMobile ? 20 : 16, display: 'block', filter: 'brightness(1.05) invert(0)' }} />
                 </button>
               ) : (
                 <button
@@ -1661,16 +1659,7 @@ const ChatWithFriend: React.FC = () => {
                     }
                   }}
                 >
-                  <svg
-                    width={isMobile ? 26 : 20}
-                    height={isMobile ? 26 : 20}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{ display: 'block' }}
-                  >
-                    <path d="M12 17a4 4 0 004-4V7a4 4 0 10-8 0v6a4 4 0 004 4zm5-4a1 1 0 112 0 7 7 0 01-14 0 1 1 0 112 0 5 5 0 0010 0z" fill="#fff"/>
-                  </svg>
+                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 26 : 20, height: isMobile ? 26 : 20, display: 'block', filter: 'brightness(1.05) invert(0)' }} />
                 </button>
               )}
             </>
