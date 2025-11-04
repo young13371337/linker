@@ -118,7 +118,7 @@ function ChangeLoginForm({ user, setUser, setFriends }: ChangeLoginFormProps) {
         style={{ marginTop: 10, background: "#18191c", color: "#fff", border: "1px solid #444", borderRadius: 8, padding: "8px 18px", fontSize: 15, cursor: "pointer", fontWeight: 500 }}
         onClick={handleChangeLogin}
         disabled={loading}
-      >{loading ? "Проверка..." : "Сменить логин"}</button>
+      >{loading ? "Проверка..." : "Сменить"}</button>
       {status && <span style={{ marginLeft: 12, color: status.includes("успешно") ? "#1ed760" : "#e74c3c", fontWeight: 500 }}>{status}</span>}
       {showToast && (
         <ToastNotification
@@ -133,7 +133,7 @@ function ChangeLoginForm({ user, setUser, setFriends }: ChangeLoginFormProps) {
 }
 import { getUser } from "../lib/session";
 import { forbiddenPasswords } from "../lib/forbidden-passwords";
-import { FaUserCircle, FaCog, FaShieldAlt, FaPalette, FaLaptop, FaMobileAlt, FaDesktop, FaSignOutAlt } from "react-icons/fa";
+import { FaUserCircle, FaCog, FaShieldAlt, FaPalette, FaLaptop, FaMobileAlt, FaDesktop, FaSignOutAlt, FaUserSecret } from "react-icons/fa";
 // Функция для определения типа устройства и возврата иконки и названия
 function getDeviceIconAndName(deviceName: string) {
   const ua = (deviceName || "").toLowerCase();
@@ -196,6 +196,8 @@ export default function ProfilePage() {
   const [setupLoading, setSetupLoading] = useState<boolean>(false);
   const [verifyLoading, setVerifyLoading] = useState<boolean>(false);
   const [disableLoading, setDisableLoading] = useState<boolean>(false);
+  const [isAnonymized, setIsAnonymized] = useState<boolean>(false);
+  const [anonymizeLoading, setAnonymizeLoading] = useState<boolean>(false);
   const [newPassword, setNewPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [passwordChanged, setPasswordChanged] = useState<boolean>(false);
@@ -304,9 +306,9 @@ export default function ProfilePage() {
     return (
       <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, position: 'relative' }}>
         <label style={{ fontSize: 15, fontWeight: 500 }}>Смена линка</label><br />
-        <input type="text" value={newLink} onChange={e=>setNewLink(e.target.value)} placeholder="без @" style={{ marginTop: 6, width: '100%', padding: '8px 10px', borderRadius:8, border: '1px solid #444', background:'#18191c', color:'#fff', fontSize:15 }} />
-        <button style={{ marginTop:10, background: '#18191c', color:'#fff', border:'1px solid #444', borderRadius:8, padding:'8px 18px', fontSize:15, cursor:'pointer', fontWeight:500 }} onClick={handleChangeLink} disabled={loading}>{loading ? 'Проверка...' : 'Сменить линк'}</button>
-        {showToast && <ToastNotification type={toastMsg.includes('успеш') ? 'success' : 'error'} message={toastMsg} duration={3000} onClose={()=>setShowToast(false)} />}
+        <input type="text" value={newLink} onChange={e=>setNewLink(e.target.value)} placeholder="" style={{ marginTop: 6, width: '100%', padding: '8px 10px', borderRadius:8, border: '1px solid #444', background:'#18191c', color:'#fff', fontSize:15 }} />
+        <button style={{ marginTop:10, background: '#18191c', color:'#fff', border:'1px solid #444', borderRadius:8, padding:'8px 18px', fontSize:15, cursor:'pointer', fontWeight:500 }} onClick={handleChangeLink} disabled={loading}>{loading ? 'Проверка...' : 'Сменить'}</button>
+        {showToast && <ToastNotification type={toastMsg.includes('Успешно') ? 'success' : 'error'} message={toastMsg} duration={3000} onClose={()=>setShowToast(false)} />}
       </div>
     );
   }
@@ -960,7 +962,7 @@ export default function ProfilePage() {
                       setDesc(data.user.description || "");
                     });
                 }}
-              >Сохранить описание</button>
+              >Сохранить</button>
             </div>
             <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s" }}>
               <label style={{ fontSize: 15, fontWeight: 500 }}>Аватарка (URL):</label><br />
@@ -991,7 +993,7 @@ export default function ProfilePage() {
                       try { window.dispatchEvent(new Event('profile-updated')); } catch (e) {}
                     });
                 }}
-              >Сохранить аватарку</button>
+              >Сохранить</button>
             </div>
             <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s" }}>
               <label style={{ fontSize: 15, fontWeight: 500 }}>Фон чата и профиля</label><br />
@@ -1034,7 +1036,7 @@ export default function ProfilePage() {
                     localStorage.setItem('profileBgOpacity', String(bgOpacity));
                   } catch {}
                 }}
-              >Сохранить фон и выделенность</button>
+              >Сохранить</button>
               </div>
               </>
             )}
@@ -1045,7 +1047,7 @@ export default function ProfilePage() {
                     <span style={{ color: '#bbb', fontWeight: 700, fontSize: 17, letterSpacing: 0.5 }}>Конфиденциальность</span>
                   </div>
                   <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s", background: '#18191c', borderRadius: 10, boxShadow: '0 1px 6px #0002', padding: '16px 0' }}>
-                    <label style={{ fontSize: 15, fontWeight: 500, marginBottom: 8, display: 'block' }}>Статус аккаунта</label>
+                    <label style={{ fontSize: 15, fontWeight: 500, marginBottom: 8, display: 'block' }}></label>
                     <div style={{ display: 'flex', gap: 24, alignItems: 'center', marginTop: 8, justifyContent: 'center' }}>
                       <button
                         key="online_priv"
@@ -1157,6 +1159,52 @@ export default function ProfilePage() {
                           Уведомления о новых сообщениях и заявках отключены, но вы в сети.
                         </>
                       )}
+                    </div>
+                  </div>
+                  {/* Анонимизация */}
+                  <div style={{ marginTop: 12, marginBottom: 6, padding: 16, maxWidth: 360, background: '#18191c', borderRadius: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                      <FaUserSecret style={{ fontSize: 18, color: '#bbb' }} />
+                      <div style={{ fontSize: 15, fontWeight: 700 }}>Анонимизация</div>
+                    </div>
+                    <div style={{ color: '#bfbfbf', fontSize: 13, marginBottom: 12 }}>Данная функция максимально уменьшает сбор данных и шифрует всё возможное (аватар, включённые настройки, поиск и заявки друзей). Ваши чаты уже зашифрованы.</div>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <button
+                        onClick={async () => {
+                          if (!user || anonymizeLoading) return;
+                          // turning on -> slower (1.5s), turning off -> faster (600ms)
+                          const turningOn = !isAnonymized;
+                          setAnonymizeLoading(true);
+                          const delay = turningOn ? 1500 : 600;
+                          setTimeout(async () => {
+                            try {
+                              const resp = await fetch('/api/profile', {
+                                method: 'POST',
+                                credentials: 'include',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ userId: user.id, anonymize: turningOn })
+                              });
+                              if (resp.ok) {
+                                setIsAnonymized(turningOn);
+                                try { setUser({ ...user, anonymized: turningOn } as any); } catch {}
+                              } else {
+                                const data = await resp.json().catch(() => ({}));
+                                alert(data.error || 'Ошибка при обновлении анонимизации');
+                              }
+                            } catch (e) {
+                              console.error(e);
+                              alert('Ошибка сети');
+                            } finally {
+                              setAnonymizeLoading(false);
+                            }
+                          }, delay);
+                        }}
+                        disabled={anonymizeLoading}
+                        style={{ padding: '10px 14px', borderRadius: 8, background: anonymizeLoading ? '#2b2d2f' : (isAnonymized ? '#3a3c3f' : '#1ed760'), color: isAnonymized ? '#fff' : '#022', border: 'none', cursor: anonymizeLoading ? 'default' : 'pointer', fontWeight: 700 }}
+                      >
+                        {anonymizeLoading ? (isAnonymized ? 'Отключаем...' : 'Включаем...') : (isAnonymized ? 'Анонимизация включена' : 'Включить анонимизацию')}
+                      </button>
+                      <div style={{ color: '#999', fontSize: 13 }}>{isAnonymized ? 'Анонимный режим активен' : 'Анонимизация выключена'}</div>
                     </div>
                   </div>
                 </>
