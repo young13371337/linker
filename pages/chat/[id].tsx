@@ -1260,27 +1260,30 @@ const ChatWithFriend: React.FC = () => {
             style={{
               width: isMobile ? 44 : 36,
               height: isMobile ? 44 : 36,
-              borderRadius: '50%', // <- сделано круглой
-              background: inputStyle.background,
-              border: 'none',
+              borderRadius: '50%',
+              padding: 0, // убираем внутренние отступы — ровный круг
+              background: 'transparent', // плоский вид
+              border: '1px solid rgba(255,255,255,0.04)', // тонкая рамка
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              marginRight: 2,
+              marginRight: 6,
               cursor: 'pointer',
               boxShadow: 'none',
               color: '#bbb',
-              fontSize: isMobile ? 22 : 18,
-              transition: 'background .14s',
+              fontSize: isMobile ? 20 : 16,
+              transition: 'background .12s, transform .12s',
             }}
             title="Отправить фото или файл"
             aria-label="Отправить фото или файл"
             onClick={() => {
               document.getElementById('file-input')?.click();
             }}
+            onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
+            onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
           >
             {/* SVG иконка скрепки */}
-            <svg width={isMobile ? 22 : 18} height={isMobile ? 22 : 18} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width={isMobile ? 20 : 16} height={isMobile ? 20 : 16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
               <path d="M17.657 11.314l-6.364 6.364a4 4 0 01-5.657-5.657l9.192-9.192a3 3 0 114.243 4.243l-9.193 9.192a2 2 0 102.828 2.828l6.364-6.364" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
@@ -1396,27 +1399,30 @@ const ChatWithFriend: React.FC = () => {
               style={{
                 width: isMobile ? 44 : 36,
                 height: isMobile ? 44 : 36,
-                borderRadius: '50%', // <- сделано круглой
-                background: inputStyle.background,
-                border: 'none',
+                borderRadius: '50%',
+                padding: 0,
+                background: 'transparent',
+                border: '1px solid rgba(255,255,255,0.04)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginLeft: 4,
+                marginLeft: 6,
                 cursor: 'pointer',
                 boxShadow: 'none',
                 color: '#bbb',
-                fontSize: isMobile ? 22 : 18,
-                transition: 'background .14s',
+                fontSize: isMobile ? 20 : 16,
+                transition: 'background .12s, transform .12s',
               }}
               title="Видеокружок"
               aria-label="Видеокружок"
               onClick={() => {
                 setShowVideoPreview(true);
               }}
+             onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
+             onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
             >
               {/* SVG иконка камеры */}
-              <svg width={isMobile ? 22 : 18} height={isMobile ? 22 : 18} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width={isMobile ? 20 : 16} height={isMobile ? 20 : 16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
                 <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2"/>
                 <rect x="9" y="9" width="6" height="6" rx="3" fill="currentColor"/>
                 <rect x="16" y="7" width="3" height="3" rx="1.5" fill="currentColor"/>
