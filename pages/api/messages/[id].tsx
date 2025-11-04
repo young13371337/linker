@@ -12,7 +12,128 @@ const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUr
   const [duration, setDuration] = useState(0);
   const [current, setCurrent] = useState(0);
 
+interface Message {
+  id: string;
+  sender: string;
+  text: string;
+  createdAt: string;
+  audioUrl?: string;
+  videoUrl?: string;
+  thumbnailUrl?: string;
+  _key?: string;
+  _serverId?: string;
+  _persisted?: boolean;
+  _failed?: boolean;
+}
+
+const ChatWithFriend: React.FC = () => {
+  const router = useRouter();
+  const { id } = router.query;
+  const { data: session, status } = useSession();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [friend, setFriend] = useState<{id: string, login?: string, name?: string, link?: string, avatar?: string | null, role?: string, status?: string} | null>(null);
+  const [chatId, setChatId] = useState<string | null>(null);
+  const [chatBgUrl, setChatBgUrl] = useState<string | null>(null);
+  const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
+  const [viewers, setViewers] = useState<Set<string>>(new Set());
+  const [openActionMsgId, setOpenActionMsgId] = useState<string | null>(null);
+  const lastTapRef = useRef<number | null>(null);
+  const [isTyping, setIsTyping] = useState<string | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState<string | null>(null);
+  const [newMessage, setNewMessage] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [showVideoPreview, setShowVideoPreview] = useState(false);
+  const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
+  const [videoRecorder, setVideoRecorder] = useState<MediaRecorder | null>(null);
+  const [videoChunks, setVideoChunks] = useState<Blob[]>([]);
+  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoRecording, setVideoRecording] = useState(false);
+  const [videoTime, setVideoTime] = useState(0);
+  const videoTimer = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
+    if (videoTime > 60 && videoRecorder && videoRecording) {
+      stopVideoRecording();
+    }
+  }, [videoTime]);
+
+  const [userId, setUserId] = useState<string | null>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const [animatedMsgIds, setAnimatedMsgIds] = useState<Set<string>>(new Set());
+  const [recordTime, setRecordTime] = useState(0);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordInterval = useRef<NodeJS.Timeout | null>(null);
+
+  const typingSentRef = useRef(false);
+  const typingInactivityTimer = useRef<number | null>(null);
+
+  const stopTyping = () => {
+    try {
+      if (!chatId) return;
+      fetch('/api/messages/typing', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId, action: 'stop' }),
+      }).catch(() => {});
+    } finally {
+      typingSentRef.current = false;
+      if (typingInactivityTimer.current) {
+        clearTimeout(typingInactivityTimer.current as unknown as number);
+        typingInactivityTimer.current = null;
+      }
+    }
+  };
+
+  const maybeStartTyping = (text: string) => {
+    if (!text || text.trim() === '') {
+      stopTyping();
+      return;
+    }
+    if (typingSentRef.current) {
+      if (typingInactivityTimer.current) clearTimeout(typingInactivityTimer.current as unknown as number);
+      typingInactivityTimer.current = window.setTimeout(() => {
+        stopTyping();
+      }, 6000);
+      return;
+    }
+    try {
+      fetch('/api/messages/typing', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId, action: 'start' }),
+      }).catch(() => {});
+    } finally {
+      typingSentRef.current = true;
+      if (typingInactivityTimer.current) clearTimeout(typingInactivityTimer.current as unknown as number);
+      typingInactivityTimer.current = window.setTimeout(() => {
+        stopTyping();
+      }, 6000);
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.onstop = null;
+      mediaRecorder.stop();
+      mediaRecorder.stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+      setIsRecording(false);
+      setRecordTime(0);
+      audioChunksRef.current = [];
+      if (recordInterval.current) clearInterval(recordInterval.current);
+    }
+  };
+
+  const stopVideoRecording = () => {
+    if (videoRecorder && videoRecording) {
+      videoRecorder.stop();
+      setVideoRecording(false);
+      if (videoTimer.current) clearInterval(videoTimer.current);
+    }
+  };
     const audio = audioRef.current;
     if (!audio) return;
     const onLoaded = () => setDuration(audio.duration);
@@ -86,145 +207,7 @@ const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUr
     </div>
   );
 };
-
-interface Message {
-  id: string;
-  sender: string;
-  text: string;
-  createdAt: string;
-  audioUrl?: string;
-  videoUrl?: string;
-}
-
-const ChatWithFriend: React.FC = () => {
-  const router = useRouter();
-  const { id } = router.query;
-  const { data: session, status } = useSession();
-  
-  const [messages, setMessages] = useState<Message[]>([]);
-  // Исправить тип friend, чтобы поддерживать login, name, avatar, role
-  const [friend, setFriend] = useState<{id: string, login?: string, link?: string | null, name?: string, avatar?: string | null, role?: string} | null>(null);
-  const [chatId, setChatId] = useState<string | null>(null);
-  const [chatBgUrl, setChatBgUrl] = useState<string | null>(null);
-  const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
-  const [isTyping, setIsTyping] = useState<string | null>(null);
-  const [isSpeaking, setIsSpeaking] = useState<string | null>(null);
-  const [newMessage, setNewMessage] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const [showVideoPreview, setShowVideoPreview] = useState(false);
-  const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
-  const [videoRecorder, setVideoRecorder] = useState<MediaRecorder | null>(null);
-  const [videoChunks, setVideoChunks] = useState<Blob[]>([]);
-  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [videoRecording, setVideoRecording] = useState(false);
-  const [videoTime, setVideoTime] = useState(0);
-  const videoTimer = useRef<NodeJS.Timeout | null>(null);
-
-  // --- Добавить недостающие переменные и хуки ---
-  const [userId, setUserId] = useState<string | null>(null);
-  const chatScrollRef = useRef<HTMLDivElement>(null);
-  const [animatedMsgIds, setAnimatedMsgIds] = useState<Set<string>>(new Set());
-  const [recordTime, setRecordTime] = useState(0);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const recordInterval = useRef<NodeJS.Timeout | null>(null);
-
-  // cancelRecording функция-заглушка (реализуй по необходимости)
-  const cancelRecording = () => {
-    if (mediaRecorder && isRecording) {
-      mediaRecorder.onstop = null;
-      mediaRecorder.stop();
-      mediaRecorder.stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
-      setIsRecording(false);
-      setRecordTime(0);
-      audioChunksRef.current = [];
-      if (recordInterval.current) clearInterval(recordInterval.current);
-    }
-  };
-
-  // TypingIndicator компонент-заглушка (реализуй по необходимости)
-  const TypingIndicator = () => <span>Печатает...</span>;
-
-  // --- Для видеокружков: объявить функции, если их нет ---
-  // Остановить запись видео
-  const stopVideoRecording = () => {
-    if (videoRecorder && videoRecording) {
-      videoRecorder.stop();
-      setVideoRecording(false);
-      if (videoTimer.current) clearInterval(videoTimer.current);
-    }
-  };
-
-  // При открытии превью — запросить камеру и начать live preview
   useEffect(() => {
-    if (showVideoPreview && !videoStream && !videoBlob) {
-      (async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 320, height: 320 }, audio: true });
-          setVideoStream(stream);
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-          }
-          // Автоматически начать запись
-          const recorder = new window.MediaRecorder(stream, { mimeType: 'video/mp4' });
-          setVideoRecorder(recorder);
-          setVideoChunks([]);
-          setVideoRecording(true);
-          setVideoTime(0);
-          if (videoTimer.current) clearInterval(videoTimer.current);
-          videoTimer.current = setInterval(() => setVideoTime(t => t + 1), 1000);
-          let chunks: Blob[] = [];
-          recorder.ondataavailable = (e) => {
-            chunks.push(e.data);
-          };
-          recorder.onstop = async () => {
-            if (videoTimer.current) clearInterval(videoTimer.current);
-            setVideoRecording(false);
-            setVideoTime(0);
-            const blob = new Blob(chunks, { type: 'video/mp4' });
-            // Сразу отправляем кружок
-            if (chatId && session) {
-              const formData = new FormData();
-              formData.append('chatId', chatId);
-              formData.append('video', blob, 'circle.mp4');
-              const res = await fetch('/api/messages/video-upload', {
-                method: 'POST',
-                body: formData,
-              });
-              const data = await res.json();
-              if (data.videoUrl && data.message && data.message.id) {
-                setMessages((prev) => [...prev, {
-                  id: data.message.id,
-                  sender: (session.user as any)?.id,
-                  text: '',
-                  createdAt: data.message.createdAt || new Date().toISOString(),
-                  audioUrl: undefined,
-                  videoUrl: data.videoUrl,
-                }]);
-              }
-            }
-            setShowVideoPreview(false);
-            setVideoBlob(null);
-            setVideoChunks([]);
-            if (videoRef.current) {
-              videoRef.current.srcObject = null;
-              videoRef.current.src = '';
-            }
-            if (stream) {
-              stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
-            }
-            setVideoStream(null);
-          };
-          recorder.start();
-        } catch (err) {
-          alert('Не удалось получить доступ к камере: ' + err);
-          setShowVideoPreview(false);
-        }
-      })();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showVideoPreview]);
   // Отправить видео (реализовать позже)
   const sendVideo = () => {
     // TODO: реализовать отправку видео

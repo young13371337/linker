@@ -931,8 +931,8 @@ const ChatWithFriend: React.FC = () => {
     ? { flex: 1, padding: '14px 16px', borderRadius: '12px', border: 'none', background: '#18191c', color: '#fff', fontSize: '16px', boxShadow: '0 2px 6px #2222', outline: 'none', minWidth: '0' }
     : { flex: 1, padding: '9px 12px', borderRadius: '9px', border: 'none', background: '#18191c', color: '#fff', fontSize: '14px', boxShadow: '0 2px 6px #2222', outline: 'none' };
   const buttonStyle = isMobile
-    ? { width: 44, height: 44, borderRadius: isMobile ? 10 : 8, background: '#229ed9', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: 'none', transition: 'background .14s', cursor: 'pointer' }
-    : { width: 36, height: 36, borderRadius: isMobile ? 10 : 8, background: '#229ed9', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, boxShadow: 'none', transition: 'background .14s', cursor: 'pointer' };
+    ? { width: 44, height: 44, borderRadius: isMobile ? 10 : 8, background: '#5c5d5dff', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: 'none', transition: 'background .14s', cursor: 'pointer' }
+    : { width: 36, height: 36, borderRadius: isMobile ? 10 : 8, background: '#5c5d5dff', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, boxShadow: 'none', transition: 'background .14s', cursor: 'pointer' };
   return (
     <>
       <Head>
@@ -1531,12 +1531,12 @@ const ChatWithFriend: React.FC = () => {
                   style={{
                     ...buttonStyle,
                     padding: 0,
-                    background: '#229ed9',
+                    background: inputStyle.background,
                     border: 'none',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: isMobile ? 10 : 8,
+                    borderRadius: '50%',
                     width: isMobile ? 44 : 36,
                     height: isMobile ? 44 : 36,
                     boxShadow: 'none',
@@ -1546,11 +1546,11 @@ const ChatWithFriend: React.FC = () => {
                   }}
                   aria-label="Отправить"
                   title="Отправить"
-                  onMouseOver={e => { e.currentTarget.style.background = '#1a8bbf'; }}
-                  onMouseOut={e => { e.currentTarget.style.background = '#229ed9'; }}
+                  onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.background = '#23232a'; }}
+                  onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.background = String(inputStyle.background); }}
                 >
                   <svg width={isMobile ? 20 : 16} height={isMobile ? 20 : 16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <polygon points="5,3 19,12 5,21" fill="#fff" />
+                    <polygon points="5,3 19,12 5,21" fill="none" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </button>
               ) : (
@@ -1559,12 +1559,12 @@ const ChatWithFriend: React.FC = () => {
                   style={{
                     ...buttonStyle,
                     padding: 0,
-                    background: isRecording ? '#d32f2f' : '#444457',
+                    background: isRecording ? '#d32f2f' : inputStyle.background,
                     border: 'none',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: isMobile ? 10 : 8,
+                    borderRadius: '50%',
                     width: isMobile ? 44 : 36,
                     height: isMobile ? 44 : 36,
                     boxShadow: 'none',

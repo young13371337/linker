@@ -1427,12 +1427,12 @@ const ChatWithFriend: React.FC = () => {
                 style={{
                   ...buttonStyle,
                   padding: 0,
-                  background: '#229ed9',
+                  background: inputStyle.background,
                   border: 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  borderRadius: isMobile ? 10 : 8,
+                  borderRadius: '50%',
                   width: isMobile ? 44 : 36,
                   height: isMobile ? 44 : 36,
                   boxShadow: 'none',
@@ -1442,11 +1442,11 @@ const ChatWithFriend: React.FC = () => {
                 }}
                 aria-label="Отправить"
                 title="Отправить"
-                onMouseOver={e => { e.currentTarget.style.background = '#1a8bbf'; }}
-                onMouseOut={e => { e.currentTarget.style.background = '#229ed9'; }}
+                onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.background = '#23232a'; }}
+                onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.background = String(inputStyle.background); }}
               >
                 <svg width={isMobile ? 20 : 16} height={isMobile ? 20 : 16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <polygon points="5,3 19,12 5,21" fill="#fff" />
+                  <polygon points="5,3 19,12 5,21" fill="none" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
             ) : (
@@ -1455,12 +1455,12 @@ const ChatWithFriend: React.FC = () => {
                 style={{
                   ...buttonStyle,
                   padding: 0,
-                  background: isRecording ? '#d32f2f' : '#444457',
+                  background: isRecording ? '#d32f2f' : inputStyle.background,
                   border: 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  borderRadius: isMobile ? 10 : 8,
+                  borderRadius: '50%',
                   width: isMobile ? 44 : 36,
                   height: isMobile ? 44 : 36,
                   boxShadow: 'none',
