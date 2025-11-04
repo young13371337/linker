@@ -1416,17 +1416,10 @@ const ChatWithFriend: React.FC = () => {
                 {/* Кнопка удаления (крестик) */}
                 <button
                   type="button"
+                  className={"chat-btn-circle small"}
                   style={{
                     background: '#d32f2f',
                     color: '#fff',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: 36,
-                    height: 36,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
                     fontSize: 22,
                     boxShadow: '0 2px 8px #d32f2f44',
                     transition: 'background .18s',
@@ -1440,17 +1433,10 @@ const ChatWithFriend: React.FC = () => {
                 {/* Кнопка отправки (иконка микрофона с галочкой) */}
                 <button
                   type="button"
+                  className={"chat-btn-circle " + (isMobile ? '' : 'small') + " chat-btn-send"}
                   style={{
-                    ...buttonStyle,
                     padding: 0,
                     background: '#229ed9',
-                    border: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '50%',
-                    width: isMobile ? 44 : 36,
-                    height: isMobile ? 44 : 36,
                     boxShadow: 'none',
                     transition: 'background .14s, opacity .12s',
                     cursor: 'pointer',
@@ -1468,7 +1454,7 @@ const ChatWithFriend: React.FC = () => {
                     }
                   }}
                 >
-                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 20 : 16, height: isMobile ? 20 : 16, display: 'block', filter: 'invert(1) brightness(1.2)' }} />
+                  <img src="/send.svg" alt="Отправить" style={{ display: 'block', filter: 'invert(1) brightness(1.2)' }} />
                 </button>
               </div>
             </div>

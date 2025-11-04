@@ -1424,17 +1424,10 @@ const ChatWithFriend: React.FC = () => {
                 {/* Кнопка удаления (крестик) */}
                 <button
                   type="button"
+                  className={"chat-btn-circle small"}
                   style={{
                     background: '#d32f2f',
                     color: '#fff',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: 36,
-                    height: 36,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
                     fontSize: 22,
                     boxShadow: '0 2px 8px #d32f2f44',
                     transition: 'background .18s',
@@ -1448,22 +1441,15 @@ const ChatWithFriend: React.FC = () => {
                 {/* Кнопка отправки (иконка микрофона с галочкой) */}
                 <button
                   type="button"
+                  className={"chat-btn-circle " + (isMobile ? '' : 'small') + " chat-btn-send"}
                   style={{
-                    ...buttonStyle,
                     padding: 0,
                     background: '#229ed9',
-                    border: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '50%',
-                    width: isMobile ? 44 : 36,
-                    height: isMobile ? 44 : 36,
                     boxShadow: 'none',
                     transition: 'background .18s, opacity .15s, transform .1s',
                     cursor: 'pointer',
                     opacity: 1,
-                    transform: 'scale(1.05)',
+                    transform: 'scale(1.05)'
                   }}
                   aria-label="Отправить голосовое сообщение"
                   title="Отправить голосовое сообщение"
@@ -1477,7 +1463,7 @@ const ChatWithFriend: React.FC = () => {
                     }
                   }}
                 >
-                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 28 : 22, height: isMobile ? 28 : 22, display: 'block' }} />
+                  <img src="/send.svg" alt="Отправить" style={{ display: 'block' }} />
                 </button>
               </div>
             </div>

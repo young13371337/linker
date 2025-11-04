@@ -1608,8 +1608,21 @@ const ChatWithFriend: React.FC = () => {
                 <button type="button" onClick={cancelRecording} style={{ background: 'transparent', border: 'none', color: '#b992ff', fontSize: isMobile ? 13 : 14, fontWeight: 700, cursor: 'pointer', padding: '2px 6px' }} aria-label="Отмена" title="Отмена">Отмена</button>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <button type="button" title="Отправить голосовое сообщение" aria-label="Отправить голосовое сообщение" onClick={() => { if (mediaRecorder && isRecording) { mediaRecorder.stop(); mediaRecorder.stream.getTracks().forEach(track => track.stop()); } }} style={{ width: isMobile ? 38 : 42, height: isMobile ? 38 : 42, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.06)', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(180deg,#7c3aed,#6d28d9)', boxShadow: '0 4px 10px rgba(109,40,217,0.14)', cursor: 'pointer', transform: 'translateZ(0)' }}>
-                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 18 : 16, height: isMobile ? 18 : 16, display: 'block', filter: 'brightness(1.05) invert(0)' }} />
+                <button
+                  type="button"
+                  title="Отправить голосовое сообщение"
+                  aria-label="Отправить голосовое сообщение"
+                  className={"chat-btn-circle " + (isMobile ? '' : 'small') + " chat-btn-send"}
+                  style={{
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    padding: 0,
+                    background: 'linear-gradient(180deg,#7c3aed,#6d28d9)',
+                    boxShadow: '0 4px 10px rgba(109,40,217,0.14)',
+                    transform: 'translateZ(0)'
+                  }}
+                  onClick={() => { if (mediaRecorder && isRecording) { mediaRecorder.stop(); mediaRecorder.stream.getTracks().forEach(track => track.stop()); } }}
+                >
+                  <img src="/send.svg" alt="Отправить" style={{ display: 'block', filter: 'brightness(1.05) invert(0)' }} />
                 </button>
               </div>
             </div>
