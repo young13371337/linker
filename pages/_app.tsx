@@ -94,47 +94,9 @@ function MainApp({ Component, pageProps }: AppProps) {
     };
   }, [session?.user?.id]);
 
-  // If a user's role becomes 'ban', show a short toast and sign them out after a delay.
-  useEffect(() => {
-    if (!session || !session.user) return;
-    try {
-      const role = (session.user as any).role;
-      if (role === 'ban') {
-        toast.error('Аккаунт заблокирован. Вы будете выведены из аккаунта.', { duration: 3500 });
-        const t = setTimeout(() => {
-          try {
-            signOut({ callbackUrl: `${window.location.origin}/` as any });
-          } catch (e) {
-            try { window.location.href = '/'; } catch (er) {}
-          }
-        }, 2500);
-        return () => clearTimeout(t);
-      }
-    } catch (e) {}
-  }, [session?.user?.role]);
+  /* Removed automatic sign-out/toast for 'ban' role — role is no longer handled client-side */
 
-  // Prevent any further navigation for banned users: on the next route change attempt
-  // redirect them to the homepage immediately.
-  useEffect(() => {
-    const handler = (url: string) => {
-      try {
-        // Prefer NextAuth session role, fallback to client-side stored user info
-        const role = (session && (session.user as any)?.role) || (getLocalUser() as any)?.role || null;
-        // allow staying on homepage
-        if (role === 'ban' && url !== '/') {
-          // Inform the user and force redirect to home
-          toast.error('Аккаунт заблокирован. Вы будете перенаправлены на главную.');
-          // Use replace to avoid adding the blocked URL to history
-          router.replace('/');
-        }
-      } catch (e) {
-        // ignore
-      }
-    };
-
-    router.events.on('routeChangeStart', handler);
-    return () => router.events.off('routeChangeStart', handler);
-  }, [session?.user?.role, router.events]);
+  /* Removed route-change blocking for 'ban' role — navigation is no longer blocked client-side */
 
   // Global Pusher listener for incoming messages -> show toast on any page
   const audioRef = useRef<HTMLAudioElement | null>(null);

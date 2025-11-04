@@ -403,7 +403,6 @@ export default function Sidebar() {
                   {user.role === 'moderator' && <img src="/role-icons/moderator.svg" alt="moderator" title="Модератор" style={{ width: 14, height: 14 }} />}
                   {user.role === 'verif' && <img src="/role-icons/verif.svg" alt="verif" title="Верифицирован" style={{ width: 14, height: 14 }} />}
                   {user.role === 'pepe' && <img src="/role-icons/pepe.svg" alt="pepe" title="Пепешка" style={{ width: 14, height: 14 }} />}
-                  {user.role === 'ban' && <img src="/role-icons/ban.svg" alt="ban" title="Заблокирован" style={{ width: 14, height: 14 }} />}
                 </div>
                 {open && <div className={styles.userLink}>@{user.link || ''}</div>}
               </div>

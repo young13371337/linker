@@ -164,9 +164,4 @@ input, textarea { font-size: 16px; }
   scrollbar-color: rgba(180,180,180,0.25) transparent;
 }
 
-/* Make ban role icon slightly smaller across the app. Use !important because
-   many locations set inline sizes — we want ban to be visually muted. */
-img[alt="ban"] {
-  width: 14px !important;
-  height: 14px !important;
-}
+/* 'ban' role removed — no special CSS for its icon */

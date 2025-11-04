@@ -65,12 +65,7 @@ export default function LoginPage() {
           try {
             const resp = await fetch(`/api/profile?login=${encodeURIComponent(login)}`);
             const data = await resp.json().catch(() => null);
-            if (data && data.user && data.user.role === 'ban') {
-              // show persistent toast informing about ban and force sign out
-              setToast({ type: 'error', message: 'Аккаунт заблокирован за нарушение правил. Войти нельзя.' });
-              try { await signOut({ redirect: false }); } catch (e) {}
-              return;
-            }
+            // removed ban-check: banned role no longer blocks login here
           } catch (e) {
             // ignore and proceed
           }
@@ -94,11 +89,7 @@ export default function LoginPage() {
           try {
             const resp = await fetch(`/api/profile?login=${encodeURIComponent(login)}`);
             const data = await resp.json().catch(() => null);
-            if (data && data.user && data.user.role === 'ban') {
-              setToast({ type: 'error', message: 'Аккаунт заблокирован за нарушение правил. Войти нельзя.' });
-              try { await signOut({ redirect: false }); } catch (e) {}
-              return;
-            }
+            // removed ban-check: banned role no longer blocks login here
           } catch (e) {}
 
           // Successful 2FA sign-in: dispatch explicit login event so prefetch shows bottom toast once

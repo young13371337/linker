@@ -179,6 +179,7 @@ export default function ProfilePage() {
   const [showNewsModal, setShowNewsModal] = useState(false);
   const [removeFriendId, setRemoveFriendId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [settingsTab, setSettingsTab] = useState<'customization'|'security'|'privacy'>('customization');
   const [token, setToken] = useState<string>("");
   const [setupQr, setSetupQr] = useState<string | null>(null);
   const [setupSecret, setSetupSecret] = useState<string | null>(null);
@@ -542,11 +543,7 @@ export default function ProfilePage() {
                   </div>
                 </span>
               )}
-              {userRole === "ban" && (
-                <span style={{ position: 'relative', display: 'inline-block' }}>
-                  <img src="/role-icons/ban.svg" alt="ban" style={{width:24, height:24, marginLeft:2, verticalAlign:'middle', cursor:'default'}} title="Заблокирован" />
-                </span>
-              )}
+              {/* 'ban' role removed: no longer displayed */}
             </span>
           </div>
           <div style={{ fontSize: 15, color: "#bbb", marginTop: 2 }}>{desc || "Нет описания"}</div>
@@ -626,9 +623,7 @@ export default function ProfilePage() {
                     {f.role === "pepe" && (
                       <img src="/role-icons/pepe.svg" alt="pepe" style={{width:32, height:32, marginLeft:4, verticalAlign:'middle'}} title="Linker Developer" />
                     )}
-                    {f.role === "ban" && (
-                      <img src="/role-icons/ban.svg" alt="ban" style={{width:24, height:24, marginLeft:4, verticalAlign:'middle'}} title="Заблокирован" />
-                    )}
+                    {/* 'ban' role removed: no longer displayed */}
                   </span>
                   <button onClick={() => setRemoveFriendId(f.id)} style={{ position: "absolute", right: 8, top: 12, background: "transparent", color: "#fff", border: "none", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, cursor: "pointer", opacity: 0.5, transition: "opacity 0.2s", zIndex: 2, boxShadow: 'none' }} title="Удалить друга" onMouseOver={e => e.currentTarget.style.opacity = "0.8"} onMouseOut={e => e.currentTarget.style.opacity = "0.5"}>
                     ×
@@ -738,13 +733,23 @@ export default function ProfilePage() {
         <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", animation: "fadeIn 0.3s" }}>
           <div style={{ background: "#23242a", borderRadius: 18, padding: 32, minWidth: 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", transition: "box-shadow 0.3s, background 0.3s", maxHeight: "80vh", overflowY: "auto", scrollbarWidth: "none" }}>
             <button onClick={() => setShowSettings(false)} style={{ position: "sticky", top: 0, right: 0, float: "right", zIndex: 100, background: "none", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", transition: "color 0.2s", marginLeft: "calc(100% - 40px)", marginBottom: 8 }} onMouseOver={e => {e.currentTarget.style.color="#4fc3f7"}} onMouseOut={e => {e.currentTarget.style.color="#fff"}}>✕</button>
-            <h3 style={{ fontSize: 20, fontWeight: 600, marginBottom: 18 }}>Настройки профиля</h3>
-            {/* Безопасность */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <FaShieldAlt style={{ color: '#bbb', fontSize: 22 }} />
-              <span style={{ color: '#bbb', fontWeight: 700, fontSize: 17, letterSpacing: 0.5 }}>Безопасность</span>
+            <h3 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Настройки профиля</h3>
+
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+              <button onClick={() => setSettingsTab('customization')} style={{ padding: '8px 12px', borderRadius: 10, background: settingsTab === 'customization' ? '#23242a' : 'transparent', border: settingsTab === 'customization' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>Кастомизация</button>
+              <button onClick={() => setSettingsTab('security')} style={{ padding: '8px 12px', borderRadius: 10, background: settingsTab === 'security' ? '#23242a' : 'transparent', border: settingsTab === 'security' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>Безопасность</button>
+              <button onClick={() => setSettingsTab('privacy')} style={{ padding: '8px 12px', borderRadius: 10, background: settingsTab === 'privacy' ? '#23242a' : 'transparent', border: settingsTab === 'privacy' ? '1px solid #444' : '1px solid transparent', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>Конфиденциальность</button>
             </div>
-            <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s" }}>
+
+            {/* Panels */}
+            {settingsTab === 'security' && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <FaShieldAlt style={{ color: '#bbb', fontSize: 22 }} />
+                  <span style={{ color: '#bbb', fontWeight: 700, fontSize: 17, letterSpacing: 0.5 }}>Безопасность</span>
+                </div>
+                <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s" }}>
               <label style={{ fontSize: 15, fontWeight: 500 }}>Смена пароля</label><br />
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <input
@@ -877,131 +882,18 @@ export default function ProfilePage() {
                 )}
               </div>
             </div>
-            {/* Кастомизация */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <FaPalette style={{ color: '#bbb', fontSize: 22 }} />
-              <span style={{ color: '#bbb', fontWeight: 700, fontSize: 17, letterSpacing: 0.5 }}>Кастомизация</span>
-            </div>
-              {/* Статус пользователя */}
-              <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s", background: '#18191c', borderRadius: 10, boxShadow: '0 1px 6px #0002', padding: '16px 0' }}>
-                <label style={{ fontSize: 15, fontWeight: 500, marginBottom: 8, display: 'block' }}></label>
-                <div style={{ display: 'flex', gap: 24, alignItems: 'center', marginTop: 8, justifyContent: 'center' }}>
-                  <button
-                    key="online"
-                    style={{
-                      background: user?.status === 'online' ? '#23242a' : '#18191c',
-                      border: user?.status === 'online' ? '2px solid #4caf50' : '1px solid #444',
-                      borderRadius: '50%',
-                      width: 38,
-                      height: 38,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      transition: 'border 0.2s',
-                      outline: 'none',
-                      boxShadow: user?.status === 'online' ? '0 2px 8px #4caf5044' : 'none'
-                    }}
-                    title={statusLabels['online']}
-                    onClick={async () => {
-                      if (!user) return;
-                      await fetch('/api/profile', {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId: user.id, status: 'online' })
-                      });
-                      setUser({ ...user, status: 'online' });
-                    }}
-                  >
-                    <UserStatus status="online" size={18} />
-                  </button>
-                  <button
-                    key="offline"
-                    style={{
-                      background: user?.status === 'offline' ? '#23242a' : '#18191c',
-                      border: user?.status === 'offline' ? '2px solid #9e9e9e' : '1px solid #444',
-                      borderRadius: '50%',
-                      width: 38,
-                      height: 38,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      transition: 'border 0.2s',
-                      outline: 'none',
-                      boxShadow: user?.status === 'offline' ? '0 2px 8px #9e9e9e44' : 'none'
-                    }}
-                    title={statusLabels['offline']}
-                    onClick={async () => {
-                      if (!user) return;
-                      await fetch('/api/profile', {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId: user.id, status: 'offline' })
-                      });
-                      setUser({ ...user, status: 'offline' });
-                    }}
-                  >
-                    <UserStatus status="offline" size={18} />
-                  </button>
-                  <button
-                    key="dnd"
-                    style={{
-                      background: user?.status === 'dnd' ? '#23242a' : '#18191c',
-                      border: user?.status === 'dnd' ? '2px solid #b8b814' : '1px solid #444',
-                      borderRadius: '50%',
-                      width: 38,
-                      height: 38,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      transition: 'border 0.2s',
-                      outline: 'none',
-                      boxShadow: user?.status === 'dnd' ? '0 2px 8px #4fc3f744' : 'none'
-                    }}
-                    title={statusLabels['dnd']}
-                    onClick={async () => {
-                      if (!user) return;
-                      await fetch('/api/profile', {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId: user.id, status: 'dnd' })
-                      });
-                      setUser({ ...user, status: 'dnd' });
-                    }}
-                  >
-                    <img src="/moon-dnd.svg" alt="Не беспокоить" style={{ width: 18, height: 18, verticalAlign: 'middle' }} />
-                  </button>
+            </>
+            )}
+
+            {settingsTab === 'customization' && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <FaPalette style={{ color: '#bbb', fontSize: 22 }} />
+                  <span style={{ color: '#bbb', fontWeight: 700, fontSize: 17, letterSpacing: 0.5 }}>Кастомизация</span>
                 </div>
-                {/* Описание выбранного статуса */}
-                <div style={{ marginTop: 18, padding: '0', color: '#fff', fontSize: 15, fontWeight: 500, textAlign: 'center', minHeight: 44 }}>
-                  {user?.status === 'online' && (
-                    <>
-                      <span style={{ color: '#4caf50', fontWeight: 700 }}>В сети</span><br />
-                      Все ваши друзья будут видеть что вы в онлайне.
-                    </>
-                  )}
-                  {user?.status === 'offline' && (
-                    <>
-                      <span style={{ color: '#9e9e9e', fontWeight: 700 }}>Не в сети</span><br />
-                      Анонимный статус, никто не сможет видеть вас, зато сможете видеть вы.
-                    </>
-                  )}
-                  {user?.status === 'dnd' && (
-                    <>
-                      <span style={{ color: '#b8b814', fontWeight: 700 }}>Не беспокоить</span><br />
-                      Уведомления о новых сообщениях и заявках отключены, но вы в сети.
-                    </>
-                  )}
-                </div>
-              </div>
-              <ChangeLoginForm user={user} setUser={setUser} setFriends={setFriends} />
-              <ChangeLinkForm user={user} setUser={setUser} setFriends={setFriends} />
-            <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s" }}>
+                <ChangeLoginForm user={user} setUser={setUser} setFriends={setFriends} />
+                <ChangeLinkForm user={user} setUser={setUser} setFriends={setFriends} />
+                <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s" }}>
               <label style={{ fontSize: 15, fontWeight: 500 }}>Описание:</label><br />
               <input type="text" value={desc} onChange={e => setDesc(e.target.value)} style={{ marginTop: 6, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #444", background: "#18191c", color: "#fff", fontSize: 15 }} />
               <button
@@ -1097,10 +989,133 @@ export default function ProfilePage() {
                 }}
               >Сохранить фон и выделенность</button>
             </div>
-            </div>
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <FaUserCircle style={{ color: '#bbb', fontSize: 22 }} />
+                  <span style={{ color: '#bbb', fontWeight: 700, fontSize: 17, letterSpacing: 0.5 }}>Конфиденциальность</span>
+                </div>
+                <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s", background: '#18191c', borderRadius: 10, boxShadow: '0 1px 6px #0002', padding: '16px 0' }}>
+                  <label style={{ fontSize: 15, fontWeight: 500, marginBottom: 8, display: 'block' }}>Статус аккаунта</label>
+                  <div style={{ display: 'flex', gap: 24, alignItems: 'center', marginTop: 8, justifyContent: 'center' }}>
+                    <button
+                      key="online_priv"
+                      style={{
+                        background: user?.status === 'online' ? '#23242a' : '#18191c',
+                        border: user?.status === 'online' ? '2px solid #4caf50' : '1px solid #444',
+                        borderRadius: '50%',
+                        width: 38,
+                        height: 38,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'border 0.2s',
+                        outline: 'none',
+                        boxShadow: user?.status === 'online' ? '0 2px 8px #4caf5044' : 'none'
+                      }}
+                      title={statusLabels['online']}
+                      onClick={async () => {
+                        if (!user) return;
+                        await fetch('/api/profile', {
+                          method: 'POST',
+                          credentials: 'include',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ userId: user.id, status: 'online' })
+                        });
+                        setUser({ ...user, status: 'online' });
+                      }}
+                    >
+                      <UserStatus status="online" size={18} />
+                    </button>
+                    <button
+                      key="offline_priv"
+                      style={{
+                        background: user?.status === 'offline' ? '#23242a' : '#18191c',
+                        border: user?.status === 'offline' ? '2px solid #9e9e9e' : '1px solid #444',
+                        borderRadius: '50%',
+                        width: 38,
+                        height: 38,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'border 0.2s',
+                        outline: 'none',
+                        boxShadow: user?.status === 'offline' ? '0 2px 8px #9e9e9e44' : 'none'
+                      }}
+                      title={statusLabels['offline']}
+                      onClick={async () => {
+                        if (!user) return;
+                        await fetch('/api/profile', {
+                          method: 'POST',
+                          credentials: 'include',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ userId: user.id, status: 'offline' })
+                        });
+                        setUser({ ...user, status: 'offline' });
+                      }}
+                    >
+                      <UserStatus status="offline" size={18} />
+                    </button>
+                    <button
+                      key="dnd_priv"
+                      style={{
+                        background: user?.status === 'dnd' ? '#23242a' : '#18191c',
+                        border: user?.status === 'dnd' ? '2px solid #b8b814' : '1px solid #444',
+                        borderRadius: '50%',
+                        width: 38,
+                        height: 38,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'border 0.2s',
+                        outline: 'none',
+                        boxShadow: user?.status === 'dnd' ? '0 2px 8px #4fc3f744' : 'none'
+                      }}
+                      title={statusLabels['dnd']}
+                      onClick={async () => {
+                        if (!user) return;
+                        await fetch('/api/profile', {
+                          method: 'POST',
+                          credentials: 'include',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ userId: user.id, status: 'dnd' })
+                        });
+                        setUser({ ...user, status: 'dnd' });
+                      }}
+                    >
+                      <img src="/moon-dnd.svg" alt="Не беспокоить" style={{ width: 18, height: 18, verticalAlign: 'middle' }} />
+                    </button>
+                  </div>
+                  <div style={{ marginTop: 18, padding: '0', color: '#fff', fontSize: 15, fontWeight: 500, textAlign: 'center', minHeight: 44 }}>
+                    {user?.status === 'online' && (
+                      <>
+                        <span style={{ color: '#4caf50', fontWeight: 700 }}>В сети</span><br />
+                        Все ваши друзья будут видеть что вы в онлайне.
+                      </>
+                    )}
+                    {user?.status === 'offline' && (
+                      <>
+                        <span style={{ color: '#9e9e9e', fontWeight: 700 }}>Не в сети</span><br />
+                        Анонимный статус, никто не сможет видеть вас, зато сможете видеть вы.
+                      </>
+                    )}
+                    {user?.status === 'dnd' && (
+                      <>
+                        <span style={{ color: '#b8b814', fontWeight: 700 }}>Не беспокоить</span><br />
+                        Уведомления о новых сообщениях и заявках отключены, но вы в сети.
+                      </>
+                    )}
+                  </div>
+                </div>
+              </>
+            </>
+            )}
             {/* Вставка любимой песни удалена по запросу пользователя */}
           </div>
-        )}
+        </div>
+      )}
       </div>
       </div>
     );
