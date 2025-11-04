@@ -748,16 +748,16 @@ export default function ProfilePage() {
         background: 'transparent',
         borderRadius: 12, padding: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ position: 'relative', width: 76, height: 76, borderRadius: 12, overflow: 'hidden', background: 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ position: 'relative', width: 76, height: 76, borderRadius: 12, overflow: 'visible', background: 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', background: 'transparent', position: 'relative' }}>
                     <img src={avatar || "https://www.svgrepo.com/show/452030/avatar-default.svg"} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                    {/* status indicator (small dot without border/outline) */}
-                    {user?.status === 'dnd' ? (
-                      <img src="/moon-dnd.svg" alt="dnd" style={{ position: 'absolute', right: 6, bottom: 6, width: 18, height: 18, zIndex: 3 }} />
-                    ) : (
-                      <span style={{ position: 'absolute', right: 6, bottom: 6, width: 12, height: 12, borderRadius: '50%', background: user?.status === 'online' ? '#1ed760' : '#bbb', zIndex: 3 }} />
-                    )}
                   </div>
+                  {/* status indicator positioned overlapping bottom-right corner of avatar */}
+                  {user?.status === 'dnd' ? (
+                    <img src="/moon-dnd.svg" alt="dnd" style={{ position: 'absolute', right: -6, bottom: -6, width: 20, height: 20, zIndex: 3 }} />
+                  ) : (
+                    <span style={{ position: 'absolute', right: -6, bottom: -6, width: 12, height: 12, borderRadius: '50%', background: user?.status === 'online' ? '#1ed760' : '#bbb', zIndex: 3 }} />
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
