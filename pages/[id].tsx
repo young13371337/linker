@@ -1479,7 +1479,9 @@ const ChatWithFriend: React.FC = () => {
                   cursor: 'pointer',
                   color: '#bbb',
                   fontSize: isMobile ? 22 : 18,
-                  transition: 'background .14s',
+                  background: 'transparent',
+                  border: 'none',
+                  transition: 'opacity .14s',
                 }}
                 title="Видеокружок"
                 aria-label="Видеокружок"
