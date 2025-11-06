@@ -118,8 +118,8 @@ export default function FriendsPage() {
         />
       )}
       <div style={{ display: 'flex', gap: 36, justifyContent: 'center', alignItems: 'flex-start', width: '100%', marginTop: 8, padding: '0 20px', boxSizing: 'border-box' }}>
-        <div style={{ width: 720, maxWidth: '100%', display: 'flex', gap: 20 }}>
-          <div style={{ flex: 1, background: '#1e2124', borderRadius: 14, padding: 18, boxShadow: '0 8px 30px rgba(0,0,0,0.55)' }}>
+        <div className="friends-grid" style={{ width: 720, maxWidth: '100%', display: 'flex', gap: 20 }}>
+          <div className="friend-panel" style={{ flex: 1, background: '#1e2124', borderRadius: 14, padding: 18, boxShadow: '0 8px 30px rgba(0,0,0,0.55)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
               <FiSearch style={{ fontSize: 22, color: '#4fc3f7' }} />
               <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>Поиск друзей</div>
@@ -175,7 +175,7 @@ export default function FriendsPage() {
             </div>
           </div>
 
-          <div style={{ width: 320, background: '#1e2124', borderRadius: 14, padding: 18, boxShadow: '0 8px 30px rgba(0,0,0,0.55)' }}>
+          <div className="friend-panel" style={{ width: 320, background: '#1e2124', borderRadius: 14, padding: 18, boxShadow: '0 8px 30px rgba(0,0,0,0.55)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
               <FiUserPlus style={{ fontSize: 20, color: '#4fc3f7' }} />
               <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>Входящие заявки</div>
@@ -210,6 +210,20 @@ export default function FriendsPage() {
           </div>
         </div>
       </div>
+      <style jsx global>{`
+        /* Remove panel backgrounds but preserve layout/padding/content */
+        .friend-panel { background: transparent !important; box-shadow: none !important; border-radius: 0 !important; }
+        /* Responsive: stack panels on mobile */
+        .friends-grid { display: flex; gap: 20px; }
+        @media (max-width: 820px) {
+          .friends-grid { flex-direction: column; width: 100% !important; }
+          .friends-grid > div { width: 100% !important; }
+        }
+        @media (max-width: 480px) {
+          h2 { font-size: 28px !important; margin: 28px 0 16px 0 !important; }
+          .friend-panel { padding: 12px !important; }
+        }
+      `}</style>
     </>
   );
 }

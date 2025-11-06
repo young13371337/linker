@@ -280,15 +280,15 @@ const ChatPage: React.FC = () => {
             </span>
           ) : lastMessages[chat.id] && (
             lastMessages[chat.id]?.videoUrl ? (
-              /* компактный вид для видеосообщения: меньший gap и более тонкая подпись */
-              <div style={{display:'flex',alignItems:'center',gap:6}}>
+              /* компактный вид для видеосообщения: ограничиваем ширину превью, не даём расширять элемент списка */
+              <div className="last-preview" style={{display:'flex',alignItems:'center',gap:6}}>
                 <VideoPlayCircle videoUrl={lastMessages[chat.id]!.videoUrl!} />
-                <span style={{fontSize: 13, color: '#4fc3f7', lineHeight: '1'}}>Видеосообщение</span>
+                <span className="last-preview-text" style={{fontSize: 13, color: '#4fc3f7', lineHeight: '1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>Видеосообщение</span>
               </div>
             ) : lastMessages[chat.id]?.audioUrl ? (
-              <span style={{fontSize: 13, color: '#4fc3f7', display:'flex',alignItems:'center',gap:6}}>
+              <span className="last-preview" style={{fontSize: 13, color: '#4fc3f7', display:'flex',alignItems:'center',gap:6}}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{display:'inline'}} xmlns="http://www.w3.org/2000/svg"><path d="M8 5v14l11-7z" fill="#4fc3f7"/></svg>
-                Голосовое сообщение
+                <span className="last-preview-text" style={{whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>Голосовое сообщение</span>
               </span>
             ) : (
               <div style={{display:'flex',flexDirection:'column'}}>
@@ -375,6 +375,14 @@ const ChatPage: React.FC = () => {
             {chatList}
           </div>
         )}
+        <style jsx global>{`
+          /* Prevent last-message previews from expanding chat item width */
+          .last-preview { min-width: 0; max-width: 100%; }
+          .last-preview-text { display: inline-block; max-width: 260px; vertical-align: middle; }
+          @media (max-width: 480px) {
+            .last-preview-text { max-width: 140px; font-size: 12px; }
+          }
+        `}</style>
         {/* Плавное уведомление справа снизу с индикатором времени */}
         {toast && (
           <ToastNotification
