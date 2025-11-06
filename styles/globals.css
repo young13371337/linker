@@ -238,3 +238,17 @@ input, textarea { font-size: 16px; }
 }
 
 /* 'ban' role removed — no special CSS for its icon */
+
+/* ======================================================
+   EMERGENCY: hide chat action circular buttons globally
+   This forcibly removes the circular icons (attach/camera/send/record)
+   to prevent them from showing on deployed site. Deploy to apply.
+   ====================================================== */
+.chat-btn-circle {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+.chat-btn-circle * {
+  display: none !important;
+}
