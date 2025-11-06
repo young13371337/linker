@@ -1437,16 +1437,14 @@ const ChatWithFriend: React.FC = () => {
                   className={"chat-btn-circle " + (isMobile ? '' : 'small') + " chat-btn-send"}
                   style={{
                     padding: 0,
-                    background: '#229ed9',
+                    background: 'transparent',
                     boxShadow: 'none',
-                    transition: 'background .14s, opacity .12s',
+                    transition: 'opacity .12s, transform .06s',
                     cursor: 'pointer',
                     opacity: 1,
                   }}
                   aria-label="Отправить голосовое сообщение"
                   title="Отправить голосовое сообщение"
-                  onMouseOver={e => { e.currentTarget.style.background = '#1a8bbf'; }}
-                  onMouseOut={e => { e.currentTarget.style.background = '#229ed9'; }}
                   onClick={() => {
                     if (mediaRecorder && isRecording) {
                       // обработчик onstop уже установлен для отправки
@@ -1501,14 +1499,13 @@ const ChatWithFriend: React.FC = () => {
                   style={{
                     padding: 0,
                     border: 'none',
-                    transition: 'background .14s, opacity .12s',
+                    transition: 'opacity .12s, transform .06s',
                     cursor: 'pointer',
                     opacity: 1,
+                    background: 'transparent'
                   }}
                   aria-label="Отправить"
                   title="Отправить"
-                  onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.background = '#1a8bbf'; }}
-                  onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.background = '#229ed9'; }}
                 >
                   <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 20 : 16, height: isMobile ? 20 : 16, display: 'block' }} />
                 </button>
@@ -1518,11 +1515,11 @@ const ChatWithFriend: React.FC = () => {
                   className={"chat-btn-circle " + (isMobile ? '' : 'small')}
                   style={{
                     padding: 0,
-                    background: isRecording ? '#d32f2f' : undefined,
+                    background: 'transparent',
                     border: 'none',
-                    transition: 'background .14s, opacity .12s',
+                    transition: 'opacity .12s',
                     cursor: 'pointer',
-                    opacity: 0.85,
+                    opacity: 0.95,
                     marginLeft: 8, // небольшой отступ между кружком и микрофоном
                   }}
                   aria-label="Голосовое сообщение"
@@ -1613,7 +1610,19 @@ const ChatWithFriend: React.FC = () => {
                     }
                   }}
                 >
-                  <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 26 : 20, height: isMobile ? 26 : 20, display: 'block' }} />
+                  {/* Inline microphone icon so we can tint it when recording */}
+                  <svg
+                    width={isMobile ? 26 : 20}
+                    height={isMobile ? 26 : 20}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style={{ color: isRecording ? '#d32f2f' : '#bbb', display: 'block' }}
+                  >
+                    <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3z" fill="currentColor" />
+                    <path d="M19 11v1a7 7 0 0 1-14 0v-1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M12 19v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
                 </button>
               )}
             </>

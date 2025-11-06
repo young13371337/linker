@@ -178,11 +178,14 @@ input, textarea { font-size: 16px; }
 
 /* Send button visual style */
 .chat-btn-send {
-  background: #229ed9 !important;
-  box-shadow: 0 2px 8px #229ed933 !important;
+  /* Make send buttons icon-only by default (transparent background).
+     Icons themselves should carry their color; preserve transitions for hover effects. */
+  background: transparent !important;
+  box-shadow: none !important;
   transition: background .14s, transform .06s, box-shadow .12s !important;
+  color: #229ed9; /* default icon tint when needed */
 }
-.chat-btn-send:hover { background: #1a8bbf !important; transform: translateY(-1px) !important; }
+.chat-btn-send:hover { transform: translateY(-1px) !important; }
 .chat-btn-send:active { transform: translateY(0) scale(.99) !important; }
 
 /* Neutral circular buttons (camera/attach/record) */
