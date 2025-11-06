@@ -1432,7 +1432,7 @@ const ChatWithFriend: React.FC = () => {
                 style={{
                   ...buttonStyle,
                   padding: 0,
-                  background: '#4a4a4a', // серый фон для кнопки отправки
+                  background: 'transparent', // make send button icon-only
                   border: 'none',
                   display: 'flex',
                   alignItems: 'center',
@@ -1441,16 +1441,15 @@ const ChatWithFriend: React.FC = () => {
                   width: isMobile ? 44 : 36,
                   height: isMobile ? 44 : 36,
                   boxShadow: 'none',
-                  transition: 'background .14s, opacity .12s',
+                  transition: 'opacity .12s',
                   cursor: 'pointer',
                   opacity: 1,
+                  color: '#bbb'
                 }}
                 aria-label="Отправить"
                 title="Отправить"
-                onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.background = '#3e3e3e'; }}
-                onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.background = '#4a4a4a'; }}
               >
-                <img src="/send.svg" alt="Отправить" style={{ display: 'block', width: isMobile ? 20 : 16, height: isMobile ? 20 : 16, filter: 'brightness(0.8)' }} />
+                <img src="/send.svg" alt="Отправить" style={{ display: 'block', width: isMobile ? 20 : 16, height: isMobile ? 20 : 16 }} />
               </button>
             ) : (
               <button
@@ -1458,7 +1457,7 @@ const ChatWithFriend: React.FC = () => {
                 style={{
                   ...buttonStyle,
                   padding: 0,
-                  background: isRecording ? '#d32f2f' : inputStyle.background,
+                  background: 'transparent',
                   border: 'none',
                   display: 'flex',
                   alignItems: 'center',
@@ -1467,10 +1466,11 @@ const ChatWithFriend: React.FC = () => {
                   width: isMobile ? 44 : 36,
                   height: isMobile ? 44 : 36,
                   boxShadow: 'none',
-                  transition: 'background .14s, opacity .12s',
+                  transition: 'opacity .12s',
                   cursor: 'pointer',
                   opacity: 0.85,
                   marginLeft: 4, // небольшой отступ между кружком и микрофоном
+                  color: isRecording ? '#d32f2f' : '#bbb'
                 }}
                 aria-label="Голосовое сообщение"
                 title="Голосовое сообщение"
@@ -1560,10 +1560,10 @@ const ChatWithFriend: React.FC = () => {
                   }
                 }}
               >
-                {/* восстановленная иконка микрофона */}
-                <svg width={isMobile ? 22 : 18} height={isMobile ? 22 : 18} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-                  <path d="M12 14a3.99 3.99 0 003.995-3.8L16 10V7a4 4 0 10-8 0v3c0 1.657 1.343 3 3 3z" fill="#fff"/>
-                  <path d="M19 11v-1a1 1 0 10-2 0v1a5 5 0 01-10 0v-1a1 1 0 10-2 0v1a7 7 0 006 6.92V21H9a1 1 0 100 2h6a1 1 0 100-2h-2v-3.08A7 7 0 0019 11z" fill="#fff"/>
+                {/* restored mic icon (uses currentColor) */}
+                <svg width={isMobile ? 22 : 18} height={isMobile ? 22 : 18} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', color: isRecording ? '#d32f2f' : '#bbb' }}>
+                  <path d="M12 14a3.99 3.99 0 003.995-3.8L16 10V7a4 4 0 10-8 0v3c0 1.657 1.343 3 3 3z" fill="currentColor"/>
+                  <path d="M19 11v-1a1 1 0 10-2 0v1a5 5 0 01-10 0v-1a1 1 0 10-2 0v1a7 7 0 006 6.92V21H9a1 1 0 100 2h6a1 1 0 100-2h-2v-3.08A7 7 0 0019 11z" fill="currentColor"/>
                 </svg>
               </button>
             )}

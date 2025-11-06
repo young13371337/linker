@@ -182,26 +182,28 @@ const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUr
           onClick={playAudio}
           className="chat-btn-circle small"
           style={{
-            background: '#fff',
-            boxShadow: '0 2px 6px #229ed933',
+            background: 'transparent',
+            boxShadow: 'none',
             marginRight: 2,
+            color: '#229ed9'
           }}
           aria-label="Воспроизвести"
         >
-          <svg width={22} height={22} viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="#229ed9"/></svg>
+          <svg width={22} height={22} viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="currentColor"/></svg>
         </button>
       ) : (
         <button
           onClick={pauseAudio}
           className="chat-btn-circle small"
           style={{
-            background: '#229ed9',
-            boxShadow: '0 2px 6px #229ed933',
+            background: 'transparent',
+            boxShadow: 'none',
             marginRight: 2,
+            color: '#229ed9'
           }}
           aria-label="Пауза"
         >
-          <svg width={22} height={22} viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" fill="#fff"/><rect x="14" y="5" width="4" height="14" fill="#fff"/></svg>
+          <svg width={22} height={22} viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" fill="currentColor"/><rect x="14" y="5" width="4" height="14" fill="currentColor"/></svg>
         </button>
       )}
       <audio ref={audioRef} src={audioUrl.startsWith('/') ? audioUrl : '/' + audioUrl} style={{ display: 'none' }} />
@@ -1419,11 +1421,11 @@ const ChatWithFriend: React.FC = () => {
                   type="button"
                   className={"chat-btn-circle small"}
                   style={{
-                    background: '#d32f2f',
-                    color: '#fff',
+                    background: 'transparent',
+                    color: '#d32f2f',
                     fontSize: 22,
-                    boxShadow: '0 2px 8px #d32f2f44',
-                    transition: 'background .18s',
+                    boxShadow: 'none',
+                    transition: 'opacity .12s',
                   }}
                   aria-label="Удалить голосовое сообщение"
                   title="Удалить голосовое сообщение"

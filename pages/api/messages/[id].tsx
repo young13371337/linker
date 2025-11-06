@@ -181,23 +181,25 @@ const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUr
         <button
           onClick={playAudio}
           style={{
-            width: 36, height: 36, borderRadius: '50%', background: '#fff',
-            border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px #229ed933', cursor: 'pointer', transition: 'background .2s', marginRight: 2
+            width: 36, height: 36, borderRadius: '50%', background: 'transparent',
+            border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'none', cursor: 'pointer', transition: 'opacity .12s', marginRight: 2,
+            color: '#229ed9'
           }}
           aria-label="Воспроизвести"
         >
-          <svg width={22} height={22} viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="#229ed9"/></svg>
+          <svg width={22} height={22} viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="currentColor"/></svg>
         </button>
       ) : (
         <button
           onClick={pauseAudio}
           style={{
-            width: 36, height: 36, borderRadius: '50%', background: '#229ed9',
-            border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px #229ed933', cursor: 'pointer', transition: 'background .2s', marginRight: 2
+            width: 36, height: 36, borderRadius: '50%', background: 'transparent',
+            border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'none', cursor: 'pointer', transition: 'opacity .12s', marginRight: 2,
+            color: '#229ed9'
           }}
           aria-label="Пауза"
         >
-          <svg width={22} height={22} viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" fill="#fff"/><rect x="14" y="5" width="4" height="14" fill="#fff"/></svg>
+          <svg width={22} height={22} viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" fill="currentColor"/><rect x="14" y="5" width="4" height="14" fill="currentColor"/></svg>
         </button>
       )}
       <audio ref={audioRef} src={audioUrl.startsWith('/') ? audioUrl : '/' + audioUrl} style={{ display: 'none' }} />
@@ -1423,11 +1425,11 @@ const ChatWithFriend: React.FC = () => {
                   type="button"
                   className={"chat-btn-circle small"}
                   style={{
-                    background: '#d32f2f',
-                    color: '#fff',
+                    background: 'transparent',
+                    color: '#d32f2f',
                     fontSize: 22,
-                    boxShadow: '0 2px 8px #d32f2f44',
-                    transition: 'background .18s',
+                    boxShadow: 'none',
+                    transition: 'opacity .12s',
                   }}
                   aria-label="Удалить голосовое сообщение"
                   title="Удалить голосовое сообщение"
@@ -1441,17 +1443,16 @@ const ChatWithFriend: React.FC = () => {
                   className={"chat-btn-circle " + (isMobile ? '' : 'small') + " chat-btn-send"}
                   style={{
                     padding: 0,
-                    background: '#229ed9',
+                    background: 'transparent',
                     boxShadow: 'none',
-                    transition: 'background .18s, opacity .15s, transform .1s',
+                    transition: 'opacity .15s, transform .1s',
                     cursor: 'pointer',
                     opacity: 1,
-                    transform: 'scale(1.05)'
+                    transform: 'scale(1.05)',
+                    color: '#229ed9'
                   }}
                   aria-label="Отправить голосовое сообщение"
                   title="Отправить голосовое сообщение"
-                  onMouseOver={e => { e.currentTarget.style.background = '#23243a'; }}
-                  onMouseOut={e => { e.currentTarget.style.background = '#229ed9'; }}
                   onClick={() => {
                     if (mediaRecorder && isRecording) {
                       // обработчик onstop уже установлен для отправки
@@ -1507,13 +1508,13 @@ const ChatWithFriend: React.FC = () => {
                   <rect x="16" y="7" width="3" height="3" rx="1.5" fill="currentColor"/>
                 </svg>
               </button>
-              {newMessage.trim() ? (
+                {newMessage.trim() ? (
                 <button
                   type="submit"
                   style={{
                     ...buttonStyle,
                     padding: 0,
-                    background: '#229ed9',
+                    background: 'transparent',
                     border: 'none',
                     display: 'flex',
                     alignItems: 'center',
@@ -1522,15 +1523,14 @@ const ChatWithFriend: React.FC = () => {
                     width: isMobile ? 44 : 36,
                     height: isMobile ? 44 : 36,
                     boxShadow: 'none',
-                    transition: 'background .18s, opacity .15s, transform .1s',
+                    transition: 'opacity .15s, transform .1s',
                     cursor: 'pointer',
                     opacity: 1,
                     transform: 'scale(1.05)',
+                    color: '#229ed9'
                   }}
                   aria-label="Отправить"
                   title="Отправить"
-                  onMouseOver={e => { e.currentTarget.style.background = '#23243a'; }}
-                  onMouseOut={e => { e.currentTarget.style.background = '#229ed9'; }}
                 >
                   <img src="/send.svg" alt="Отправить" style={{ width: isMobile ? 28 : 22, height: isMobile ? 28 : 22, display: 'block' }} />
                 </button>
@@ -1540,7 +1540,7 @@ const ChatWithFriend: React.FC = () => {
                   style={{
                     ...buttonStyle,
                     padding: 0,
-                    background: isRecording ? '#d32f2f' : '#444457',
+                    background: 'transparent',
                     border: 'none',
                     display: 'flex',
                     alignItems: 'center',
@@ -1549,10 +1549,11 @@ const ChatWithFriend: React.FC = () => {
                     width: isMobile ? 44 : 36,
                     height: isMobile ? 44 : 36,
                     boxShadow: 'none',
-                    transition: 'background .18s, opacity .15s, transform .1s',
+                    transition: 'opacity .18s, transform .1s',
                     cursor: 'pointer',
                     opacity: 0.85,
                     marginLeft: 4, // небольшой отступ между кружком и микрофоном
+                    color: isRecording ? '#d32f2f' : '#bbb'
                   }}
                   aria-label="Голосовое сообщение"
                   title="Голосовое сообщение"
@@ -1648,9 +1649,9 @@ const ChatWithFriend: React.FC = () => {
                     viewBox="0 0 24 24"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
-                    style={{ display: 'block' }}
+                    style={{ display: 'block', color: isRecording ? '#d32f2f' : '#bbb' }}
                   >
-                    <path d="M12 17a4 4 0 004-4V7a4 4 0 10-8 0v6a4 4 0 004 4zm5-4a1 1 0 112 0 7 7 0 01-14 0 1 1 0 112 0 5 5 0 0010 0z" fill="#fff"/>
+                    <path d="M12 17a4 4 0 004-4V7a4 4 0 10-8 0v6a4 4 0 004 4zm5-4a1 1 0 112 0 7 7 0 01-14 0 1 1 0 112 0 5 5 0 0010 0z" fill="currentColor"/>
                   </svg>
                 </button>
               )}
