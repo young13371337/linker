@@ -215,13 +215,19 @@ export default function FriendsPage() {
         .friend-panel { background: transparent !important; box-shadow: none !important; border-radius: 0 !important; }
         /* Responsive: stack panels on mobile */
         .friends-grid { display: flex; gap: 20px; }
+        /* Mobile adjustments: make inner controls full width and stack neatly */
+        .friend-panel input { width: 100% !important; box-sizing: border-box; }
+        .friend-panel button { min-width: 0; }
+        .friend-panel .search-result-item { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
         @media (max-width: 820px) {
-          .friends-grid { flex-direction: column; width: 100% !important; }
+          .friends-grid { flex-direction: column; width: 100% !important; gap: 12px; }
           .friends-grid > div { width: 100% !important; }
         }
         @media (max-width: 480px) {
           h2 { font-size: 28px !important; margin: 28px 0 16px 0 !important; }
           .friend-panel { padding: 12px !important; }
+          .friend-panel .search-result-item > div:last-child { display: flex; gap: 8px; flex-wrap: wrap; }
+          .friend-panel .search-result-item button { flex: 1 1 auto; }
         }
       `}</style>
     </>

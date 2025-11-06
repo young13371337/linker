@@ -253,7 +253,7 @@ const ChatPage: React.FC = () => {
         }}
       >
   {renderAvatar()}
-        <div style={{display:'flex',flexDirection:'column',flex:1}}>
+  <div style={{display:'flex',flexDirection:'column',flex:1, minWidth: 0}}>
           <span style={{fontWeight: 600, fontSize: 20, color: '#e3e8f0', display:'flex',alignItems:'center',gap:8}}>
             {title || 'Группа'}
             {role === 'admin' && <img src="/role-icons/admin.svg" alt="admin" style={{width:20, height:20, marginLeft:4}} />}
@@ -321,31 +321,8 @@ const ChatPage: React.FC = () => {
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10, position: 'relative'}}>
           <div style={{width:44}} />
           <h2 style={{color: '#e3e8f0', fontWeight: 700, fontSize: 28, textAlign: 'center'}}>Чаты</h2>
-          <button
-            title="Создать чат"
-            aria-label="Создать чат"
-            onClick={() => { setShowCreateModal(true); }}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 10,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'transparent',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
-              transition: 'transform .12s ease-in-out, box-shadow .12s'
-            }}
-            onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.04)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)'; }}
-            onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none'; }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="3" y="3" width="18" height="18" rx="4" stroke="#e3e8f0" strokeWidth="1.2" fill="none" opacity="0.06"/>
-              <path d="M7 17.5L16.2 8.3a1 1 0 0 0 0-1.4l-1.6-1.6a1 1 0 0 0-1.4 0L4 14.5V18h3.5z" stroke="#e3e8f0" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
+          {/* create button intentionally removed */}
+          <div style={{width:44}} />
         </div>
         {chats.length === 0 ? (
           <div style={{color: '#bbb', fontSize: 20, textAlign: 'center', marginTop: 80}}>Нет чатов.<br />Создайте группу или добавьте друзей!</div>
@@ -378,7 +355,7 @@ const ChatPage: React.FC = () => {
         <style jsx global>{`
           /* Prevent last-message previews from expanding chat item width */
           .last-preview { min-width: 0; max-width: 100%; }
-          .last-preview-text { display: inline-block; max-width: 260px; vertical-align: middle; }
+          .last-preview-text { display: block; max-width: 100%; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
           @media (max-width: 480px) {
             .last-preview-text { max-width: 140px; font-size: 12px; }
           }
