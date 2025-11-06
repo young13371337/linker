@@ -931,8 +931,8 @@ const ChatWithFriend: React.FC = () => {
     ? { flex: 1, padding: '14px 16px', borderRadius: '12px', border: 'none', background: '#18191c', color: '#fff', fontSize: '16px', boxShadow: '0 2px 6px #2222', outline: 'none', minWidth: '0' }
     : { flex: 1, padding: '9px 12px', borderRadius: '9px', border: 'none', background: '#18191c', color: '#fff', fontSize: '14px', boxShadow: '0 2px 6px #2222', outline: 'none' };
   const buttonStyle = isMobile
-    ? { width: 44, height: 44, borderRadius: '50%', background: '#5c5d5dff', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 2px 6px #229ed933', transition: 'background .2s', cursor: 'pointer' }
-    : { width: 36, height: 36, borderRadius: '50%', background: '#5c5d5dff', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, boxShadow: '0 2px 6px #229ed933', transition: 'background .2s', cursor: 'pointer' };
+    ? { width: 44, height: 44, borderRadius: '50%', background: 'transparent', color: '#bbb', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 2px 6px #229ed933', transition: 'opacity .2s', cursor: 'pointer' }
+    : { width: 36, height: 36, borderRadius: '50%', background: 'transparent', color: '#bbb', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, boxShadow: '0 2px 6px #229ed933', transition: 'opacity .2s', cursor: 'pointer' };
   return (
     <>
       <Head>
