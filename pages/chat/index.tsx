@@ -335,24 +335,25 @@ const ChatPage: React.FC = () => {
           }}
             className="chat-list-scroll"
           >
-            <style jsx global>{`
-              .chat-list-scroll::-webkit-scrollbar {
-                width: 7px;
-                background: transparent;
-              }
-              .chat-list-scroll::-webkit-scrollbar-thumb {
-                background: rgba(79,195,247,0.25);
-                border-radius: 6px;
-                transition: background 0.2s;
-              }
-              .chat-list-scroll:hover::-webkit-scrollbar-thumb {
-                background: rgba(79,195,247,0.45);
-              }
-            `}</style>
+              {/* moved scrollbar styles to the global style block below to avoid nested styled-jsx tags */}
             {chatList}
           </div>
         )}
         <style jsx global>{`
+          /* Scrollbar styles for chat list (kept here to avoid nested styled-jsx) */
+          .chat-list-scroll::-webkit-scrollbar {
+            width: 7px;
+            background: transparent;
+          }
+          .chat-list-scroll::-webkit-scrollbar-thumb {
+            background: rgba(79,195,247,0.25);
+            border-radius: 6px;
+            transition: background 0.2s;
+          }
+          .chat-list-scroll:hover::-webkit-scrollbar-thumb {
+            background: rgba(79,195,247,0.45);
+          }
+
           /* Prevent last-message previews from expanding chat item width */
           .last-preview { min-width: 0; max-width: 100%; }
           .last-preview-text { display: block; max-width: 100%; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
