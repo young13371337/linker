@@ -1483,17 +1483,17 @@ const ChatWithFriend: React.FC = () => {
                   width: isMobile ? 44 : 36,
                   height: isMobile ? 44 : 36,
                   borderRadius: '50%',
-                  background: inputStyle.background,
-                  border: 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginLeft: 4,
                   cursor: 'pointer',
-                  boxShadow: inputStyle.boxShadow,
+                  boxShadow: 'none',
                   color: '#bbb',
                   fontSize: isMobile ? 22 : 18,
-                  transition: 'background .2s',
+                  background: 'transparent',
+                  border: 'none',
+                  transition: 'opacity .2s',
                 }}
                 title="Видеокружок"
                 aria-label="Видеокружок"
@@ -1501,8 +1501,8 @@ const ChatWithFriend: React.FC = () => {
                   setShowVideoPreview(true);
                 }}
               >
-                {/* User-provided camera icon */}
-                <img src="/video.svg" alt="Видео" style={{ display: 'block', width: isMobile ? 20 : 16, height: isMobile ? 20 : 16 }} />
+                {/* User-provided camera icon (slightly larger) */}
+                <img src="/video.svg" alt="Видео" style={{ display: 'block', width: isMobile ? 24 : 20, height: isMobile ? 24 : 20 }} />
               </button>
                 {newMessage.trim() ? (
                 <button

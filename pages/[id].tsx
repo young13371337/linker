@@ -1489,8 +1489,8 @@ const ChatWithFriend: React.FC = () => {
                   setShowVideoPreview(true);
                 }}
               >
-                {/* User-provided camera icon */}
-                <img src="/video.svg" alt="Видео" style={{ display: 'block', width: isMobile ? 20 : 16, height: isMobile ? 20 : 16 }} />
+                {/* User-provided camera icon (slightly larger) */}
+                <img src="/video.svg" alt="Видео" style={{ display: 'block', width: isMobile ? 24 : 20, height: isMobile ? 24 : 20 }} />
               </button>
               {newMessage.trim() ? (
                 <button
@@ -1610,8 +1610,8 @@ const ChatWithFriend: React.FC = () => {
                     }
                   }}
                 >
-                  {/* User-provided audio icon */}
-                  <img src="/audio.svg" alt="Голос" style={{ display: 'block', width: isMobile ? 22 : 18, height: isMobile ? 22 : 18 }} />
+                  {/* User-provided audio icon (slightly larger) */}
+                  <img src="/audio.svg" alt="Голос" style={{ display: 'block', width: isMobile ? 26 : 20, height: isMobile ? 26 : 20 }} />
                 </button>
               )}
             </>

@@ -1405,7 +1405,7 @@ const ChatWithFriend: React.FC = () => {
                 height: isMobile ? 44 : 36,
                 borderRadius: '50%',
                 padding: 0,
-                background: inputStyle.background,
+                background: 'transparent',
                 border: 'none',
                 display: 'flex',
                 alignItems: 'center',
@@ -1420,7 +1420,7 @@ const ChatWithFriend: React.FC = () => {
               onClick={() => setShowVideoPreview(true)}
             >
               {/* User-provided camera icon */}
-              <img src="/video.svg" alt="Видео" style={{ display: 'block', width: isMobile ? 20 : 16, height: isMobile ? 20 : 16 }} />
+              <img src="/video.svg" alt="Видео" style={{ display: 'block', width: isMobile ? 24 : 20, height: isMobile ? 24 : 20 }} />
             </button>
               {newMessage.trim() ? (
               <button
@@ -1557,7 +1557,7 @@ const ChatWithFriend: React.FC = () => {
                 }}
               >
                 {/* User-provided audio icon */}
-                <img src="/audio.svg" alt="Голос" style={{ display: 'block', width: isMobile ? 22 : 18, height: isMobile ? 22 : 18 }} />
+                <img src="/audio.svg" alt="Голос" style={{ display: 'block', width: isMobile ? 26 : 20, height: isMobile ? 26 : 20 }} />
               </button>
             )}
           </>
