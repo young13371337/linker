@@ -404,13 +404,17 @@ export default function ProfilePage() {
       WebkitOverflowScrolling: "touch"
     }}>
       {backgroundUrl && (
+        // Top cover banner instead of full-card background
         <div
           style={{
             position: 'absolute',
-            inset: 0,
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 160,
             zIndex: 0,
             pointerEvents: 'none',
-            borderRadius: 18,
+            borderRadius: "18px 18px 0 0",
             background: `url('${backgroundUrl}') center/cover no-repeat`,
             opacity: Math.max(0.01, bgOpacity / 100)
           }}
@@ -1003,8 +1007,14 @@ export default function ProfilePage() {
               >Сохранить</button>
             </div>
             <div style={{ marginBottom: 22, marginLeft: 0, maxWidth: 320, transition: "box-shadow 0.2s, background 0.2s" }}>
-              <label style={{ fontSize: 15, fontWeight: 500 }}>Фон чата и профиля</label><br />
+              <label style={{ fontSize: 15, fontWeight: 500 }}>Обложка и фон чатов</label><br />
               <input type="text" value={backgroundUrl} onChange={e => setBackgroundUrl(e.target.value)} style={{ marginTop: 6, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #444", background: "#18191c", color: "#fff", fontSize: 15 }} placeholder="" />
+              {/* preview */}
+              {backgroundUrl ? (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ width: '100%', height: 80, borderRadius: 8, background: `url('${backgroundUrl}') center/cover no-repeat`, border: '1px solid #333' }} />
+                </div>
+              ) : null}
               <div style={{ marginTop: 12 }}>
                 <label style={{ fontSize: 15, fontWeight: 500 }}>Выделенность фона: {bgOpacity}%</label><br />
                 <input

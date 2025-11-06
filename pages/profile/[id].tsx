@@ -83,11 +83,23 @@ export default function UserProfile() {
         boxShadow: "0 2px 24px #0006",
         color: "#fff",
         fontFamily: "Segoe UI, Verdana, Arial, sans-serif",
-        background: user.backgroundUrl
-          ? `linear-gradient(rgba(30,32,42,0.65),rgba(30,32,42,0.82)), url(${user.backgroundUrl}) center/cover no-repeat`
-          : "#23242a"
+        background: "#23242a",
+        position: 'relative',
+        overflow: 'hidden'
       }}
     >
+      {user.backgroundUrl && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 160,
+          zIndex: 0,
+          borderRadius: '18px 18px 0 0',
+          background: `linear-gradient(rgba(30,32,42,0.25),rgba(30,32,42,0.45)), url(${user.backgroundUrl}) center/cover no-repeat`
+        }} />
+      )}
   <div style={{ display: "flex", alignItems: "center", gap: 18, paddingBottom: 18, borderBottom: "1px solid #333" }}>
         <div style={{ position: "relative" }}>
           {user.avatar ? (
