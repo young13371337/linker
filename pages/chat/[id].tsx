@@ -68,7 +68,7 @@ const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUr
           }}
           aria-label="Воспроизвести"
         >
-          <svg width={22} height={22} viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="#229ed9"/></svg>
+          <svg width={26} height={26} viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="#229ed9"/></svg>
         </button>
       ) : (
         <button
@@ -81,7 +81,7 @@ const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUr
           }}
           aria-label="Пауза"
         >
-          <svg width={22} height={22} viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" fill="#fff"/><rect x="14" y="5" width="4" height="14" fill="#fff"/></svg>
+          <svg width={26} height={26} viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" fill="#fff"/><rect x="14" y="5" width="4" height="14" fill="#fff"/></svg>
         </button>
       )}
       <audio ref={audioRef} src={audioUrl.startsWith('/') ? audioUrl : '/' + audioUrl} style={{ display: 'none' }} />
@@ -1262,7 +1262,7 @@ const ChatWithFriend: React.FC = () => {
               height: isMobile ? 44 : 36,
               borderRadius: '50%',
               padding: 0,
-              background: inputStyle.background,
+              background: 'transparent',
               border: 'none',
               display: 'flex',
               alignItems: 'center',
@@ -1276,10 +1276,8 @@ const ChatWithFriend: React.FC = () => {
             aria-label="Отправить фото или файл"
             onClick={() => document.getElementById('file-input')?.click()}
           >
-            {/* Ваша иконка скрепки (восстановлена) */}
-            <svg width={isMobile ? 22 : 18} height={isMobile ? 22 : 18} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-              <path d="M17.657 11.314l-6.364 6.364a4 4 0 01-5.657-5.657l9.192-9.192a3 3 0 114.243 4.243l-9.193 9.192a2 2 0 102.828 2.828l6.364-6.364" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            {/* User-provided file icon */}
+            <img src="/file.svg" alt="Файл" style={{ display: 'block', width: isMobile ? 22 : 18, height: isMobile ? 22 : 18 }} />
           </button>
           {/* Центрированный кружок поверх чата с затемнением */}
           {showVideoPreview && (
@@ -1445,7 +1443,7 @@ const ChatWithFriend: React.FC = () => {
                 aria-label="Отправить"
                 title="Отправить"
               >
-                <img src="/send.svg" alt="Отправить" style={{ display: 'block', width: isMobile ? 20 : 16, height: isMobile ? 20 : 16 }} />
+                  <img src="/send.svg" alt="Отправить" style={{ display: 'block', width: isMobile ? 26 : 22, height: isMobile ? 26 : 22 }} />
               </button>
             ) : (
               <button
@@ -1492,22 +1490,23 @@ const ChatWithFriend: React.FC = () => {
                       if (recordInterval.current) clearInterval(recordInterval.current);
                       setIsRecording(false);
                       setRecordTime(0);
-                      const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
-                      audioChunksRef.current = [];
-                      // Optimistic UI: create a temporary message so user sees upload in progress
-                      const tempId = 'temp-audio-' + Date.now();
-                      const tempMsg: Message = {
-                        id: tempId,
-                        sender: (session?.user as any)?.id || '',
-                        text: '',
-                        createdAt: new Date().toISOString(),
-                        audioUrl: undefined,
-                        videoUrl: undefined,
-                        _key: tempId,
-                        _persisted: false,
-                        _failed: false,
-                      };
-                      setMessages(prev => [...prev, tempMsg]);
+                        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
+                        audioChunksRef.current = [];
+                        // Optimistic UI: create a temporary message so user sees upload in progress
+                        const tempId = 'temp-audio-' + Date.now();
+                        const tempObjUrl = URL.createObjectURL(audioBlob);
+                        const tempMsg: Message = {
+                          id: tempId,
+                          sender: (session?.user as any)?.id || '',
+                          text: '',
+                          createdAt: new Date().toISOString(),
+                          audioUrl: tempObjUrl,
+                          videoUrl: undefined,
+                          _key: tempId,
+                          _persisted: false,
+                          _failed: false,
+                        };
+                        setMessages(prev => [...prev, tempMsg]);
 
                       const formData = new FormData();
                       formData.append('chatId', chatId || '');
@@ -1518,27 +1517,30 @@ const ChatWithFriend: React.FC = () => {
                           credentials: 'include',
                           body: formData,
                         });
-                        if (!res.ok) {
-                          const txt = await res.text();
-                          // mark temp message as failed
-                          setMessages(prev => prev.map(m => m.id === tempId ? { ...m, _failed: true } : m));
-                          alert('Ошибка отправки голосового: ' + txt);
-                        } else {
-                          const data = await res.json();
-                          if (data && data.message && data.message.id) {
-                            // replace temp message with server message
-                            setMessages(prev => prev.map(m => m.id === tempId ? {
-                              ...m,
-                              id: data.message.id,
-                              createdAt: data.message.createdAt || m.createdAt,
-                              audioUrl: data.audioUrl,
-                              _persisted: data.persisted !== false,
-                            } : m));
-                          } else {
-                            // no message returned: mark failed
+                          if (!res.ok) {
+                            const txt = await res.text();
+                            // mark temp message as failed
                             setMessages(prev => prev.map(m => m.id === tempId ? { ...m, _failed: true } : m));
+                            try { URL.revokeObjectURL(tempObjUrl); } catch (e) {}
+                            alert('Ошибка отправки голосового: ' + txt);
+                          } else {
+                            const data = await res.json();
+                            if (data && data.message && data.message.id) {
+                              // replace temp message with server message
+                              setMessages(prev => prev.map(m => m.id === tempId ? {
+                                ...m,
+                                id: data.message.id,
+                                createdAt: data.message.createdAt || m.createdAt,
+                                audioUrl: data.audioUrl,
+                                _persisted: data.persisted !== false,
+                              } : m));
+                              try { URL.revokeObjectURL(tempObjUrl); } catch (e) {}
+                            } else {
+                              // no message returned: mark failed
+                              setMessages(prev => prev.map(m => m.id === tempId ? { ...m, _failed: true } : m));
+                              try { URL.revokeObjectURL(tempObjUrl); } catch (e) {}
+                            }
                           }
-                        }
                       } catch (err) {
                         setMessages(prev => prev.map(m => m.id === tempId ? { ...m, _failed: true } : m));
                         alert('Ошибка отправки голосового: ' + err);
@@ -1613,7 +1615,7 @@ const ChatWithFriend: React.FC = () => {
                   }}
                   onClick={() => { if (mediaRecorder && isRecording) { mediaRecorder.stop(); mediaRecorder.stream.getTracks().forEach(track => track.stop()); } }}
                 >
-                    <img src="/send.svg" alt="Отправить" style={{ display: 'block', width: isMobile ? 20 : 16, height: isMobile ? 20 : 16 }} />
+          <img src="/send.svg" alt="Отправить" style={{ display: 'block', width: isMobile ? 26 : 22, height: isMobile ? 26 : 22 }} />
                 </button>
               </div>
             </div>
