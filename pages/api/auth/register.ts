@@ -6,7 +6,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { login, password, link } = req.body;
   if (!login || !password || !link) return res.status(400).json({ error: "Login, password and link required" });
   try {
-    // reCAPTCHA removed — proceed with registration normally
     const user = await registerUser(login, password, link);
     return res.status(201).json({ user });
   } catch (e: any) {
