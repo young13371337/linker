@@ -1,3 +1,0 @@
-Emergency deploy bump to force rebuild/deploy
-Timestamp: 2025-11-06T00:00:00Z
-Reason: force a new build so emergency CSS (hide chat buttons) is applied in production.

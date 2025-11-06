@@ -1419,12 +1419,8 @@ const ChatWithFriend: React.FC = () => {
               aria-label="Видеокружок"
               onClick={() => setShowVideoPreview(true)}
             >
-              {/* Ваша иконка камеры (восстановлена) */}
-              <svg width={isMobile ? 22 : 18} height={isMobile ? 22 : 18} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-                <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2"/>
-                <rect x="9" y="9" width="6" height="6" rx="3" fill="currentColor"/>
-                <rect x="16" y="7" width="3" height="3" rx="1.5" fill="currentColor"/>
-              </svg>
+              {/* User-provided camera icon */}
+              <img src="/video.svg" alt="Видео" style={{ display: 'block', width: isMobile ? 20 : 16, height: isMobile ? 20 : 16 }} />
             </button>
               {newMessage.trim() ? (
               <button
@@ -1560,11 +1556,8 @@ const ChatWithFriend: React.FC = () => {
                   }
                 }}
               >
-                {/* restored mic icon (uses currentColor) */}
-                <svg width={isMobile ? 22 : 18} height={isMobile ? 22 : 18} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', color: isRecording ? '#d32f2f' : '#bbb' }}>
-                  <path d="M12 14a3.99 3.99 0 003.995-3.8L16 10V7a4 4 0 10-8 0v3c0 1.657 1.343 3 3 3z" fill="currentColor"/>
-                  <path d="M19 11v-1a1 1 0 10-2 0v1a5 5 0 01-10 0v-1a1 1 0 10-2 0v1a7 7 0 006 6.92V21H9a1 1 0 100 2h6a1 1 0 100-2h-2v-3.08A7 7 0 0019 11z" fill="currentColor"/>
-                </svg>
+                {/* User-provided audio icon */}
+                <img src="/audio.svg" alt="Голос" style={{ display: 'block', width: isMobile ? 22 : 18, height: isMobile ? 22 : 18 }} />
               </button>
             )}
           </>

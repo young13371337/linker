@@ -1489,12 +1489,8 @@ const ChatWithFriend: React.FC = () => {
                   setShowVideoPreview(true);
                 }}
               >
-                {/* SVG иконка камеры */}
-                <svg width={isMobile ? 22 : 18} height={isMobile ? 22 : 18} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2"/>
-                  <rect x="9" y="9" width="6" height="6" rx="3" fill="currentColor"/>
-                  <rect x="16" y="7" width="3" height="3" rx="1.5" fill="currentColor"/>
-                </svg>
+                {/* User-provided camera icon */}
+                <img src="/video.svg" alt="Видео" style={{ display: 'block', width: isMobile ? 20 : 16, height: isMobile ? 20 : 16 }} />
               </button>
               {newMessage.trim() ? (
                 <button
@@ -1614,19 +1610,8 @@ const ChatWithFriend: React.FC = () => {
                     }
                   }}
                 >
-                  {/* Inline microphone icon so we can tint it when recording */}
-                  <svg
-                    width={isMobile ? 26 : 20}
-                    height={isMobile ? 26 : 20}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{ color: isRecording ? '#d32f2f' : '#bbb', display: 'block' }}
-                  >
-                    <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3z" fill="currentColor" />
-                    <path d="M19 11v1a7 7 0 0 1-14 0v-1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M12 19v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  </svg>
+                  {/* User-provided audio icon */}
+                  <img src="/audio.svg" alt="Голос" style={{ display: 'block', width: isMobile ? 22 : 18, height: isMobile ? 22 : 18 }} />
                 </button>
               )}
             </>
