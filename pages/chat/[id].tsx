@@ -1603,17 +1603,17 @@ const ChatWithFriend: React.FC = () => {
                   type="button"
                   title="Отправить голосовое сообщение"
                   aria-label="Отправить голосовое сообщение"
-                  className={"chat-btn-circle " + (isMobile ? '' : 'small') + " chat-btn-send"}
+                  className={(isMobile ? '' : 'small') + " chat-btn-send"}
                   style={{
                     border: '1px solid rgba(255,255,255,0.06)',
                     padding: 0,
-                    background: 'linear-gradient(180deg,#7c3aed,#6d28d9)',
-                    boxShadow: '0 4px 10px rgba(109,40,217,0.14)',
+                      background: 'linear-gradient(180deg,#7c3aed,#6d28d9)',
+                      boxShadow: '0 4px 10px rgba(109,40,217,0.14)',
                     transform: 'translateZ(0)'
                   }}
                   onClick={() => { if (mediaRecorder && isRecording) { mediaRecorder.stop(); mediaRecorder.stream.getTracks().forEach(track => track.stop()); } }}
                 >
-                  <img src="/send.svg" alt="Отправить" style={{ display: 'block' }} />
+                    <img src="/send.svg" alt="Отправить" style={{ display: 'block', width: isMobile ? 20 : 16, height: isMobile ? 20 : 16 }} />
                 </button>
               </div>
             </div>

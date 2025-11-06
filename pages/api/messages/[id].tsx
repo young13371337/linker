@@ -1440,7 +1440,7 @@ const ChatWithFriend: React.FC = () => {
                 {/* Кнопка отправки (иконка микрофона с галочкой) */}
                 <button
                   type="button"
-                  className={"chat-btn-circle " + (isMobile ? '' : 'small') + " chat-btn-send"}
+                  className={(isMobile ? '' : 'small') + " chat-btn-send"}
                   style={{
                     padding: 0,
                     background: 'transparent',
@@ -1449,7 +1449,13 @@ const ChatWithFriend: React.FC = () => {
                     cursor: 'pointer',
                     opacity: 1,
                     transform: 'scale(1.05)',
-                    color: '#229ed9'
+                    color: '#229ed9',
+                    width: isMobile ? 44 : 36,
+                    height: isMobile ? 44 : 36,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                   aria-label="Отправить голосовое сообщение"
                   title="Отправить голосовое сообщение"
@@ -1461,7 +1467,7 @@ const ChatWithFriend: React.FC = () => {
                     }
                   }}
                 >
-                  <img src="/send.svg" alt="Отправить" style={{ display: 'block' }} />
+                  <img src="/send.svg" alt="Отправить" style={{ display: 'block', width: isMobile ? 20 : 16, height: isMobile ? 20 : 16 }} />
                 </button>
               </div>
             </div>
