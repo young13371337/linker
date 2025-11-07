@@ -110,10 +110,10 @@ html, body {
 }
 
 /* ===== Poppins font and auth input styles ===== */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
 /* Add a root helper class that switches the site to Poppins.
-   We will apply this class in _app.tsx for all routes except the index page. */
+   We apply the font via a <link> in the document head and toggle this class in `_app.tsx`.
+   Note: the actual font file is loaded from Google Fonts only when the head link is present. */
 .use-poppins {
   font-family: 'Poppins', 'Segoe UI', Arial, sans-serif !important;
   -webkit-font-smoothing: antialiased !important;
