@@ -763,14 +763,15 @@ const ChatWithFriend: React.FC = () => {
           if (tempIndex !== -1) {
             const copy = [...prev];
             const existing = copy[tempIndex];
-            copy[tempIndex] = {
+            copy[tempIndex] = ({
               ...existing,
               id: newMsg.id,
-              text: newMsg.text,
+              text: newMsg.text ?? existing.text,
               createdAt: newMsg.createdAt,
               audioUrl: newMsg.audioUrl,
               videoUrl: newMsg.videoUrl,
-            };
+              _encryptedPending: !Boolean(newMsg.text),
+            } as any);
             return copy;
           }
 
