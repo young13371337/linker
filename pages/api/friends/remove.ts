@@ -11,32 +11,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const userId = (session.user as any).id;
   if (!friendId) return res.status(400).json({ error: "friendId required" });
   try {
-    // Удалить связь дружбы в обе стороны
-    await prisma.friend.deleteMany({
-      where: {
-        OR: [
-          { userId, friendId },
-          { userId: friendId, friendId: userId }
-        ]
+    // Use a transaction to remove friend links (both directions), any friend requests
+    // between the users, and chats that contain both users.
+    await prisma.$transaction(async (tx) => {
+      // Remove friend records in both directions
+      await tx.friend.deleteMany({
+        where: {
+          OR: [
+            { userId, friendId },
+            { userId: friendId, friendId: userId }
+          ]
+        }
+      });
+
+      // Clean up any outstanding friend requests between these users
+      await tx.friendRequest.deleteMany({
+        where: {
+          OR: [
+            { fromId: userId, toId: friendId },
+            { fromId: friendId, toId: userId }
+          ]
+        }
+      });
+
+      // Find and delete chats that include both users
+      const chats = await tx.chat.findMany({
+        where: {
+          AND: [
+            { users: { some: { id: userId } } },
+            { users: { some: { id: friendId } } }
+          ]
+        },
+        select: { id: true }
+      });
+
+      if (chats && chats.length > 0) {
+        const chatIds = chats.map((c: { id: string }) => c.id);
+        // Delete chats; messages and related records should cascade
+        await tx.chat.deleteMany({ where: { id: { in: chatIds } } });
       }
     });
-
-    // Найти чаты, которые содержат обоих пользователей
-    const chats = await prisma.chat.findMany({
-      where: {
-        AND: [
-          { users: { some: { id: userId } } },
-          { users: { some: { id: friendId } } }
-        ]
-      },
-      select: { id: true }
-    });
-
-    if (chats && chats.length > 0) {
-      const chatIds = chats.map((c: { id: string }) => c.id);
-      // Удаляем чаты; сообщения и связанные записи должны удалиться по каскаду
-      await prisma.chat.deleteMany({ where: { id: { in: chatIds } } });
-    }
 
     return res.status(200).json({ success: true });
   } catch (e: any) {

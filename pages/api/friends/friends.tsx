@@ -67,15 +67,31 @@ export default function FriendsPage() {
   useEffect(() => {
     const u = getUser();
     setUser(u);
-    if (!u) {
-      window.location.href = "/auth/login";
-      return;
-    }
-    fetch(`/api/profile?userId=${u.id}`)
-      .then(r => r.json())
-      .then(data => {
-        setFriends(data.user.friends || []);
-        setRequests(data.user.friendRequests || []);
+    const profileUrl = u ? `/api/profile?userId=${u.id}` : `/api/profile`;
+    fetch(profileUrl, { credentials: 'include' })
+      .then(async (r) => {
+        if (r.status === 401) {
+          window.location.href = '/auth/login';
+          return;
+        }
+        const data = await r.json().catch(() => ({}));
+        const profile = data && data.user ? data.user : null;
+        if (!profile) {
+          console.warn('Profile fetch did not return user:', data);
+          if (!u) {
+            window.location.href = '/auth/login';
+            return;
+          }
+          setFriends([]);
+          setRequests([]);
+          return;
+        }
+        setFriends(profile.friends || []);
+        setRequests(profile.friendRequests || []);
+      }).catch(e => {
+        console.error('Failed to fetch profile:', e);
+        setFriends([]);
+        setRequests([]);
       });
   }, []);
 

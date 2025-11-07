@@ -370,18 +370,32 @@ export default function ProfilePage() {
 
   const handleRemoveFriend = async () => {
     if (!user || !removeFriendId) return;
-    await fetch("/api/friends/remove", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, friendId: removeFriendId })
-    });
-    // Обновить список друзей
-    fetch(`/api/profile?userId=${user.id}`)
-      .then(r => r.json())
-      .then(data => {
-        setFriends(data.user.friends || []);
+    try {
+      const resp = await fetch("/api/friends/remove", {
+        method: "POST",
+        credentials: 'include',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, friendId: removeFriendId })
       });
-    setRemoveFriendId(null);
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        alert(err.error || 'Не удалось удалить друга');
+        return;
+      }
+      // Обновить список друзей
+      const prof = await fetch(`/api/profile?userId=${user.id}`, { credentials: 'include' });
+      if (prof.ok) {
+        const data = await prof.json().catch(() => ({}));
+        setFriends(data.user.friends || []);
+      } else {
+        setFriends([]);
+      }
+    } catch (e) {
+      console.error('Failed to remove friend:', e);
+      alert('Ошибка сети при удалении друга');
+    } finally {
+      setRemoveFriendId(null);
+    }
   };
   // Проверка авторизации через NextAuth (после всех хуков)
   if (status === "loading" || !session || !session.user || !session.user.id || !user) {

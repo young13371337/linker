@@ -81,17 +81,25 @@ export default function FriendsPage() {
   useEffect(() => {
     const u = getUser();
     setUser(u);
-    if (!u) {
-      window.location.href = "/auth/login";
-      return;
-    }
-    fetch(`/api/profile?userId=${u.id}`)
-      .then(r => r.json().catch(() => ({})))
-      .then(data => {
+    // If we don't have a client-side user, still try to fetch the profile from the server
+    // The server will return 401 when the session/token is invalid — only then redirect.
+    const profileUrl = u ? `/api/profile?userId=${u.id}` : `/api/profile`;
+    fetch(profileUrl, { credentials: 'include' })
+      .then(async (r) => {
+        if (r.status === 401) {
+          // server says unauthorized — redirect to login
+          window.location.href = '/auth/login';
+          return;
+        }
+        const data = await r.json().catch(() => ({}));
         const profile = data && data.user ? data.user : null;
         if (!profile) {
-          // profile not returned (maybe unauthorized or server error) - don't crash
+          // If we don't have a profile and no local user, redirect; otherwise preserve empty lists
           console.warn('Profile fetch did not return user:', data);
+          if (!u) {
+            window.location.href = '/auth/login';
+            return;
+          }
           setFriends([]);
           setRequests([]);
           return;
