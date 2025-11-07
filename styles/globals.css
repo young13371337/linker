@@ -222,6 +222,8 @@ input, textarea { font-size: 16px; }
   height: 26px !important;
   display: block !important;
 }
+/* Ensure the play/pause icon inside .voice-play-btn is always white (user-selected accent shouldn't recolor the triangle) */
+.voice-play-btn svg { fill: #fff !important; }
 
 /* Specific tweak for send icon color/contrast when using /send.svg */
 .chat-btn-send img { filter: invert(1) brightness(1.2) !important; }
