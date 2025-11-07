@@ -56,12 +56,17 @@ function parseForm(req: NextApiRequest): Promise<{ fields: any; files: any }> {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Enable CORS for faster response
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  // Allow credentials so browser can send cookies when needed
+  // CORS: prefer echoing request origin when present so credentialed requests work.
+  const origin = (req.headers.origin as string) || '';
+  if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, DELETE');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, DELETE, OPTIONS');
+  // Handle preflight quickly
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
 
   // Handle preflight
   if (req.method === 'OPTIONS') {

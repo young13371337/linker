@@ -35,8 +35,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'GET') {
-    // Получить сообщения по chatId
-    const { chatId } = req.query;
+    // Получить сообщения по chatId (pagination supported)
+    const { chatId, limit: qLimit, before } = req.query;
     if (!chatId || typeof chatId !== 'string') return res.status(400).json({ error: 'chatId required' });
     try {
       // Ensure the requesting user is a participant of the chat
@@ -45,9 +45,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const isParticipant = (chat.users || []).some((u: any) => String(u.id) === String(user.id));
       if (!isParticipant) return res.status(403).json({ error: 'Forbidden' });
 
-      const messages = await prisma.message.findMany({ where: { chatId }, orderBy: { createdAt: 'asc' } });
-      // Расшифровываем текст сообщений. Если расшифровка упадёт для одного сообщения,
-      // логируем ошибку, но возвращаем остальные сообщения — не ломаем весь ответ.
+      const limit = Math.min(200, Number(qLimit) || 50); // cap for safety
+
+      // If `before` provided, use it as an exclusive cursor for createdAt timestamp
+      const where: any = { chatId };
+      if (before && typeof before === 'string') {
+        const beforeDate = new Date(before);
+        if (!isNaN(beforeDate.getTime())) {
+          where.createdAt = { lt: beforeDate };
+        }
+      }
+
+      // Fetch newest messages (desc) limited by `limit`, then reverse to return ascending order.
+      const msgs = await prisma.message.findMany({ where, orderBy: { createdAt: 'desc' }, take: limit });
+      const messages = msgs.reverse();
+
+      // Decrypt text per-message; keep others if one fails.
       const decryptedMessages = messages.map((msg: any) => {
         let text = '';
         if (msg.text) {
@@ -55,13 +68,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             text = decryptMessage(msg.text, chatId);
           } catch (dErr) {
             console.error('[MESSAGES GET] Failed to decrypt message', msg.id, dErr);
-            // preserve placeholder instead of throwing
             text = '[Ошибка расшифровки]';
           }
         }
         return { ...msg, text };
       });
-      return res.status(200).json({ messages: decryptedMessages });
+
+      // hasMore -> true when we returned 'limit' items (there may be more older messages)
+      const hasMore = msgs.length === limit;
+      return res.status(200).json({ messages: decryptedMessages, hasMore });
     } catch (err: any) {
       console.error('Failed to fetch messages for chatId', chatId, err);
       const payload: any = { error: 'Failed to fetch messages' };

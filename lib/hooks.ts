@@ -21,6 +21,6 @@ export const swrConfig: Partial<SWRConfiguration> = {
 
 export const profileKey = (userId: string) => `/api/profile?userId=${userId}`;
 export const chatsKey = `/api/chats`;
-export const messagesKey = (chatId: string) => `/api/messages?chatId=${chatId}`;
+export const messagesKey = (chatId: string, limit = 60) => `/api/messages?chatId=${chatId}&limit=${limit}`;
 
 export default {};

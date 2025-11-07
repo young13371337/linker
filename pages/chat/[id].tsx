@@ -426,7 +426,7 @@ const ChatWithFriend: React.FC = () => {
               console.warn('[CHAT BG] failed to read localStorage', e);
             }
           // Получить сообщения
-          fetch(`/api/messages?chatId=${data.chat.id}`, { credentials: 'include' })
+          fetch(`/api/messages?chatId=${data.chat.id}&limit=60`, { credentials: 'include' })
             .then(res => res.json())
             .then(data => {
               if (Array.isArray(data.messages)) {

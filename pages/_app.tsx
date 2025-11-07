@@ -238,7 +238,7 @@ function MainApp({ Component, pageProps }: AppProps) {
             if (data.content && typeof data.content === 'string' && data.content.trim()) {
               messageText = data.content;
             } else if (data.chatId) {
-              const resp = await fetch(`/api/messages?chatId=${encodeURIComponent(String(data.chatId))}`, { credentials: 'include' });
+              const resp = await fetch(`/api/messages?chatId=${encodeURIComponent(String(data.chatId))}&limit=60`, { credentials: 'include' });
               if (resp.ok) {
                 const json = await resp.json().catch(() => null);
                 const msgs = (json && json.messages) || [];
