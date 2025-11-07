@@ -200,6 +200,29 @@ input, textarea { font-size: 16px; }
   display: block !important;
 }
 
+/* Voice play/pause button: only icon (triangle / pause bars), no white circular background.
+   Use an explicit class so emergency/global rules can't hide it accidentally. */
+.voice-play-btn {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+}
+.voice-play-btn svg {
+  width: 26px !important;
+  height: 26px !important;
+  display: block !important;
+}
+
 /* Specific tweak for send icon color/contrast when using /send.svg */
 .chat-btn-send img { filter: invert(1) brightness(1.2) !important; }
 .circle-btn-anim {

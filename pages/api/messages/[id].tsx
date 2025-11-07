@@ -137,6 +137,17 @@ const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUr
   const [duration, setDuration] = useState(0);
   const [current, setCurrent] = useState(0);
 
+  const [messageColor, setMessageColor] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('chatMessageColor') : null;
+      if (stored) setMessageColor(stored);
+    } catch (e) {}
+    const onColor = (e: any) => { try { setMessageColor(e?.detail || null); } catch (err) {} };
+    window.addEventListener('chat-color-changed', onColor as EventListener);
+    return () => window.removeEventListener('chat-color-changed', onColor as EventListener);
+  }, []);
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -171,20 +182,19 @@ const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUr
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
+  const ownBg = messageColor ? `linear-gradient(90deg, ${messageColor} 60%, #1e2a3a 100%)` : 'linear-gradient(90deg,#229ed9 60%,#1e2a3a 100%)';
+
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12,
-      background: isOwn ? 'linear-gradient(90deg,#229ed9 60%,#1e2a3a 100%)' : 'linear-gradient(90deg,#222 60%,#23243a 100%)',
+      background: isOwn ? ownBg : 'linear-gradient(90deg,#222 60%,#23243a 100%)',
       borderRadius: 16, padding: '8px 18px', boxShadow: '0 2px 8px #2222', minWidth: 120, maxWidth: 320
     }}>
       {!playing ? (
         <button
           onClick={playAudio}
-          style={{
-            width: 36, height: 36, borderRadius: '50%', background: 'transparent',
-            border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'none', cursor: 'pointer', transition: 'opacity .12s', marginRight: 2,
-            color: '#229ed9'
-          }}
+          className="voice-play-btn"
+          style={{ marginRight: 8, color: '#229ed9' }}
           aria-label="Воспроизвести"
         >
           <svg width={26} height={26} viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="currentColor"/></svg>
@@ -192,11 +202,8 @@ const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUr
       ) : (
         <button
           onClick={pauseAudio}
-          style={{
-            width: 36, height: 36, borderRadius: '50%', background: 'transparent',
-            border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'none', cursor: 'pointer', transition: 'opacity .12s', marginRight: 2,
-            color: '#229ed9'
-          }}
+          className="voice-play-btn"
+          style={{ marginRight: 8, color: '#ffffff' }}
           aria-label="Пауза"
         >
           <svg width={26} height={26} viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" fill="currentColor"/><rect x="14" y="5" width="4" height="14" fill="currentColor"/></svg>

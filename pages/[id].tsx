@@ -170,50 +170,42 @@ const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUr
     const s = Math.floor(t % 60);
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
+  const [messageColor, setMessageColor] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('chatMessageColor') : null;
+      if (stored) setMessageColor(stored);
+    } catch (e) {}
+    const onColor = (e: any) => { try { setMessageColor(e?.detail || null); } catch (err) {} };
+    window.addEventListener('chat-color-changed', onColor as EventListener);
+    return () => window.removeEventListener('chat-color-changed', onColor as EventListener);
+  }, []);
+
+  const ownBg = messageColor ? `linear-gradient(90deg, ${messageColor} 60%, #1e2a3a 100%)` : 'linear-gradient(90deg,#229ed9 60%,#1e2a3a 100%)';
 
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12,
-      background: isOwn ? 'linear-gradient(90deg,#229ed9 60%,#1e2a3a 100%)' : 'linear-gradient(90deg,#222 60%,#23243a 100%)',
+      background: isOwn ? ownBg : 'linear-gradient(90deg,#222 60%,#23243a 100%)',
       borderRadius: 16, padding: '8px 18px', boxShadow: '0 2px 8px #2222', minWidth: 120, maxWidth: 320
     }}>
       {!playing ? (
         <button
           onClick={playAudio}
-          style={{
-            background: 'transparent',
-            boxShadow: 'none',
-            marginRight: 8,
-            color: '#229ed9',
-            border: 'none',
-            padding: 6,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer'
-          }}
+          className="voice-play-btn"
+          style={{ marginRight: 8, color: '#229ed9' }}
           aria-label="Воспроизвести"
         >
-          <svg width={26} height={26} viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="#fff"/></svg>
+          <svg width={26} height={26} viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="currentColor"/></svg>
         </button>
       ) : (
         <button
           onClick={pauseAudio}
-          style={{
-            background: 'transparent',
-            boxShadow: 'none',
-            marginRight: 8,
-            color: '#229ed9',
-            border: 'none',
-            padding: 6,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer'
-          }}
+          className="voice-play-btn"
+          style={{ marginRight: 8, color: '#ffffff' }}
           aria-label="Пауза"
         >
-          <svg width={26} height={26} viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" fill="#fff"/><rect x="14" y="5" width="4" height="14" fill="#fff"/></svg>
+          <svg width={26} height={26} viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" fill="currentColor"/><rect x="14" y="5" width="4" height="14" fill="currentColor"/></svg>
         </button>
       )}
       <audio ref={audioRef} src={audioUrl.startsWith('/') ? audioUrl : '/' + audioUrl} style={{ display: 'none' }} />
@@ -973,9 +965,20 @@ const ChatWithFriend: React.FC = () => {
   const nameStyle = isMobile
     ? { fontWeight: 600, fontSize: '18px', color: '#e3e8f0', display: 'flex', alignItems: 'center', gap: '6px' }
     : { fontWeight: 600, fontSize: '17px', color: '#e3e8f0', display: 'flex', alignItems: 'center', gap: '6px' };
+  const [messageColor, setMessageColor] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('chatMessageColor') : null;
+      if (saved) setMessageColor(saved);
+    } catch (e) {}
+    const onColor = (e: any) => { try { setMessageColor(e?.detail || null); } catch (err) {} };
+    window.addEventListener('chat-color-changed', onColor as EventListener);
+    return () => window.removeEventListener('chat-color-changed', onColor as EventListener);
+  }, []);
+  const ownBg = messageColor || '#229ed9';
   const messageStyle = isMobile
-  ? { background: '#229ed9', color: '#fff', padding: '10px 18px', borderRadius: '12px', display: 'inline-block', boxShadow: '0 2px 6px #2222', fontSize: '16px', maxWidth: '80vw', wordBreak: 'break-word' as const, position: 'relative' as 'relative' }
-  : { background: '#229ed9', color: '#fff', padding: '7px 14px', borderRadius: '9px', display: 'inline-block', boxShadow: '0 2px 6px #2222', fontSize: '14px', position: 'relative' as 'relative' };
+  ? { background: ownBg, color: '#fff', padding: '10px 18px', borderRadius: '12px', display: 'inline-block', boxShadow: '0 2px 6px #2222', fontSize: '16px', maxWidth: '80vw', wordBreak: 'break-word' as const, position: 'relative' as 'relative' }
+  : { background: ownBg, color: '#fff', padding: '7px 14px', borderRadius: '9px', display: 'inline-block', boxShadow: '0 2px 6px #2222', fontSize: '14px', position: 'relative' as 'relative' };
   const inputStyle = isMobile
     ? { flex: 1, padding: '14px 16px', borderRadius: '12px', border: 'none', background: '#18191c', color: '#fff', fontSize: '16px', boxShadow: '0 2px 6px #2222', outline: 'none', minWidth: '0' }
     : { flex: 1, padding: '9px 12px', borderRadius: '9px', border: 'none', background: '#18191c', color: '#fff', fontSize: '14px', boxShadow: '0 2px 6px #2222', outline: 'none' };
