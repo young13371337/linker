@@ -8,7 +8,6 @@ import { FaComments, FaUser, FaSignOutAlt, FaRegNewspaper, FaVideo } from "react
 import styles from "../styles/Sidebar.module.css"; // создадим CSS для hover и анимаций
 import Pusher from 'pusher-js';
 import ToastNotification from '../pages/chat/ToastNotification';
-import SettingsModal from './SettingsModal';
 
 export default function Sidebar() {
   const router = useRouter();
@@ -223,7 +222,6 @@ export default function Sidebar() {
   };
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -342,23 +340,7 @@ export default function Sidebar() {
         </div>
 
         <nav className={styles.nav}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {/* Custom chat link: icon, gear button (left of text when expanded), then text */}
-            <Link href="/chat" className={styles.link}>
-              <div className={styles.linkContent}>
-                <span className={styles.icon}><FaComments /></span>
-                {open ? (
-                  <>
-                    <button aria-label="Настройки чата" title="Настройки" onClick={(e) => { e.stopPropagation(); setSettingsOpen(true); }} style={{ background: 'transparent', border: 'none', color: '#ccc', cursor: 'pointer', padding: 6, marginLeft: 6, marginRight: 6 }} onMouseDown={(e) => e.preventDefault()}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7zm8.2-3.5c0-.4 0-.8-.1-1.2l2-1.6-2-3.4-2.4.7c-.5-.4-1-.7-1.6-1l-1-2.5h-4l-1 2.5c-.6.3-1.1.6-1.6 1L2 6.9 0 10.3l2 1.6c-.1.4-.1.8-.1 1.2s0 .8.1 1.2L0 15.9 2 19.3l2.4-.7c.5.4 1 .7 1.6 1l1 2.5h4l1-2.5c.6-.3 1.1-.6 1.6-1l2.4.7 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z" fill="currentColor"/></svg>
-                    </button>
-                    <span className={styles.text}>Чат</span>
-                  </>
-                ) : null}
-              </div>
-            </Link>
-          </div>
-          {settingsOpen && <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />}
+          <SidebarLink href="/chat" icon={<FaComments />} text="Чат" open={open} isMobile={isMobile} />
           <SidebarLink
             href="/friends"
             icon={
