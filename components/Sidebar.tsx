@@ -454,9 +454,11 @@ export default function Sidebar() {
 }
 
 function SidebarLink({ href, icon, text, open, onClick, isMobile }: any) {
+  const router = useRouter();
+  const active = router.pathname.startsWith(href);
   return (
     <Link href={href} className={styles.link} onClick={onClick}>
-      <div className={styles.linkContent}>
+      <div className={`${styles.linkContent} ${active ? styles.active : ''}`}>
         <span className={styles.icon}>{icon}</span>
         {open ? <span className={styles.text}>{text}</span> : null}
       </div>
