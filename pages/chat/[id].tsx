@@ -158,6 +158,18 @@ const ChatWithFriend: React.FC = () => {
     }
   }, [videoTime]);
 
+  // selected chat message color (sync with SettingsModal via localStorage + event)
+  const [messageColor, setMessageColor] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('chatMessageColor') : null;
+      if (stored) setMessageColor(stored);
+    } catch (e) {}
+    const onColor = (e: any) => { try { setMessageColor(e?.detail || null); } catch (err) {} };
+    window.addEventListener('chat-color-changed', onColor as EventListener);
+    return () => window.removeEventListener('chat-color-changed', onColor as EventListener);
+  }, []);
+
   // --- Добавить недостающие переменные и хуки ---
   const [userId, setUserId] = useState<string | null>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
@@ -166,17 +178,7 @@ const ChatWithFriend: React.FC = () => {
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordInterval = useRef<NodeJS.Timeout | null>(null);
-
-  const [messageColor, setMessageColor] = useState<string | null>(null);
-  useEffect(() => {
-    try {
-      const saved = typeof window !== 'undefined' ? localStorage.getItem('chatMessageColor') : null;
-      if (saved) setMessageColor(saved);
-    } catch (e) {}
-    const onColor = (e: any) => { try { setMessageColor(e?.detail || null); } catch (err) {} };
-    window.addEventListener('chat-color-changed', onColor as EventListener);
-    return () => window.removeEventListener('chat-color-changed', onColor as EventListener);
-  }, []);
+  
 
   // Typing event throttling: send only once per typing session.
   const typingSentRef = useRef(false);
@@ -1174,13 +1176,13 @@ const ChatWithFriend: React.FC = () => {
                             ) : msg.audioUrl ? (
                               <VoiceMessage audioUrl={msg.audioUrl} isOwn={isOwn} />
                             ) : (
-                              <span
+                                <span
                                 data-msg-id={msg.id}
                                 style={isOwn
                                   ? {
                                       ...messageStyle,
                                       display: 'inline-block',
-                                      background: '#229ed9',
+                                      background: messageColor || 'var(--chat-accent, #229ed9)',
                                       color: '#fff',
                                       borderRadius: '16px',
                                       minWidth: 48,

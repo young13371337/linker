@@ -1279,7 +1279,7 @@ const ChatWithFriend: React.FC = () => {
                                   ? {
                                       ...messageStyle,
                                       display: 'inline-block',
-                                      background: '#229ed9',
+                                      background: 'var(--chat-accent, #229ed9)',
                                       color: '#fff',
                                       borderRadius: '16px',
                                       minWidth: 48,

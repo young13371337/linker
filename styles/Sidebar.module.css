@@ -95,6 +95,14 @@
 }
 .linkContent.active .icon { color: #fff; }
 
+/* allow applying active via module class name */
+.active {
+  background: linear-gradient(120deg, var(--chat-accent, #229ed9) 40%, rgba(180,216,255,0.12));
+  box-shadow: 0 2px 8px var(--chat-accent-shadow, #229ed933);
+  color: #fff;
+}
+.active .icon { color: #fff; }
+
 .linkContent span {
   text-decoration: none !important;
   pointer-events: none;
