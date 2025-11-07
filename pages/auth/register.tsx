@@ -57,7 +57,7 @@ export default function RegisterPage() {
           value={login}
           onChange={e => setLogin(e.target.value)}
           required
-          style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid #333", background: "#222", color: "#fff", fontSize: 16, outline: "none" }}
+          className="auth-input--alt"
         />
         <input
           type="text"
@@ -65,7 +65,7 @@ export default function RegisterPage() {
           value={link}
           onChange={e => setLink(e.target.value)}
           required
-          style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid #333", background: "#222", color: "#fff", fontSize: 16, outline: "none" }}
+          className="auth-input--alt"
         />
         <input
           type="password"
@@ -73,9 +73,9 @@ export default function RegisterPage() {
           value={password}
           onChange={e => setPassword(e.target.value)}
           required
-          style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid #333", background: "#222", color: "#fff", fontSize: 16, outline: "none" }}
+          className="auth-input--alt"
         />
-        <button type="submit" style={{ width: "100%", padding: "12px 0", borderRadius: 8, border: "none", background: "#4fc3f7", color: "#111", fontWeight: 600, fontSize: 18, cursor: "pointer", transition: "background .2s" }}>Зарегистрироваться</button>
+        <button type="submit" className="auth-btn">Зарегистрироваться</button>
         {toast && (
           <ToastNotification
             type={toast.type}

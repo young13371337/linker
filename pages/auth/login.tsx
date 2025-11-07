@@ -159,15 +159,7 @@ export default function LoginPage() {
             onChange={e => setLogin(e.target.value)}
             onBlur={handleLoginBlur}
             required
-            style={{
-              padding: "12px 16px",
-              borderRadius: 8,
-              border: "1px solid #333",
-              background: "#222",
-              color: "#fff",
-              fontSize: 16,
-              outline: "none"
-            }}
+            className="auth-input"
           />
 
           <input
@@ -176,15 +168,7 @@ export default function LoginPage() {
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
-            style={{
-              padding: "12px 16px",
-              borderRadius: 8,
-              border: "1px solid #333",
-              background: "#222",
-              color: "#fff",
-              fontSize: 16,
-              outline: "none"
-            }}
+            className="auth-input"
           />
 
           {show2FA && (
@@ -210,22 +194,7 @@ export default function LoginPage() {
             </>
           )}
 
-          <button type="submit"
-            style={{
-              width: "100%",
-              padding: "12px 0",
-              borderRadius: 8,
-              border: "none",
-              background: "#4fc3f7",
-              color: "#111",
-              fontWeight: 600,
-              fontSize: 18,
-              cursor: "pointer",
-              transition: "background .2s"
-            }}
-          >
-            Войти
-          </button>
+          <button type="submit" className="auth-btn">Войти</button>
 
           {toast && (
             <ToastNotification

@@ -329,7 +329,7 @@ function MainApp({ Component, pageProps }: AppProps) {
   }, [session]);
 
   return (
-    <>
+    <div className={router.pathname !== '/' ? 'use-poppins' : ''}>
       <Head>
         <title>Linker Social</title>
         {/* Mobile meta tags for responsive layout and theme color */}
@@ -338,7 +338,7 @@ function MainApp({ Component, pageProps }: AppProps) {
         {/* reCAPTCHA script moved to registration page to avoid loading globally */}
       </Head>
       {showSidebar && <Sidebar />}
-      {/* (removed) previously-blocking ban overlay — UI not blocked here anymore */}
+      {/* Apply app pages; the surrounding div toggles the Poppins font except on the index route ('/'). */}
       <Component {...pageProps} />
       {bottomToast && (
         <ToastNotification
@@ -356,7 +356,7 @@ function MainApp({ Component, pageProps }: AppProps) {
         <source src="/sound/notification.mp3" />
         Your browser does not support the audio element.
       </audio>
-    </>
+    </div>
   );
 }
 
