@@ -180,12 +180,17 @@ const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUr
       {!playing ? (
         <button
           onClick={playAudio}
-          className="chat-btn-circle small"
           style={{
             background: 'transparent',
             boxShadow: 'none',
-            marginRight: 2,
-            color: '#229ed9'
+            marginRight: 8,
+            color: '#229ed9',
+            border: 'none',
+            padding: 6,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer'
           }}
           aria-label="Воспроизвести"
         >
@@ -194,12 +199,17 @@ const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUr
       ) : (
         <button
           onClick={pauseAudio}
-          className="chat-btn-circle small"
           style={{
             background: 'transparent',
             boxShadow: 'none',
-            marginRight: 2,
-            color: '#229ed9'
+            marginRight: 8,
+            color: '#229ed9',
+            border: 'none',
+            padding: 6,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer'
           }}
           aria-label="Пауза"
         >
@@ -340,6 +350,8 @@ const ChatWithFriend: React.FC = () => {
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordInterval = useRef<NodeJS.Timeout | null>(null);
+  // for debouncing typing events
+  const typingTimeoutRef = useRef<number | null>(null);
 
   // cancelRecording функция-заглушка (реализуй по необходимости)
   const cancelRecording = () => {
@@ -401,6 +413,16 @@ const ChatWithFriend: React.FC = () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chatId })
     });
+  };
+
+  // Debounced caller used from input onChange to avoid spamming the server
+  const scheduleTypingEvent = () => {
+    try {
+      if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current as any);
+    } catch {}
+    typingTimeoutRef.current = window.setTimeout(() => {
+      sendTypingEvent();
+    }, 450);
   };
 
   // При открытии превью — запросить камеру и начать live preview
@@ -512,6 +534,24 @@ const ChatWithFriend: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showVideoPreview]);
+  // Load cached messages from localStorage immediately for faster perceived load
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('chat-messages');
+      if (raw) {
+        const cached = JSON.parse(raw);
+        if (Array.isArray(cached) && cached.length > 0) {
+          setMessages(cached);
+          // quick scroll to cached bottom
+          requestAnimationFrame(() => {
+            if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+          });
+        }
+      }
+    } catch (e) {
+      // ignore parse errors
+    }
+  }, []);
   // Отправить видео (реализовать позже)
   const sendVideo = () => {
     // TODO: реализовать отправку видео
@@ -792,11 +832,14 @@ const ChatWithFriend: React.FC = () => {
 
   // Функция для автопрокрутки вниз
   const scrollToBottom = (smooth = true) => {
-    if (chatScrollRef.current) {
-      chatScrollRef.current.scrollTo({
-        top: chatScrollRef.current.scrollHeight,
-        behavior: smooth ? 'smooth' : 'auto'
+    if (!chatScrollRef.current) return;
+    // Use rAF for smoother immediate scroll, fallback to .scrollTo
+    try {
+      requestAnimationFrame(() => {
+        chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
       });
+    } catch (e) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
   };
 
@@ -1469,7 +1512,7 @@ const ChatWithFriend: React.FC = () => {
                 value={newMessage}
                 onChange={(e) => {
                   setNewMessage(e.target.value);
-                  sendTypingEvent();
+                  scheduleTypingEvent();
                 }}
                 placeholder="Сообщение..."
                 style={inputStyle}
