@@ -1,4 +1,4 @@
-/* Кастомный полупрозрачный скроллбар для чата */
+
 .chat-messages-scroll {
   overflow-y: auto !important;
   scrollbar-width: thin;
@@ -236,11 +236,5 @@ input, textarea { font-size: 16px; }
   scrollbar-width: thin;
   scrollbar-color: rgba(180,180,180,0.25) transparent;
 }
-.chat-btn-circle {
-  display: none !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-}
-.chat-btn-circle * {
-  display: none !important;
-}
+/* NOTE: chat-btn-circle must remain visible for message controls (play/pause/send).
+   Emergency global hide removed to avoid hiding actionable buttons in chats. */
