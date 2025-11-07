@@ -628,14 +628,17 @@ const ChatWithFriend: React.FC = () => {
           if (tempIndex !== -1) {
             const copy = prev.slice();
             const existing = copy[tempIndex];
-            copy[tempIndex] = {
+            // Preserve existing text if server message arrives without plaintext (encrypted payload).
+            // Mark as pending decryption so that later the real text will overwrite it.
+            copy[tempIndex] = ({
               ...existing,
               id: newMsg.id,
-              text: newMsg.text,
+              text: newMsg.text ?? existing.text,
               createdAt: newMsg.createdAt,
               audioUrl: newMsg.audioUrl,
               videoUrl: newMsg.videoUrl,
-            };
+              _encryptedPending: !Boolean(newMsg.text),
+            } as any);
             return copy;
           }
 
