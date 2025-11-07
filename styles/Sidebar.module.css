@@ -87,6 +87,14 @@
   background: rgba(255,255,255,0.13);
 }
 
+/* Active state for the selected nav item (uses CSS variable --chat-accent if set) */
+.linkContent.active {
+  background: linear-gradient(120deg, var(--chat-accent, #229ed9) 40%, rgba(180,216,255,0.12));
+  box-shadow: 0 2px 8px var(--chat-accent-shadow, #229ed933);
+  color: #fff;
+}
+.linkContent.active .icon { color: #fff; }
+
 .linkContent span {
   text-decoration: none !important;
   pointer-events: none;

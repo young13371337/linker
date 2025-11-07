@@ -324,14 +324,14 @@ const ChatPage: React.FC = () => {
           <div style={{width:44}} />
           <div style={{display:'flex', alignItems:'center', gap:8}}>
             <button
-              aria-label="Настройки чатов"
-              title="Настройки"
+              aria-label="Тема чатов"
+              title="Тема"
               onClick={() => setShowSettingsModal(true)}
               style={{ background: 'transparent', border: 'none', padding: 6, margin: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
             >
+              {/* non-gear icon (small star/spark) to indicate theme/color */}
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z" fill="#e3e8f0"/>
-                <path d="M19.4 13.5c.04-.5.06-1 .06-1.5s-.02-1-.06-1.5l2.1-1.6a.5.5 0 0 0 .12-.64l-2-3.4a.5.5 0 0 0-.6-.22l-2.5 1a8.3 8.3 0 0 0-1.3-.76l-.4-2.6A.5.5 0 0 0 13.7 2h-3.4a.5.5 0 0 0-.5.42l-.4 2.6c-.45.2-.88.47-1.28.76l-2.5-1a.5.5 0 0 0-.6.22l-2 3.4a.5.5 0 0 0 .12.64L4.6 10c-.04.5-.06 1-.06 1.5s.02 1 .06 1.5L2.5 14.6a.5.5 0 0 0-.12.64l2 3.4c.14.24.43.33.67.22l2.5-1c.4.29.83.56 1.28.76l.4 2.6c.05.27.28.42.5.42h3.4c.28 0 .5-.19.5-.42l.4-2.6c.45-.2.88-.47 1.28-.76l2.5 1c.24.1.53 0 .67-.22l2-3.4a.5.5 0 0 0-.12-.64l-2.1-1.1z" fill="#9aa0a6"/>
+                <path d="M12 2l1.9 4.2L18.5 7l-3.3 2.6L15.6 14 12 11.8 8.4 14l.4-4.4L5.5 7l4.6-.8L12 2z" fill="#e3e8f0"/>
               </svg>
             </button>
             <h2 style={{color: '#e3e8f0', fontWeight: 700, fontSize: 28, textAlign: 'center', margin: 0}}>Чаты</h2>

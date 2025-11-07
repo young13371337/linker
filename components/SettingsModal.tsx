@@ -25,6 +25,28 @@ export default function SettingsModal({ open, onClose }: Props) {
     } catch (e) {}
   };
 
+  // keep a CSS variable on :root in sync so components/CSS can use var(--chat-accent)
+  useEffect(() => {
+    try {
+      const initial = typeof window !== 'undefined' ? localStorage.getItem('chatMessageColor') : null;
+      if (initial) {
+        document.documentElement.style.setProperty('--chat-accent', initial);
+        // light shadow tint
+        document.documentElement.style.setProperty('--chat-accent-shadow', initial + '33');
+      }
+    } catch (e) {}
+  }, []);
+
+  // update CSS var whenever color changes locally
+  useEffect(() => {
+    try {
+      if (color) {
+        document.documentElement.style.setProperty('--chat-accent', color);
+        document.documentElement.style.setProperty('--chat-accent-shadow', color + '33');
+      }
+    } catch (e) {}
+  }, [color]);
+
   if (!open) return null;
 
   return (
