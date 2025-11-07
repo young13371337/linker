@@ -48,6 +48,19 @@ const VideoCircle: React.FC<{ src: string; poster?: string }> = ({ src, poster }
   const CIRCUM = 2 * Math.PI * RADIUS;
   const offset = CIRCUM * (1 - progress);
 
+  // color from settings
+  const [messageColor, setMessageColor] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('chatMessageColor') : null;
+      if (saved) setMessageColor(saved);
+    } catch (e) {}
+    const onColor = (e: any) => { try { setMessageColor(e?.detail || null); } catch (err) {} };
+    window.addEventListener('chat-color-changed', onColor as EventListener);
+    return () => window.removeEventListener('chat-color-changed', onColor as EventListener);
+  }, []);
+  const highlightColor = messageColor || '#229ed9';
+
   return (
     <div style={{ position: 'relative', width: CIRCLE_SIZE, height: CIRCLE_SIZE, transition: 'width .18s, height .18s', display: 'inline-block' }}>
       {/* Show a small poster image first for instant display; only mount video when user interacts */}
@@ -58,12 +71,12 @@ const VideoCircle: React.FC<{ src: string; poster?: string }> = ({ src, poster }
             alt="video poster"
             // Clicking the poster mounts the video node but does NOT autoplay — the user must press the play button.
             onClick={() => { setMounted(true); }}
-            style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#111', objectFit: 'cover', border: '2.5px solid #229ed9', boxShadow: '0 2px 12px #229ed955', marginBottom: 2, cursor: 'pointer', transition: 'box-shadow .18s, border .18s' }}
+            style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#111', objectFit: 'cover', border: '2.5px solid ' + highlightColor, boxShadow: '0 2px 12px #229ed955', marginBottom: 2, cursor: 'pointer', transition: 'box-shadow .18s, border .18s' }}
           />
         ) : (
           <div
             onClick={() => setMounted(true)}
-            style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'linear-gradient(135deg,#111,#222)', border: '2.5px solid #229ed9', boxShadow: '0 2px 12px #229ed955', marginBottom: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'linear-gradient(135deg,#111,#222)', border: '2.5px solid ' + highlightColor, boxShadow: '0 2px 12px #229ed955', marginBottom: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           />
         ))
       ) : (
@@ -73,7 +86,7 @@ const VideoCircle: React.FC<{ src: string; poster?: string }> = ({ src, poster }
           preload="metadata"
           poster={poster}
           // remove native controls; use custom play/pause and progress ring
-          style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#111', objectFit: 'cover', border: '2.5px solid #229ed9', boxShadow: '0 2px 12px #229ed955', marginBottom: 2, cursor: 'pointer', transition: 'box-shadow .18s, border .18s' }}
+          style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#111', objectFit: 'cover', border: '2.5px solid ' + highlightColor, boxShadow: '0 2px 12px #229ed955', marginBottom: 2, cursor: 'pointer', transition: 'box-shadow .18s, border .18s' }}
           onClick={() => {
             if (!videoRef.current) return;
             if (videoRef.current.paused) {
@@ -110,7 +123,7 @@ const VideoCircle: React.FC<{ src: string; poster?: string }> = ({ src, poster }
           style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', zIndex: 2 }}
         >
           <circle cx={CIRCLE_SIZE / 2} cy={CIRCLE_SIZE / 2} r={RADIUS} stroke="#ffffff22" strokeWidth={STROKE} fill="none" opacity={playing ? 0.18 : 0.06} />
-          <circle cx={CIRCLE_SIZE / 2} cy={CIRCLE_SIZE / 2} r={RADIUS} stroke="#229ed9" strokeWidth={STROKE} fill="none" strokeDasharray={CIRCUM} strokeDashoffset={offset} strokeLinecap="round" style={{ transition: playing ? 'stroke-dashoffset 0.15s linear' : 'none' }} />
+          <circle cx={CIRCLE_SIZE / 2} cy={CIRCLE_SIZE / 2} r={RADIUS} stroke={highlightColor} strokeWidth={STROKE} fill="none" strokeDasharray={CIRCUM} strokeDashoffset={offset} strokeLinecap="round" style={{ transition: playing ? 'stroke-dashoffset 0.15s linear' : 'none' }} />
         </svg>
       )}
 
@@ -182,6 +195,7 @@ const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUr
   }, []);
 
   const ownBg = messageColor ? `linear-gradient(90deg, ${messageColor} 60%, #1e2a3a 100%)` : 'linear-gradient(90deg,#229ed9 60%,#1e2a3a 100%)';
+  const highlightColor = messageColor || '#229ed9';
 
   return (
     <div style={{
@@ -193,7 +207,7 @@ const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUr
         <button
           onClick={playAudio}
           className="voice-play-btn"
-          style={{ marginRight: 8, color: '#229ed9' }}
+          style={{ marginRight: 8, color: highlightColor }}
           aria-label="Воспроизвести"
         >
           <svg width={26} height={26} viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="currentColor"/></svg>
@@ -209,8 +223,8 @@ const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUr
         </button>
       )}
       <audio ref={audioRef} src={audioUrl.startsWith('/') ? audioUrl : '/' + audioUrl} style={{ display: 'none' }} />
-      <div style={{ flex: 1 }}>
-        <div style={{ height: 4, background: '#229ed9', borderRadius: 2, position: 'relative', marginBottom: 4 }}>
+        <div style={{ flex: 1 }}>
+        <div style={{ height: 4, background: highlightColor, borderRadius: 2, position: 'relative', marginBottom: 4 }}>
           <div style={{ position: 'absolute', left: 0, top: 0, height: 4, borderRadius: 2, background: '#fff', width: duration ? `${(current/duration)*100}%` : '0%' }} />
         </div>
         <div style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>{formatTime(current)} / {formatTime(duration)}</div>
@@ -975,7 +989,7 @@ const ChatWithFriend: React.FC = () => {
     window.addEventListener('chat-color-changed', onColor as EventListener);
     return () => window.removeEventListener('chat-color-changed', onColor as EventListener);
   }, []);
-  const ownBg = messageColor || '#229ed9';
+  const ownBg = messageColor ? `linear-gradient(90deg, ${messageColor} 60%, #1e2a3a 100%)` : 'linear-gradient(90deg,#229ed9 60%,#1e2a3a 100%)';
   const messageStyle = isMobile
   ? { background: ownBg, color: '#fff', padding: '10px 18px', borderRadius: '12px', display: 'inline-block', boxShadow: '0 2px 6px #2222', fontSize: '16px', maxWidth: '80vw', wordBreak: 'break-word' as const, position: 'relative' as 'relative' }
   : { background: ownBg, color: '#fff', padding: '7px 14px', borderRadius: '9px', display: 'inline-block', boxShadow: '0 2px 6px #2222', fontSize: '14px', position: 'relative' as 'relative' };
@@ -1403,7 +1417,7 @@ const ChatWithFriend: React.FC = () => {
                   muted
                   playsInline
                   className="circle-anim"
-                  style={{ width: 220, height: 220, borderRadius: '50%', background: '#111', objectFit: 'cover', border: '4px solid #229ed9', boxShadow: '0 4px 32px #000a' }}
+                  style={{ width: 220, height: 220, borderRadius: '50%', background: '#111', objectFit: 'cover', border: '4px solid ' + (messageColor || '#229ed9'), boxShadow: '0 4px 32px #000a' }}
                 />
                 <div style={{ color: '#fff', fontWeight: 600, fontSize: 18, textAlign: 'center', marginTop: 18, marginBottom: 10 }}>
                   {videoRecording ? ` ${videoTime}s` : 'Готово'}
