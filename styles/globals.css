@@ -114,8 +114,8 @@ html, body {
 /* Add a root helper class that switches the site to Stack Sans Text.
    We apply the font via a <link> in the document head and toggle this class in `_app.tsx`.
    The font is loaded only for pages where Stack Sans Text is required (see `_app.tsx`). */
-.use-stack-sans-text {
-  font-family: 'Stack Sans Text', 'Segoe UI', Arial, sans-serif !important;
+.use-outfit {
+  font-family: 'Outfit', 'Segoe UI', Arial, sans-serif !important;
   -webkit-font-smoothing: antialiased !important;
   -moz-osx-font-smoothing: grayscale !important;
 }
