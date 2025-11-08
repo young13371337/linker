@@ -24,15 +24,15 @@ function MainApp({ Component, pageProps }: AppProps) {
   const hideSidebarRoutes = ["/auth/login", "/auth/register", "/"];
   const showSidebar = !hideSidebarRoutes.includes(router.pathname);
 
-    // Outfit should be applied only on specific pages. We'll whitelist routes.
-    const outfitRoutes = new Set([
+    // Elms Sans should be applied only on specific pages. We'll whitelist routes.
+    const elmsRoutes = new Set([
       '/friends',
       '/profile',
       '/chat',
       '/chat/[id]',
       '/profile/[id]'
     ]);
-    const useOutfit = outfitRoutes.has(router.pathname);
+    const useElms = elmsRoutes.has(router.pathname);
 
   useEffect(() => {
     if (!session?.user?.id) return;
@@ -339,18 +339,18 @@ function MainApp({ Component, pageProps }: AppProps) {
   }, [session]);
 
   return (
-    <div className={useOutfit ? 'use-outfit' : ''}>
+    <div className={useElms ? 'use-elms-sans' : ''}>
       <Head>
         <title>Linker Social</title>
         {/* Mobile meta tags for responsive layout and theme color */}
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#0f1214" />
-          {/* Load Outfit early (preconnect + stylesheet) on the whitelisted pages */}
-          {useOutfit && (
+          {/* Load Elms Sans early (preconnect + stylesheet) on the whitelisted pages */}
+          {useElms && (
             <>
               <link rel="preconnect" href="https://fonts.googleapis.com" />
               <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-              <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+              <link href="https://fonts.googleapis.com/css2?family=Elms+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
             </>
           )}
         {/* reCAPTCHA script moved to registration page to avoid loading globally */}
