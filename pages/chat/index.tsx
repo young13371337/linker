@@ -377,8 +377,8 @@ const ChatPage: React.FC = () => {
             .last-preview-text { max-width: 140px; font-size: 12px; }
           }
         `}</style>
-        {/* Плавное уведомление справа снизу с индикатором времени */}
-        <SettingsModal open={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
+  {/* Плавное уведомление справа снизу с индикатором времени */}
+  <SettingsModal variant="chat-list" open={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
 
         {toast && (
           <ToastNotification
