@@ -114,27 +114,11 @@ html, body {
 /* Add a root helper class that switches the site to Urbanist.
    We apply the font via a <link> in the document head and toggle this class in `_app.tsx`.
    The font is loaded only for pages where Urbanist is required (see `_app.tsx`). */
-.use-product-sans {
-  /* Product Sans is a proprietary Google font and is not available via Google Fonts.
-     To use it, self-host the font files in `public/fonts/` and uncomment the @font-face block below.
-     Until you self-host, the browser will fall back to system fonts listed here. */
-  font-family: 'Product Sans', 'Segoe UI', Arial, sans-serif !important;
+.use-urbanist {
+  font-family: 'Urbanist', 'Segoe UI', Arial, sans-serif !important;
   -webkit-font-smoothing: antialiased !important;
   -moz-osx-font-smoothing: grayscale !important;
 }
-
-/* Self-hosted Product Sans @font-face (using files in public/fonts/) */
-@font-face {
-  font-family: 'Product Sans';
-  /* single file provided: productsans.ttf */
-  src: url('/fonts/productsans.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* If you later add separate weights (e.g. Medium/Bold) place them in public/fonts and
-   add corresponding @font-face entries with font-weight: 500/700. */
 
 /* Auth input style example 1 — used on the login page */
 .auth-input {
