@@ -25,14 +25,14 @@ function MainApp({ Component, pageProps }: AppProps) {
   const showSidebar = !hideSidebarRoutes.includes(router.pathname);
 
     // Urbanist should be applied only on specific pages. We'll whitelist routes.
-    const urbanistRoutes = new Set([
+    const productSansRoutes = new Set([
       '/friends',
       '/profile',
       '/chat',
       '/chat/[id]',
       '/profile/[id]'
     ]);
-    const useUrbanist = urbanistRoutes.has(router.pathname);
+    const useProductSans = productSansRoutes.has(router.pathname);
 
   useEffect(() => {
     if (!session?.user?.id) return;
@@ -339,20 +339,15 @@ function MainApp({ Component, pageProps }: AppProps) {
   }, [session]);
 
   return (
-    <div className={useUrbanist ? 'use-urbanist' : ''}>
+    <div className={useProductSans ? 'use-product-sans' : ''}>
       <Head>
         <title>Linker Social</title>
         {/* Mobile meta tags for responsive layout and theme color */}
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#0f1214" />
-          {/* Load Urbanist early (preconnect + stylesheet) on the whitelisted pages */}
-          {useUrbanist && (
-            <>
-              <link rel="preconnect" href="https://fonts.googleapis.com" />
-              <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-              <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-            </>
-          )}
+          {/* Product Sans is proprietary and not hosted on Google Fonts.
+             To use it, self-host font files and uncomment @font-face in `styles/globals.css`.
+             We intentionally do not load external font links here. */}
         {/* reCAPTCHA script moved to registration page to avoid loading globally */}
       </Head>
       {showSidebar && <Sidebar />}
