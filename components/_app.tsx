@@ -46,7 +46,7 @@ function ToastContainer() {
       toast.style.padding = "14px 28px";
       toast.style.borderRadius = "14px";
       toast.style.fontSize = "16px";
-      toast.style.fontFamily = "Segoe UI, Verdana, Arial, sans-serif";
+  toast.style.fontFamily = "Roboto, Verdana, Arial, sans-serif";
       toast.style.boxShadow = "0 4px 24px #0006";
       toast.style.transition = "opacity .3s";
       toast.style.opacity = "0";

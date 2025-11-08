@@ -82,7 +82,7 @@ export default function UserProfile() {
         borderRadius: 18,
         boxShadow: "0 2px 24px #0006",
         color: "#fff",
-        fontFamily: "Segoe UI, Verdana, Arial, sans-serif",
+        fontFamily: "Roboto, Verdana, Arial, sans-serif",
         background: user.backgroundUrl
           ? `linear-gradient(rgba(30,32,42,0.65),rgba(30,32,42,0.82)), url(${user.backgroundUrl}) center/cover no-repeat`
           : "#23242a"
@@ -105,7 +105,7 @@ export default function UserProfile() {
   <div style={{ flex: 1 }}>
           <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: 1, display: "flex", flexDirection: "column", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, position: 'relative' }}>
-              <span style={{ fontFamily: 'Segoe UI, Roboto, sans-serif' }}>{user.link ? `@${user.link}` : user.login}</span>
+              <span style={{ fontFamily: 'Roboto, sans-serif' }}>{user.link ? `@${user.link}` : user.login}</span>
               {user.role === "admin" && (
               <span
                 style={{ position: 'relative', display: 'inline-block' }}

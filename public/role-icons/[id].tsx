@@ -28,8 +28,8 @@ export default function UserProfile() {
         padding: 32,
         borderRadius: 18,
         boxShadow: "0 2px 24px #0006",
-        color: "#fff",
-        fontFamily: "Segoe UI, Verdana, Arial, sans-serif",
+  color: "#fff",
+  fontFamily: "Roboto, Verdana, Arial, sans-serif",
         background: user.backgroundUrl
           ? `linear-gradient(rgba(30,32,42,0.65),rgba(30,32,42,0.82)), url(${user.backgroundUrl}) center/cover no-repeat`
           : "#23242a"
