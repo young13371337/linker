@@ -353,6 +353,12 @@ function MainApp({ Component, pageProps }: AppProps) {
               <link href="https://fonts.googleapis.com/css2?family=Elms+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
             </>
           )}
+            {/* Load JetBrains Mono font so it's available for code blocks / monospace sections. */}
+            <>
+              <link rel="preconnect" href="https://fonts.googleapis.com" />
+              <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+              <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@200;300;400;500;600;700&display=swap" rel="stylesheet" />
+            </>
         {/* reCAPTCHA script moved to registration page to avoid loading globally */}
       </Head>
       {showSidebar && <Sidebar />}
