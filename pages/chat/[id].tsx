@@ -1402,13 +1402,28 @@ const ChatWithFriend: React.FC = () => {
           {/* typing indicator removed from messages area — moved to header */}
         </div>
         {replyTo && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.03)' }}>
-            <div style={{ flex: 1, fontSize: 13, color: '#dfe7f6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              <div style={{ fontSize: 12, color: '#9fb6d6' }}>Ответ на сообщение</div>
-              <div style={{ fontSize: 14, color: '#fff', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{replyTo.text || (replyTo.videoUrl ? '[видео]' : replyTo.audioUrl ? '[голос]' : '[медиа]')}</div>
-            </div>
-            <div>
-              <button type="button" onClick={() => setReplyTo(null)} title="Отменить ответ" style={{ background: 'transparent', border: 'none', color: '#bbb', fontSize: 18, cursor: 'pointer' }}>×</button>
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'stretch', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: 10, overflow: 'hidden' }}>
+              <div style={{ width: 4, background: 'linear-gradient(180deg,#229ed9,#6dbdf5)' }} />
+              <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontSize: 12, color: '#9fb6d6', fontWeight: 700 }}>
+                    {(() => {
+                      try {
+                        const meId = (session?.user as any)?.id;
+                        if (replyTo.sender === meId) return 'Вы';
+                        return (friend?.name || friend?.login || 'Пользователь');
+                      } catch (e) { return 'Пользователь'; }
+                    })()}
+                  </div>
+                  <div>
+                    <button type="button" onClick={() => setReplyTo(null)} title="Отменить ответ" style={{ background: 'transparent', border: 'none', color: '#bbb', fontSize: 18, cursor: 'pointer' }}>×</button>
+                  </div>
+                </div>
+                <div style={{ fontSize: 14, color: '#e6eef8', lineHeight: '1.2', maxHeight: 44, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {replyTo.text || (replyTo.videoUrl ? '[видео]' : replyTo.audioUrl ? '[голос]' : '[медиа]')}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -1561,7 +1576,7 @@ const ChatWithFriend: React.FC = () => {
                 setNewMessage(v);
                 maybeStartTyping(v);
               }}
-              placeholder="Сообщение..."
+              placeholder={replyTo ? `Ответ ${replyTo.sender === (session?.user as any)?.id ? 'вам' : (friend?.name || friend?.login || '...')}` : 'Сообщение...'}
               style={inputStyle}
             />
             {/* Кнопка видеокружка рядом с микрофоном */}
