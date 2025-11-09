@@ -1035,7 +1035,7 @@ const ChatWithFriend: React.FC = () => {
           minHeight: '100vh',
           background: '#111',
           color: '#e3e8f0',
-          fontFamily: 'Segoe UI,Arial,sans-serif',
+          fontFamily: 'inherit',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

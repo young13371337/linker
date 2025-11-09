@@ -318,7 +318,7 @@ const ChatPage: React.FC = () => {
   // Group info modal via click was removed: clicking a chat (group or 1:1) navigates into the chat directly
 
   return (
-    <div style={{minHeight: '100vh', width: '100vw', background: '#111', fontFamily: 'Segoe UI, Arial, sans-serif', margin: 0, padding: 0, position: 'relative'}}>
+  <div style={{minHeight: '100vh', width: '100vw', background: '#111', fontFamily: 'inherit', margin: 0, padding: 0, position: 'relative'}}>
       <div style={{maxWidth: 500, margin: '0 auto', paddingTop: 60}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10, position: 'relative'}}>
           <div style={{width:44}}>

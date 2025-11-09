@@ -91,17 +91,18 @@
   scrollbar-color: rgba(180,180,180,0.25) transparent !important;
 }
 
+/* Global: use a plain, common font across the app */
 body {
   margin: 0;
-  font-family: 'Segoe UI', Arial, sans-serif;
+  /* самый обычный шрифт: Arial / Helvetica / sans-serif */
+  font-family: Arial, Helvetica, sans-serif;
   background: #111;
   color: #fff;
 }
 html, body {
   padding: 0;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
-    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   background: #111;
   min-height: 100%;
   /* Allow natural scrolling on mobile devices */
@@ -109,80 +110,22 @@ html, body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* ===== Stack Sans Text font and auth input styles ===== */
-
-/* Add a root helper class that switches the site to Stack Sans Text.
-   We apply the font via a <link> in the document head and toggle this class in `_app.tsx`.
-   The font is loaded only for pages where Stack Sans Text is required (see `_app.tsx`). */
-.use-outfit {
-  font-family: 'Outfit', 'Segoe UI', Arial, sans-serif !important;
-  -webkit-font-smoothing: antialiased !important;
-  -moz-osx-font-smoothing: grayscale !important;
+/* Respect user's motion preference */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
-/* Helper class to switch the site to Elms Sans (Google Font).
-   Applied via a wrapper class on the root element from `_app.tsx`. */
-.use-elms-sans {
-  font-family: 'Elms Sans', 'Segoe UI', Arial, sans-serif !important;
-  -webkit-font-smoothing: antialiased !important;
-  -moz-osx-font-smoothing: grayscale !important;
+/* Soft global fade-in for first-rendered elements inside the Next.js root (#__next). */
+@keyframes globalFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
 }
-
-/* Helper class to switch the site (or parts of it) to JetBrains Mono - a readable monospace font
-   Usage: add the `use-jetbrains-mono` class on a wrapper element (e.g., code blocks or a page) */
-.use-jetbrains-mono {
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Segoe UI Mono', monospace !important;
-  -webkit-font-smoothing: antialiased !important;
-  -moz-osx-font-smoothing: grayscale !important;
+#__next > * {
+  animation: globalFadeIn 160ms ease both;
 }
-/* Auth input style example 1 — used on the login page */
-.auth-input {
-  padding: 12px 16px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.03);
-  color: #fff;
-  font-size: 16px;
-  outline: none;
-  transition: box-shadow .12s, border-color .12s, background .12s;
-}
-.auth-input:focus {
-  border-color: rgba(255,255,255,0.18);
-  box-shadow: 0 6px 18px rgba(80,160,240,0.06);
-  background: rgba(255,255,255,0.04);
-}
-
-/* Auth input style example 2 — alternative style used on the register page */
-.auth-input--alt {
-  padding: 14px 18px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.06);
-  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  color: #fff;
-  font-size: 16px;
-  outline: none;
-  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.4);
-}
-.auth-input--alt:focus {
-  border-color: rgba(79,195,247,0.9);
-  box-shadow: 0 8px 30px rgba(79,195,247,0.06);
-}
-
-.auth-btn {
-  width: 100%;
-  padding: 12px 0;
-  border-radius: 10px;
-  border: none;
-  background: linear-gradient(90deg,#2ca7ff,#4fc3f7);
-  color: #071017;
-  font-weight: 600;
-  font-size: 18px;
-  cursor: pointer;
-  transition: transform .08s ease, box-shadow .12s ease, opacity .12s ease;
-}
-.auth-btn:active { transform: translateY(1px) scale(.998); }
-.auth-btn:focus { box-shadow: 0 8px 24px rgba(79,195,247,0.12); }
-
 
 a {
   color: #4fc3f7;
@@ -275,38 +218,6 @@ input, textarea { font-size: 16px; }
   display: block !important;
 }
 
-/* Voice play/pause button: only icon (triangle / pause bars), no white circular background.
-   Use an explicit class so emergency/global rules can't hide it accidentally. */
-.voice-play-btn {
-  background: transparent !important;
-  border: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: auto !important;
-  height: auto !important;
-  min-width: 30px !important;
-  min-height: 30px !important;
-  cursor: pointer !important;
-  box-shadow: none !important;
-}
-.voice-play-btn svg {
-  width: 26px !important;
-  height: 26px !important;
-  display: block !important;
-}
-/* Ensure the play/pause icon inside .voice-play-btn is always white (user-selected accent shouldn't recolor the triangle) */
-.voice-play-btn svg { fill: #fff !important; }
-/* Ensure all elements inside voice-play-btn render white regardless of inline styles
-   This forces both the SVG fill and the currentColor used by shapes to be white. */
-.voice-play-btn, .voice-play-btn svg, .voice-play-btn * {
-  color: #fff !important;
-  fill: #fff !important;
-  stroke: #fff !important;
-}
-
 /* Specific tweak for send icon color/contrast when using /send.svg */
 .chat-btn-send img { filter: invert(1) brightness(1.2) !important; }
 .circle-btn-anim {
@@ -343,5 +254,11 @@ input, textarea { font-size: 16px; }
   scrollbar-width: thin;
   scrollbar-color: rgba(180,180,180,0.25) transparent;
 }
-/* NOTE: chat-btn-circle must remain visible for message controls (play/pause/send).
-   Emergency global hide removed to avoid hiding actionable buttons in chats. */
+.chat-btn-circle {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+.chat-btn-circle * {
+  display: none !important;
+}

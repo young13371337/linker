@@ -60,7 +60,7 @@ export default function FriendsPage() {
   };
 
   return (
-    <div style={{ maxWidth: 700, margin: "40px auto", padding: 32, background: "#23242a", borderRadius: 24, boxShadow: "0 6px 32px #0008", color: "#fff", fontFamily: "Segoe UI, Verdana, Arial, sans-serif" }}>
+    <div style={{ maxWidth: 700, margin: "40px auto", padding: 32, background: "#23242a", borderRadius: 24, boxShadow: "0 6px 32px #0008", color: "#fff", fontFamily: 'inherit' }}>
       <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 32, textAlign: "center", letterSpacing: 1, color: "#fff", textShadow: "none" }}>Друзья и заявки</h2>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 32, alignItems: "flex-start", justifyContent: "space-between" }}>
         {/* Поиск друзей */}
