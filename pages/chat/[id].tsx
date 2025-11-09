@@ -178,6 +178,11 @@ const ChatWithFriend: React.FC = () => {
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordInterval = useRef<NodeJS.Timeout | null>(null);
+  // Reply / swipe-to-reply state (mobile)
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const touchElRef = useRef<HTMLElement | null>(null);
   
 
   // Typing event throttling: send only once per typing session.
@@ -753,6 +758,7 @@ const ChatWithFriend: React.FC = () => {
       sender: (session.user as any)?.id,
       text: messageText,
       createdAt: new Date().toISOString(),
+      replyToId: replyTo?.id || undefined,
     };
     
     setMessages(prev => [...prev, tempMessage]);
@@ -773,7 +779,7 @@ const ChatWithFriend: React.FC = () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ chatId, text: messageText })
+      body: JSON.stringify({ chatId, text: messageText, replyToId: replyTo?.id || null })
     })
       .then(async res => {
         const txt = await res.text();
@@ -829,7 +835,10 @@ const ChatWithFriend: React.FC = () => {
       })
       .catch(err => {
         console.error('[SEND] Network or parse error sending message', err);
-  setMessages((prev: any[]) => prev.map((msg: any) => msg.id === tempId ? { ...msg, _failed: true } : msg));
+        setMessages((prev: any[]) => prev.map((msg: any) => msg.id === tempId ? { ...msg, _failed: true } : msg));
+      })
+      .finally(() => {
+        try { setReplyTo(null); } catch (e) {}
       });
   };
 
@@ -1122,11 +1131,41 @@ const ChatWithFriend: React.FC = () => {
                         onMouseLeave={() => setHoveredMsgId(null)}
                       >
                         {/* Оборачиваем контент сообщения в контейнер с поддержкой клика (ПК) и долгого нажатия (моб)
-                            Меню действий появляется для собственных сообщений (Copy / Delete). */}
+                            Меню действий появляется для собственных сообщений (Copy / Delete).
+                            На ПК: при ховере по чужому сообщению показываем кнопку «Ответить». */}
                         <div
                           data-action-container={msg.id}
                           style={{ position: 'relative', display: 'inline-flex' }}
                         >
+                          {/* Desktop: reply button shown on hover for other users' messages */}
+                          {!isMobile && !isOwn && hoveredMsgId === msg.id && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setReplyTo(msg); try { if (navigator.vibrate) navigator.vibrate(10); } catch (e) {} }}
+                              title="Ответить"
+                              aria-label="Ответить"
+                              style={{
+                                position: 'absolute',
+                                right: 6,
+                                top: 6,
+                                background: 'rgba(255,255,255,0.03)',
+                                border: 'none',
+                                color: '#9fbfe6',
+                                cursor: 'pointer',
+                                width: 34,
+                                height: 28,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: 6,
+                                zIndex: 120,
+                                padding: 4,
+                              }}
+                            >
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ display: 'block' }}>
+                                <path d="M10 19l-7-7 7-7v4h8v6h-8v4z" fill="currentColor" />
+                              </svg>
+                            </button>
+                          )}
                           <div
                             onClick={(e) => {
                               // ПК: открываем/закрываем меню по двойному клику (double-tap)
@@ -1147,20 +1186,77 @@ const ChatWithFriend: React.FC = () => {
                                 }, DOUBLE_TAP_MS + 50);
                               }
                             }}
-                            onTouchEnd={(e) => {
-                              // Моб: открываем меню по двойному тапу (2 клика)
+                            onTouchStart={(e) => {
+                              // prepare swipe detection on mobile
                               if (!isMobile) return;
-                              try { e.stopPropagation(); } catch {}
+                              if (isOwn) return; // only allow replying to others' messages
+                              try {
+                                touchStartXRef.current = e.touches[0].clientX;
+                                touchStartYRef.current = e.touches[0].clientY;
+                                touchElRef.current = e.currentTarget as HTMLElement;
+                              } catch (err) {}
+                            }}
+                            onTouchMove={(e) => {
+                              if (!isMobile) return;
+                              if (!touchStartXRef.current || !touchElRef.current) return;
+                              try {
+                                const dx = e.touches[0].clientX - (touchStartXRef.current || 0);
+                                const dy = e.touches[0].clientY - (touchStartYRef.current || 0);
+                                // if mostly vertical movement — cancel swipe (allow scroll)
+                                if (Math.abs(dy) > Math.abs(dx) * 1.2) {
+                                  touchStartXRef.current = null;
+                                  touchStartYRef.current = null;
+                                  touchElRef.current.style.transform = '';
+                                  touchElRef.current.style.opacity = '';
+                                  touchElRef.current = null;
+                                  return;
+                                }
+                                const clamped = Math.max(Math.min(dx, 40), -120);
+                                touchElRef.current.style.transform = `translateX(${clamped}px)`;
+                                touchElRef.current.style.opacity = `${1 - Math.min(Math.abs(clamped) / 220, 0.35)}`;
+                              } catch (err) {}
+                            }}
+                            onTouchEnd={(e) => {
+                              // handle left-swipe -> reply, or fallback to double-tap for menu
+                              if (!isMobile) return;
+                              try { e.stopPropagation(); } catch (err) {}
+                              const startX = touchStartXRef.current || 0;
+                              const endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : startX;
+                              const dx = endX - startX;
+                              const el = touchElRef.current;
+                              if (el) {
+                                el.style.transition = 'transform 180ms ease, opacity 180ms ease';
+                                el.style.transform = '';
+                                el.style.opacity = '';
+                                setTimeout(() => { try { el.style.transition = ''; } catch (e) {} }, 250);
+                              }
+                              // threshold for left-swipe
+                              if (dx < -80) {
+                                if (!isOwn) {
+                                  setReplyTo(msg);
+                                  try { if (navigator.vibrate) navigator.vibrate(10); } catch (e) {}
+                                }
+                                touchStartXRef.current = null;
+                                touchStartYRef.current = null;
+                                touchElRef.current = null;
+                                return;
+                              }
+                              // fallback: double-tap behavior
                               const now = Date.now();
                               const last = lastTapRef.current;
                               const DOUBLE_TAP_MS = 350;
                               if (last && (now - last) <= DOUBLE_TAP_MS) {
-                                // double tap — toggle menu
                                 setOpenActionMsgId(prev => prev === msg.id ? null : msg.id);
                                 lastTapRef.current = null;
                               } else {
                                 lastTapRef.current = now;
+                                setTimeout(() => {
+                                  if (lastTapRef.current === now) lastTapRef.current = null;
+                                }, DOUBLE_TAP_MS + 50);
                               }
+                              touchStartXRef.current = null;
+                              touchStartYRef.current = null;
+                              touchElRef.current = null;
                             }}
                             style={{ display: 'inline-block' }}
                           >
@@ -1261,6 +1357,41 @@ const ChatWithFriend: React.FC = () => {
                                 </button>
                               </div>
                             )}
+                            {/* For other users: show a small action menu on hover with Reply icon */}
+                            {!isOwn && hoveredMsgId === msg.id && (
+                              <div
+                                className="action-menu"
+                                onClick={(e) => { e.stopPropagation(); }}
+                                role="menu"
+                                style={{
+                                  position: 'absolute',
+                                  top: isMobile ? -46 : -44,
+                                  left: isMobile ? 6 : 8,
+                                  background: '#0f1113',
+                                  border: '1px solid rgba(255,255,255,0.06)',
+                                  padding: isMobile ? '6px 8px' : '8px 10px',
+                                  borderRadius: isMobile ? 10 : 12,
+                                  display: 'flex',
+                                  gap: isMobile ? 8 : 12,
+                                  alignItems: 'center',
+                                  boxShadow: '0 10px 30px rgba(0,0,0,0.65)',
+                                  zIndex: 110,
+                                  minWidth: isMobile ? 120 : 120,
+                                }}
+                                data-action-container={msg.id}
+                              >
+                                <button
+                                  onClick={(e) => { try { e.stopPropagation(); } catch {} setReplyTo(msg); }}
+                                  title="Ответить"
+                                  aria-label="Ответить"
+                                  style={{ background: 'transparent', border: 'none', padding: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#e6eef8', borderRadius: 8, transition: 'background .12s' }}
+                                >
+                                  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" style={{ display: 'block', color: 'inherit' }}>
+                                    <path d="M10 19l-7-7 7-7v4h8v6h-8v4z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -1272,6 +1403,17 @@ const ChatWithFriend: React.FC = () => {
             })()
           )}
           {/* typing indicator removed from messages area — moved to header */}
+          {replyTo && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', marginBottom: 8, borderRadius: 10, background: '#0f1113', border: '1px solid rgba(255,255,255,0.04)' }}>
+              <div style={{ flex: 1, overflow: 'hidden' }}>
+                <div style={{ fontSize: 12, color: '#9aa0a6', marginBottom: 4 }}>Ответ на сообщение</div>
+                <div style={{ fontSize: 14, color: '#e3e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{replyTo.text || '[медиа]'}</div>
+              </div>
+              <div>
+                <button onClick={() => setReplyTo(null)} aria-label="Отменить ответ" title="Отменить ответ" style={{ background: 'transparent', border: 'none', color: '#bbb', fontSize: 20, lineHeight: '1', cursor: 'pointer' }}>×</button>
+              </div>
+            </div>
+          )}
         </div>
         <form
           onSubmit={handleSendMessage}
@@ -1421,6 +1563,11 @@ const ChatWithFriend: React.FC = () => {
                 setNewMessage(v);
                 maybeStartTyping(v);
               }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    try { setReplyTo(null); } catch (err) {}
+                  }
+                }}
               placeholder="Сообщение..."
               style={inputStyle}
             />

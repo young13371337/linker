@@ -20,6 +20,14 @@ function MainApp({ Component, pageProps }: AppProps) {
   const { data: session } = useSession();
   const [bottomToast, setBottomToast] = useState<null | { type: 'error' | 'success'; message: string; duration?: number; actions?: any[] }>(null);
 
+  // Add a class to body on client-side mount to trigger the initial CSS fade-in defined in globals.css
+  useEffect(() => {
+    try {
+      document.body.classList.add('app-loaded');
+    } catch (e) {}
+    return () => { try { document.body.classList.remove('app-loaded'); } catch (e) {} };
+  }, []);
+
   // Главная страница доступна всем, редирект убран
   const hideSidebarRoutes = ["/auth/login", "/auth/register", "/"];
   const showSidebar = !hideSidebarRoutes.includes(router.pathname);
