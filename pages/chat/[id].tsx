@@ -178,79 +178,6 @@ const ChatWithFriend: React.FC = () => {
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordInterval = useRef<NodeJS.Timeout | null>(null);
-  // Reply / swipe-to-reply state and touch refs
-  const [replyTo, setReplyTo] = useState<Message | null>(null);
-  const [openReplyMsgId, setOpenReplyMsgId] = useState<string | null>(null);
-  const touchStartXRef = useRef<number | null>(null);
-  const touchStartYRef = useRef<number | null>(null);
-  const lastTouchXRef = useRef<number | null>(null);
-  const lastTouchYRef = useRef<number | null>(null);
-  const touchActiveMsgRef = useRef<string | null>(null);
-
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>, msg: Message) => {
-    const isMobileNow = typeof window !== 'undefined' ? window.innerWidth <= 600 : false;
-    if (!isMobileNow) return;
-    const t = e.touches[0];
-    touchStartXRef.current = t.clientX;
-    touchStartYRef.current = t.clientY;
-    lastTouchXRef.current = t.clientX;
-    lastTouchYRef.current = t.clientY;
-    touchActiveMsgRef.current = msg.id;
-    const el = e.currentTarget as HTMLElement | null;
-    if (el) el.style.transition = '';
-  };
-
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>, msg: Message) => {
-    const isMobileNow = typeof window !== 'undefined' ? window.innerWidth <= 600 : false;
-    if (!isMobileNow) return;
-    const t = e.touches[0];
-    if (touchStartXRef.current == null || touchStartYRef.current == null) return;
-    const dx = t.clientX - touchStartXRef.current;
-    const dy = t.clientY - touchStartYRef.current;
-    lastTouchXRef.current = t.clientX;
-    lastTouchYRef.current = t.clientY;
-    // If user is scrolling vertically, ignore horizontal swipe behavior
-    if (Math.abs(dy) > Math.abs(dx)) return;
-    const el = e.currentTarget as HTMLElement | null;
-    if (!el) return;
-    // show finger-following translation only for left swipe (reply gesture)
-    if (dx < 0) {
-      el.style.transform = `translateX(${dx}px)`;
-      el.style.opacity = '0.98';
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>, msg: Message) => {
-    const isMobileNow = typeof window !== 'undefined' ? window.innerWidth <= 600 : false;
-    if (!isMobileNow) return;
-    const endX = lastTouchXRef.current ?? touchStartXRef.current;
-    if (endX == null || touchStartXRef.current == null) return;
-    const dx = endX - touchStartXRef.current;
-    const el = e.currentTarget as HTMLElement | null;
-    const THRESHOLD = -60; // px to consider as swipe-left
-    if (dx <= THRESHOLD && msg.sender !== (session?.user as any)?.id) {
-      // trigger reply for messages from the other user
-      setReplyTo(msg);
-      if (el) {
-        try {
-          el.style.transition = 'transform 220ms cubic-bezier(.2,.8,.2,1), opacity 200ms';
-          el.style.transform = 'translateX(-12px)';
-          setTimeout(() => { if (el) el.style.transform = ''; }, 260);
-        } catch (err) {}
-      }
-    } else {
-      if (el) {
-        el.style.transition = 'transform 200ms cubic-bezier(.2,.8,.2,1), opacity 160ms';
-        el.style.transform = '';
-        el.style.opacity = '';
-      }
-    }
-    touchStartXRef.current = null;
-    touchStartYRef.current = null;
-    lastTouchXRef.current = null;
-    lastTouchYRef.current = null;
-    touchActiveMsgRef.current = null;
-  };
   
 
   // Typing event throttling: send only once per typing session.
@@ -324,20 +251,16 @@ const ChatWithFriend: React.FC = () => {
   // Закрываем меню действий при клике вне
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
+      if (!openActionMsgId) return;
       const target = e.target as HTMLElement | null;
       if (!target) return;
-      // Если нет ни одного открытого меню — ничего не делаем
-      if (!openActionMsgId && !openReplyMsgId) return;
-      // если клик внутри контейнера действия — не закрываем соответствующее меню
-      if (openActionMsgId && target.closest(`[data-action-container="${openActionMsgId}"]`)) return;
-      if (openReplyMsgId && target.closest(`[data-reply-container="${openReplyMsgId}"]`)) return;
-      // иначе закрываем оба
+      // если клик внутри контейнера действия — не закрываем
+      if (target.closest(`[data-action-container="${openActionMsgId}"]`)) return;
       setOpenActionMsgId(null);
-      setOpenReplyMsgId(null);
     };
     document.addEventListener('click', onDocClick);
     return () => document.removeEventListener('click', onDocClick);
-  }, [openActionMsgId, openReplyMsgId]);
+  }, [openActionMsgId]);
 
   const TypingIndicator = ({ name }: { name?: string }) => (
     <div style={{
@@ -819,10 +742,9 @@ const ChatWithFriend: React.FC = () => {
     e.preventDefault();
     if (!newMessage.trim() || !chatId || !session) return;
     
-  // Создаем временный ID для сообщения
-  const tempId = 'temp-' + Date.now();
-  const messageText = newMessage.trim();
-  const replyToId = replyTo?.id || null;
+    // Создаем временный ID для сообщения
+    const tempId = 'temp-' + Date.now();
+    const messageText = newMessage.trim();
     
     // Немедленно добавляем сообщение в UI
     const tempMessage = {
@@ -830,13 +752,10 @@ const ChatWithFriend: React.FC = () => {
       _key: tempId,
       sender: (session.user as any)?.id,
       text: messageText,
-      replyToId: replyTo?.id || undefined,
       createdAt: new Date().toISOString(),
     };
     
-  setMessages(prev => [...prev, tempMessage]);
-  // Clear reply preview after user sent the message (optimistic)
-  setReplyTo(null);
+    setMessages(prev => [...prev, tempMessage]);
     setNewMessage(''); // Очищаем поле ввода сразу
     
     // Устанавливаем анимацию для нового сообщения
@@ -854,7 +773,7 @@ const ChatWithFriend: React.FC = () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ chatId, text: messageText, replyTo: replyToId })
+      body: JSON.stringify({ chatId, text: messageText })
     })
       .then(async res => {
         const txt = await res.text();
@@ -1054,7 +973,7 @@ const ChatWithFriend: React.FC = () => {
           minHeight: '100vh',
           background: '#111',
           color: '#e3e8f0',
-          fontFamily: 'inherit',
+          fontFamily: 'Segoe UI,Arial,sans-serif',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -1189,7 +1108,6 @@ const ChatWithFriend: React.FC = () => {
                       <div
                         key={msg._key || msg.id}
                         ref={getMsgRef}
-                        data-msg-id={msg.id}
                         className={animatedMsgIds.has(msg.id) ? 'chat-msg-appear' : ''}
                         style={{
                           marginBottom: 0,
@@ -1202,9 +1120,6 @@ const ChatWithFriend: React.FC = () => {
                         }}
                         onMouseEnter={() => setHoveredMsgId(msg.id)}
                         onMouseLeave={() => setHoveredMsgId(null)}
-                        onTouchStart={(e) => handleTouchStart(e, msg)}
-                        onTouchMove={(e) => handleTouchMove(e, msg)}
-                        onTouchEnd={(e) => handleTouchEnd(e, msg)}
                       >
                         {/* Оборачиваем контент сообщения в контейнер с поддержкой клика (ПК) и долгого нажатия (моб)
                             Меню действий появляется для собственных сообщений (Copy / Delete). */}
@@ -1215,28 +1130,21 @@ const ChatWithFriend: React.FC = () => {
                           <div
                             onClick={(e) => {
                               // ПК: открываем/закрываем меню по двойному клику (double-tap)
-                              // Также: одиночный клик по чужому сообщению откроет меню "Ответить".
                               try { e.stopPropagation(); } catch {}
                               if (isMobile) return;
                               const now = Date.now();
                               const last = lastTapRef.current;
                               const DOUBLE_TAP_MS = 350;
                               if (last && (now - last) <= DOUBLE_TAP_MS) {
-                                // double click detected — toggle existing action menu (for own messages)
+                                // double click detected — toggle menu
                                 setOpenActionMsgId(prev => prev === msg.id ? null : msg.id);
                                 lastTapRef.current = null;
                               } else {
-                                // record first click, wait for potential second; if no second arrives, treat as single click
+                                // record first click, wait for second
                                 lastTapRef.current = now;
                                 setTimeout(() => {
-                                  if (lastTapRef.current === now) {
-                                    // single click — toggle reply menu for non-own messages
-                                    lastTapRef.current = null;
-                                    try {
-                                      if (!isOwn) setOpenReplyMsgId(prev => prev === msg.id ? null : msg.id);
-                                    } catch (err) {}
-                                  }
-                                }, DOUBLE_TAP_MS + 30);
+                                  if (lastTapRef.current === now) lastTapRef.current = null;
+                                }, DOUBLE_TAP_MS + 50);
                               }
                             }}
                             onTouchEnd={(e) => {
@@ -1353,42 +1261,6 @@ const ChatWithFriend: React.FC = () => {
                                 </button>
                               </div>
                             )}
-                            {/* Reply menu for non-own messages (desktop single-click) */}
-                            {!isOwn && openReplyMsgId === msg.id && (
-                              <div
-                                className="action-menu"
-                                onClick={(e) => { e.stopPropagation(); }}
-                                role="menu"
-                                style={{
-                                  position: 'absolute',
-                                  top: isMobile ? -46 : -44,
-                                  left: isMobile ? 6 : 8,
-                                  background: '#0f1113',
-                                  border: '1px solid rgba(255,255,255,0.06)',
-                                  padding: isMobile ? '6px 8px' : '8px 10px',
-                                  borderRadius: isMobile ? 10 : 12,
-                                  display: 'flex',
-                                  gap: isMobile ? 8 : 12,
-                                  alignItems: 'center',
-                                  boxShadow: '0 10px 30px rgba(0,0,0,0.65)',
-                                  zIndex: 110,
-                                  transformOrigin: 'left top',
-                                  minWidth: isMobile ? 120 : 140,
-                                }}
-                                data-reply-container={msg.id}
-                              >
-                                <button
-                                  onClick={(e) => { try { e.stopPropagation(); } catch {} setReplyTo(msg); setOpenReplyMsgId(null); }}
-                                  title="Ответить"
-                                  aria-label="Ответить"
-                                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
-                                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                                  style={{ background: 'transparent', border: 'none', padding: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#a9d4f6', borderRadius: 8, transition: 'background .12s' }}
-                                >
-                                  Ответить
-                                </button>
-                              </div>
-                            )}
                           </div>
                         </div>
 
@@ -1401,35 +1273,6 @@ const ChatWithFriend: React.FC = () => {
           )}
           {/* typing indicator removed from messages area — moved to header */}
         </div>
-        {replyTo && (
-          <div className="reply-preview">
-            <div className="rp-container">
-              <div className="rp-bar" />
-              <div className="rp-content">
-                <div className="rp-meta">
-                  <div className="rp-name">
-                    {(() => {
-                      try {
-                        const meId = (session?.user as any)?.id;
-                        if (replyTo.sender === meId) return 'Вы';
-                        // If the reply target is from friend, show friend's display name; otherwise show short label
-                        if (replyTo.sender === friend?.id) return (friend?.name || friend?.login || 'Пользователь');
-                        return 'Пользователь';
-                      } catch (e) { return 'Пользователь'; }
-                    })()}
-                  </div>
-                  <div>
-                    <button type="button" onClick={() => setReplyTo(null)} title="Отменить ответ" style={{ background: 'transparent', border: 'none', color: '#bbb', fontSize: 16, cursor: 'pointer' }}>×</button>
-                  </div>
-                </div>
-                <div className="rp-text">
-                  {replyTo.text || (replyTo.videoUrl ? '[видео]' : replyTo.audioUrl ? '[голос]' : '[медиа]')}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         <form
           onSubmit={handleSendMessage}
           style={{
@@ -1578,7 +1421,7 @@ const ChatWithFriend: React.FC = () => {
                 setNewMessage(v);
                 maybeStartTyping(v);
               }}
-              placeholder={replyTo ? `Ответ ${replyTo.sender === (session?.user as any)?.id ? 'вам' : (friend?.name || friend?.login || '...')}` : 'Сообщение...'}
+              placeholder="Сообщение..."
               style={inputStyle}
             />
             {/* Кнопка видеокружка рядом с микрофоном */}
