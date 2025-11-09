@@ -21,6 +21,13 @@ export default function Sidebar() {
     setMounted(true);
   }, []);
 
+  // Ensure sidebar is visible by default on desktop when component mounts
+  useEffect(() => {
+    if (!mounted) return;
+    // show sidebar by default on non-mobile widths
+    if (!isMobile) setOpen(true);
+  }, [mounted, isMobile]);
+
   // helper: fetch latest profile from server and merge into local state/storage
   const fetchAndMergeProfile = async (localUser: any) => {
     if (!localUser || !localUser.id) return null;

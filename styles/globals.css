@@ -127,6 +127,35 @@ html, body {
   animation: globalFadeIn 160ms ease both;
 }
 
+/* Reply preview styling (Telegram-like, compact) */
+.reply-preview { margin-bottom: 8px; }
+.reply-preview .rp-container {
+  display: flex;
+  align-items: stretch;
+  background: rgba(255,255,255,0.015);
+  border: 1px solid rgba(255,255,255,0.03);
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: inherit;
+}
+.reply-preview .rp-bar {
+  width: 3px;
+  background: linear-gradient(180deg,#229ed9,#6dbdf5);
+}
+.reply-preview .rp-content {
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+.reply-preview .rp-meta { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.reply-preview .rp-name { font-size: 12px; color: #9fb6d6; font-weight: 600; }
+.reply-preview .rp-text { font-size: 13px; color: #dfe7f6; line-height:1.2; max-height: 40px; overflow: hidden; text-overflow: ellipsis; }
+
+/* Slightly reduce contrast on the input placeholder when replying */
+input[placeholder^="Ответ"]::placeholder { color: rgba(255,255,255,0.45); }
+
 a {
   color: #4fc3f7;
   text-decoration: none;
