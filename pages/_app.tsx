@@ -18,6 +18,22 @@ const Sidebar = dynamic(() => import("../components/Sidebar"), { ssr: false });
 function MainApp({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const { data: session } = useSession();
+  // Add a small client-side hydration marker so global CSS can fade the entire
+  // app in smoothly. Respect the user's reduced-motion preference.
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined' || typeof document === 'undefined') return;
+      const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReduced) {
+        // keep animations off for users who prefer reduced motion
+        document.documentElement.classList.add('reduced-motion');
+      } else {
+        document.documentElement.classList.add('app-hydrated');
+      }
+    } catch (e) {
+      // ignore in SSR or restricted environments
+    }
+  }, []);
   const [bottomToast, setBottomToast] = useState<null | { type: 'error' | 'success'; message: string; duration?: number; actions?: any[] }>(null);
 
   // Главная страница доступна всем, редирект убран

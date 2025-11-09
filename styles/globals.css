@@ -117,6 +117,37 @@ html, body {
   }
 }
 
+/* Global app-level hydration fade: keep the Next.js root hidden until client mount
+   so the entire page fades in smoothly instead of popping. We add the class
+   `app-hydrated` on client mount (see pages/_app.tsx). Users who opt out can
+   add `.no-anim` to elements to skip animations. */
+/* Initial hidden state */
+#__next {
+  opacity: 0;
+  transition: opacity 220ms cubic-bezier(.2,.8,.2,1);
+  will-change: opacity;
+}
+/* When client has mounted, the html gets `app-hydrated` and #__next fades in */
+html.app-hydrated #__next {
+  opacity: 1;
+}
+
+/* Subtle element-level fade/translate for freshly rendered elements. This
+   animates elements on first paint/insert. Add `.no-anim` to opt-out. */
+@keyframes elementFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+/* Apply to most elements but allow an opt-out class. Avoid animating root
+   structural tags too aggressively by excluding html, head, meta, script, style. */
+*:not(html):not(head):not(meta):not(script):not(style):not(.no-anim) {
+  animation: elementFadeIn 160ms ease both;
+  will-change: opacity, transform;
+}
+
+/* Provide an easy opt-out helper for components that must not animate */
+.no-anim { animation: none !important; transition: none !important; }
+
 /* Soft global fade-in for first-rendered elements inside the Next.js root (#__next). */
 @keyframes globalFadeIn {
   from { opacity: 0; transform: translateY(6px); }
