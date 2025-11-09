@@ -91,18 +91,17 @@
   scrollbar-color: rgba(180,180,180,0.25) transparent !important;
 }
 
-/* Global: use a plain, common font across the app */
+/* Default font stack: prefer Roboto (used throughout the UI), fall back to system fonts */
 body {
   margin: 0;
-  /* самый обычный шрифт: Arial / Helvetica / sans-serif */
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
   background: #111;
   color: #fff;
 }
 html, body {
   padding: 0;
   margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
   background: #111;
   min-height: 100%;
   /* Allow natural scrolling on mobile devices */

@@ -337,7 +337,10 @@ function MainApp({ Component, pageProps }: AppProps) {
         {/* Mobile meta tags for responsive layout and theme color */}
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#0f1214" />
-          {/* Using system / plain fonts provided by globals.css (no external font downloads) */}
+          {/* Load Roboto as the default UI font (single consolidated preconnect + stylesheet) */}
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
         {/* reCAPTCHA script moved to registration page to avoid loading globally */}
       </Head>
       {showSidebar && <Sidebar />}
