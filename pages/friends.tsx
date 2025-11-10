@@ -114,7 +114,7 @@ export default function FriendsPage() {
   }, []);
 
   return (
-    <>
+    <div style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
       <h2 style={{ textAlign: "center", fontSize: 36, fontWeight: 800, margin: "48px 0 24px 0", color: "#fff" }}>Меню друзей</h2>
       <p style={{ textAlign: 'center', color: '#bfc9cf', marginTop: 0, marginBottom: 28 }}>Поиск и заявки, взаимная дружба создана для общения в чатах</p>
       {toast && (
@@ -238,6 +238,6 @@ export default function FriendsPage() {
           .friend-panel .search-result-item button { flex: 1 1 auto; }
         }
       `}</style>
-    </>
+    </div>
   );
 }

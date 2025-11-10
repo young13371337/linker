@@ -414,6 +414,8 @@ export default function ProfilePage() {
       boxShadow: "0 2px 24px #0006",
       position: 'relative',
       background: "#23242a",
+      // use a simple system/sans-serif font for the profile page
+      fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
       overflowX: "auto",
       WebkitOverflowScrolling: "touch"
     }}>
