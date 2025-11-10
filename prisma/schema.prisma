@@ -45,6 +45,9 @@ model User {
   sentMessages   Message[]    @relation("UserSentMessages")
   sessions       Session[]    @relation("UserSessions")
   chats          Chat[]       @relation("ChatUsers")
+  // relation fields for Call model
+  callsMade      Call[]       @relation("CallCaller")
+  callsReceived  Call[]       @relation("CallCallee")
 }
 
 model Friend {
@@ -84,4 +87,17 @@ model Message {
   videoMime   String?   // new
   chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
   sender    User     @relation("UserSentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model Call {
+  id        String   @id @default(uuid())
+  callerId  String
+  calleeId  String
+  type      String   @default("phone")
+  status    String   @default("calling")
+  startedAt DateTime?
+  endedAt   DateTime?
+  createdAt DateTime @default(now())
+  caller    User     @relation("CallCaller", fields: [callerId], references: [id], onDelete: Cascade)
+  callee    User     @relation("CallCallee", fields: [calleeId], references: [id], onDelete: Cascade)
 }

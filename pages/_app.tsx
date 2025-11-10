@@ -6,6 +6,7 @@ import { SessionProvider, useSession, signOut } from "next-auth/react";
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { SWRConfig, mutate } from "swr";
+import CallProvider from '../components/CallProvider';
 import { swrConfig, profileKey, chatsKey, messagesKey } from "../lib/hooks";
 import { Toaster, toast } from 'react-hot-toast';
 import { MessageToast } from '../components/MessageToast';
@@ -395,7 +396,9 @@ export default function App(props: AppProps) {
   return (
     <SessionProvider session={props.pageProps.session}>
       <SWRConfig value={swrConfig}>
-        <MainApp {...props} />
+        <CallProvider>
+          <MainApp {...props} />
+        </CallProvider>
       </SWRConfig>
     </SessionProvider>
   );

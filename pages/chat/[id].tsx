@@ -9,6 +9,7 @@ import { FaPaperPlane } from 'react-icons/fa';
 import { useRouter } from 'next/router';
 import UserStatus, { statusLabels } from '../../components/UserStatus';
 import { useSession } from 'next-auth/react';
+import { useCall } from '../../components/CallProvider';
 
 // Инициализация Pusher
 const VoiceMessage: React.FC<{ audioUrl: string; isOwn?: boolean }> = ({ audioUrl, isOwn }) => {
@@ -121,6 +122,8 @@ interface Message {
   _serverId?: string;
   _persisted?: boolean;
   _failed?: boolean;
+  // UI-only system message marker — rendered centered like day separators
+  _system?: boolean;
 }
 
 const ChatWithFriend: React.FC = () => {
@@ -178,6 +181,48 @@ const ChatWithFriend: React.FC = () => {
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordInterval = useRef<NodeJS.Timeout | null>(null);
+
+  // Call control (starts phone/video calls)
+  const call = useCall();
+
+  // Listen for global call-ended events (dispatched by CallProvider) and insert
+  // a centered system message into the chat when the event concerns the
+  // currently opened friend.
+  useEffect(() => {
+    const handler = (e: any) => {
+      try {
+        const d = e?.detail;
+        if (!d) return;
+        // only insert if the event is about the currently opened friend
+        if (!friend || !friend.id) return;
+        if (String(d.targetId) !== String(friend.id)) return;
+
+        const who = d.targetName || (friend.link ? `@${friend.link}` : (friend.login || friend.name || '')); 
+        
+        if (d.wasInCall) {
+          const started = d.startedAt || d.endedAt || Date.now();
+          const ended = d.endedAt || Date.now();
+          const sec = Math.max(0, Math.floor((ended - started) / 1000));
+          const mins = Math.floor(sec / 60);
+          const secs = sec % 60;
+          const dur = mins > 0 ? `${mins}м ${String(secs).padStart(2, '0')}с` : `${secs}с`;
+          const text = `Звонок от ${who} продлился ${dur}`;
+          const sys: Message = { id: `sys-${Date.now()}-${Math.random().toString(36).slice(2,6)}`, sender: 'system', text, createdAt: new Date(ended).toISOString(), _system: true };
+          // Optimistically add to UI only (do not persist)
+          setMessages(prev => [...prev, sys]);
+        } else {
+          const ended = d.endedAt || Date.now();
+          const timeStr = new Date(ended).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const text = `Пропущеный звонок от ${who} в ${timeStr}`;
+          const sys: Message = { id: `sys-${Date.now()}-${Math.random().toString(36).slice(2,6)}`, sender: 'system', text, createdAt: new Date(ended).toISOString(), _system: true };
+          // Optimistically add to UI only (do not persist)
+          setMessages(prev => [...prev, sys]);
+        }
+      } catch (err) {}
+    };
+    window.addEventListener('call-ended', handler as EventListener);
+    return () => window.removeEventListener('call-ended', handler as EventListener);
+  }, [friend]);
   
 
   // Typing event throttling: send only once per typing session.
@@ -512,12 +557,10 @@ const ChatWithFriend: React.FC = () => {
 
   // Accept the whole message object so we can handle both persisted and temp-uploaded messages.
   const handleDeleteMessage = async (msg: Message) => {
-    // Optimistic removal: remove from UI immediately, try to delete on server.
-    setMessages(prev => prev.filter(m => m.id !== msg.id));
     setOpenActionMsgId(null);
     try {
       // If this is a temporary message (upload succeeded but DB create failed), the id may start with 'temp-'
-      // In that case, try to delete the uploaded file directly on the server.
+      // In that case, try to delete the uploaded file directly on the server and remove locally.
       if (typeof msg.id === 'string' && msg.id.startsWith('temp-')) {
         const mediaUrl = msg.videoUrl || msg.audioUrl;
         if (mediaUrl) {
@@ -531,6 +574,7 @@ const ChatWithFriend: React.FC = () => {
           });
           console.log('[CHAT] Media-delete response:', res.status, res.statusText);
           if (res.ok) {
+            setMessages(prev => prev.filter(m => m.id !== msg.id));
             try { (window as any).toast && (window as any).toast('Сообщение и файл удалены'); } catch {}
             return;
           }
@@ -540,21 +584,25 @@ const ChatWithFriend: React.FC = () => {
           return;
         } else {
           // No uploaded media associated; nothing server-side to delete.
+          setMessages(prev => prev.filter(m => m.id !== msg.id));
           try { (window as any).toast && (window as any).toast('Сообщение удалено'); } catch {}
           return;
         }
       }
 
-      // Normal persisted message: call the main messages DELETE endpoint
+      // Normal persisted message: call the main messages DELETE endpoint first
       const endpoint = `/api/messages/${msg.id}`;
-      console.log('[CHAT] Deleting message:', msg.id, '->', endpoint);
+      console.log('[CHAT] Deleting message (server-first):', msg.id, '->', endpoint);
       const res = await fetch(endpoint, { method: 'DELETE', credentials: 'include' });
       console.log('[CHAT] Delete response:', res.status, res.statusText);
-      if (res.ok) {
+      if (res.ok || res.status === 204) {
+        // Remove from UI only after server confirms deletion
+        setMessages(prev => prev.filter(m => m.id !== msg.id));
         try { (window as any).toast && (window as any).toast('Сообщение удалено'); } catch {}
         return;
       }
-      // If server responded but not OK, show non-blocking error toast
+
+      // If server responded but not OK, show non-blocking error toast and do not remove locally
       const errorText = await res.text().catch(() => '');
       let errorMessage = 'Не удалось удалить сообщение';
       try {
@@ -688,8 +736,19 @@ const ChatWithFriend: React.FC = () => {
           console.error('Error handling typing event:', e);
         }
       };
+      const onMessageDeleted = (data: any) => {
+        try {
+          if (!data || !data.messageId) return;
+          const mid = data.messageId;
+          setMessages(prev => prev.filter(m => m.id !== mid));
+          setOpenActionMsgId(prev => (prev === mid ? null : prev));
+        } catch (e) {
+          console.error('Error handling message-deleted event', e);
+        }
+      };
     chatChannel.bind('new-message', onNewMessage);
     chatChannel.bind('typing', onTyping);
+    chatChannel.bind('message-deleted', onMessageDeleted);
       const onViewer = (data: any) => {
         try {
           if (!data || !data.userId) return;
@@ -712,6 +771,7 @@ const ChatWithFriend: React.FC = () => {
           try { userChannel.unbind('status-changed', onStatus); } catch (e) {}
           try { chatChannel.unbind('new-message', onNewMessage); } catch (e) {}
           try { chatChannel.unbind('typing', onTyping); } catch (e) {}
+          try { chatChannel.unbind('message-deleted', onMessageDeleted); } catch (e) {}
           try { chatChannel.unbind('viewer-state', onViewer); } catch (e) {}
           try { pusherClient.unsubscribe(`user-${friend.id}`); } catch (e) {}
           try { pusherClient.unsubscribe(`chat-${chatId}`); } catch (e) {}
@@ -1026,8 +1086,26 @@ const ChatWithFriend: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Avatar on the right (no status dot in chat header) */}
-                <div style={{ marginLeft: 8 }}>
+                {/* Avatar on the right with call buttons positioned neatly */}
+                <div style={{ marginLeft: 8, display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
+                  {/* Buttons: absolute vertical stack to the left of avatar for desktop, row for mobile */}
+                  <div style={{ position: 'absolute', right: isMobile ? 56 : 56, top: isMobile ? 2 : -6, display: 'flex', flexDirection: 'row', gap: 0, alignItems: 'center' }}>
+                    <button
+                      aria-label="Позвонить"
+                      title="Позвонить"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!friend || !friend.id) return;
+                        try { call.startCall({ type: 'phone', targetId: friend.id, targetName: friend.link ? `@${friend.link}` : (friend.login || friend.name), targetAvatar: friend.avatar || undefined }); } catch (err) {}
+                      }}
+                      onMouseOver={(e) => { try { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(34,158,217,0.08)'; } catch {} }}
+                      onMouseOut={(e) => { try { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; } catch {} }}
+                      style={{ width: isMobile ? 40 : 40, height: isMobile ? 40 : 40, borderRadius: 8, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, transition: 'background 0.12s, transform 0.06s' }}
+                    >
+                      <img src="/phonecall.svg" alt="phone" style={{ width: 18, height: 18, display: 'block' }} />
+                    </button>
+                  </div>
+
                   <img src={friend?.avatar || '/window.svg'} alt="avatar" style={avatarStyle} />
                 </div>
               </div>
@@ -1089,6 +1167,15 @@ const ChatWithFriend: React.FC = () => {
                     {group.label}
                   </div>
                   {group.items.map((msg) => {
+                    // render system messages (centered) like day separators
+                    if ((msg as any)._system) {
+                      return (
+                        <div key={msg._key || msg.id} style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                          <div style={{ textAlign: 'center', color: '#9aa0a6', fontWeight: 500, fontSize: 13, margin: '8px 0', letterSpacing: 0.4, padding: '4px 8px', maxWidth: '78%', lineHeight: 1.1 }}>{msg.text}</div>
+                        </div>
+                      );
+                    }
+
                     const isOwn = msg.sender === (session?.user as any)?.id;
                     // --- callback ref для анимации только для новых сообщений ---
                     const getMsgRef = (el: HTMLDivElement | null) => {
