@@ -12,6 +12,8 @@ type CallState = {
   status: 'calling' | 'ringing' | 'in-call' | 'ended';
   startedAt?: number;
   muted?: boolean;
+  endedAt?: number;
+  endedReason?: 'declined' | 'ended';
 };
 
 type CallContextValue = {
@@ -41,6 +43,26 @@ function CallWindow({ call, onAccept, onEnd, onMinimize, muted, onToggleMute }: 
   const isIncoming = call.status === 'ringing';
   const isActive = call.status === 'in-call';
 
+  const [elapsed, setElapsed] = React.useState<string>('00:00');
+  React.useEffect(() => {
+    let t: any = null;
+    const update = () => {
+      const start = call.startedAt || Date.now();
+      const diff = Math.max(0, Date.now() - start);
+      const s = Math.floor(diff / 1000);
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      setElapsed(`${mm}:${ss}`);
+    };
+    if (isActive) {
+      update();
+      t = setInterval(update, 1000);
+    } else {
+      setElapsed('00:00');
+    }
+    return () => { if (t) clearInterval(t); };
+  }, [call.startedAt, isActive]);
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}>
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
@@ -49,32 +71,61 @@ function CallWindow({ call, onAccept, onEnd, onMinimize, muted, onToggleMute }: 
           <img src={call.targetAvatar || '/window.svg'} alt="avatar" style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', background: '#333' }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 18 }}>{call.targetName || 'Звонок'}</div>
-            <div style={{ color: '#9aa0a6', marginTop: 6 }}>{isOutgoing ? 'Звонок...' : isIncoming ? 'Входящий звонок' : isActive ? 'В разговоре' : ''}</div>
+            <div style={{ color: '#9aa0a6', marginTop: 6 }}>
+              {call.status === 'ended' ? (call.endedReason === 'declined' ? 'Звонок отклонён' : (call.startedAt ? 'Звонок завершён' : 'Звонок завершён')) : (isOutgoing ? 'Звонок...' : isIncoming ? 'Входящий звонок' : isActive ? 'В разговоре' : '')}
+            </div>
           </div>
         </div>
+        {call.status === 'ended' ? (
+          // ended/declined panel
+          <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 84, height: 84, borderRadius: 84, background: call.endedReason === 'declined' ? 'linear-gradient(135deg,#ff7b7b,#e64545)' : 'linear-gradient(135deg,#666,#444)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <img src="/phone-end.svg.svg" alt="ended" style={{ width: 28, height: 28, transform: call.endedReason === 'declined' ? 'rotate(0deg)' : 'rotate(0deg)' }} />
+            </div>
+            <div style={{ color: '#fff', fontWeight: 700, fontSize: 16 }}>{call.endedReason === 'declined' ? 'Звонок отклонён' : (call.startedAt && call.endedAt ? (() => {
+              const ms = Math.max(0, (call.endedAt || Date.now()) - (call.startedAt || Date.now()));
+              const s = Math.floor(ms / 1000);
+              const mm = String(Math.floor(s / 60)).padStart(2, '0');
+              const ss = String(s % 60).padStart(2, '0');
+              return `Звонок продлился ${mm}:${ss}`;
+            })() : 'Звонок завершён')}</div>
+          </div>
+        ) : null}
         <div style={{ display: 'flex', gap: 14, marginTop: 18, justifyContent: 'center', alignItems: 'center' }}>
-          {/* Icon-only circular buttons with subtle shadow */}
-          {isIncoming && (
-            <button onClick={onAccept} title="Принять" style={{ width: 56, height: 56, borderRadius: 56, border: 'none', background: 'linear-gradient(135deg,#1ed760,#18b54a)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 10px 30px rgba(24,160,80,0.16)' }}>
-              <img src="/phone-accept.svg.svg" alt="accept" style={{ width: 22, height: 22 }} />
-            </button>
+          {/* show elapsed timer when in-call */}
+          {isActive && (
+            <div style={{ color: '#cfeefc', fontWeight: 700, fontSize: 16, marginRight: 8 }}>{elapsed}</div>
           )}
 
-          {/* Mute/unmute */}
-          <button onClick={onToggleMute} title={muted ? 'Включить микрофон' : 'Выключить микрофон'} style={{ width: 48, height: 48, borderRadius: 48, border: '1px solid rgba(255,255,255,0.06)', background: muted ? '#2b2b2b' : '#0f1113', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: muted ? '0 6px 18px rgba(0,0,0,0.45)' : '0 6px 18px rgba(0,0,0,0.25)' }}>
-            <img src={muted ? '/mic-off.svg.svg' : '/mic-on.svg.svg'} alt="mic" style={{ width: 20, height: 20 }} />
-          </button>
+          {/* Incoming: show accept + decline */}
+          {isIncoming ? (
+            <>
+              <button onClick={onAccept} title="Принять" style={{ width: 56, height: 56, borderRadius: 56, border: 'none', background: 'linear-gradient(135deg,#1ed760,#18b54a)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 10px 30px rgba(24,160,80,0.16)' }}>
+                <img src="/phone-accept.svg.svg" alt="accept" style={{ width: 22, height: 22 }} />
+              </button>
+              <button onClick={onEnd} title="Отклонить" style={{ width: 56, height: 56, borderRadius: 56, border: 'none', background: 'linear-gradient(135deg,#ff5b5b,#e64545)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 10px 30px rgba(220,60,60,0.16)' }}>
+                <img src="/phone-end.svg.svg" alt="decline" style={{ width: 20, height: 20 }} />
+              </button>
+            </>
+          ) : (
+            // normal in-call controls
+            <>
+              {/* Mute/unmute */}
+              <button onClick={onToggleMute} title={muted ? 'Включить микрофон' : 'Выключить микрофон'} style={{ width: 48, height: 48, borderRadius: 48, border: '1px solid rgba(255,255,255,0.06)', background: muted ? '#2b2b2b' : '#0f1113', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: muted ? '0 6px 18px rgba(0,0,0,0.45)' : '0 6px 18px rgba(0,0,0,0.25)' }}>
+                <img src={muted ? '/mic-off.svg.svg' : '/mic-on.svg.svg'} alt="mic" style={{ width: 20, height: 20 }} />
+              </button>
 
-          {/* Minimize */}
-          <button onClick={onMinimize} title="Свернуть" style={{ width: 44, height: 44, borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)', background: '#0f1113', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <img src="/tray.svg.svg" alt="minimize" style={{ width: 18, height: 18, filter: 'invert(1) brightness(1.1)' }} />
-          </button>
+              {/* Minimize */}
+              <button onClick={onMinimize} title="Свернуть" style={{ width: 44, height: 44, borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)', background: '#0f1113', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <img src="/tray.svg.svg" alt="minimize" style={{ width: 18, height: 18, filter: 'invert(1) brightness(1.1)' }} />
+              </button>
 
-          {/* End call */}
-          <button onClick={onEnd} title="Завершить" style={{ width: 56, height: 56, borderRadius: 56, border: 'none', background: 'linear-gradient(135deg,#ff5b5b,#e64545)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 10px 30px rgba(220,60,60,0.16)' }}>
-            {/* перевёрнутая иконка завершения: убираем прежнюю 180deg трансформацию (иконка теперь зеркально ориентирована) */}
-            <img src="/phone-end.svg.svg" alt="end" style={{ width: 20, height: 20, transform: 'rotate(0deg)' }} />
-          </button>
+              {/* End call */}
+              <button onClick={onEnd} title="Завершить" style={{ width: 56, height: 56, borderRadius: 56, border: 'none', background: 'linear-gradient(135deg,#ff5b5b,#e64545)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 10px 30px rgba(220,60,60,0.16)' }}>
+                <img src="/phone-end.svg.svg" alt="end" style={{ width: 20, height: 20, transform: 'rotate(0deg)' }} />
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -86,6 +137,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [minimized, setMinimized] = useState(false);
   const [muted, setMuted] = useState(false);
   const audioStreamRef = React.useRef<MediaStream | null>(null);
+  const audioElRef = React.useRef<HTMLAudioElement | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
@@ -118,10 +170,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // add local tracks
         stream.getTracks().forEach(t => pc.addTrack(t, stream));
 
-        // collect remote tracks
-        const remoteStream = new MediaStream();
-        remoteStreamRef.current = remoteStream;
-        pc.ontrack = (ev) => { try { ev.streams && ev.streams[0] && (remoteStreamRef.current = ev.streams[0]); } catch (e) {} };
+  // collect remote tracks
+  const remoteStream = new MediaStream();
+  remoteStreamRef.current = remoteStream;
+  pc.ontrack = (ev) => { try { if (ev.streams && ev.streams[0]) { remoteStreamRef.current = ev.streams[0]; if (audioElRef.current) { try { audioElRef.current.srcObject = remoteStreamRef.current; audioElRef.current.play().catch(()=>{}); } catch {} } } } catch (e) {} };
 
         pc.onicecandidate = (ev) => {
           if (ev.candidate) {
@@ -166,9 +218,9 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         };
 
-        const remoteStream = new MediaStream();
-        remoteStreamRef.current = remoteStream;
-        pc.ontrack = (ev) => { try { ev.streams && ev.streams[0] && (remoteStreamRef.current = ev.streams[0]); } catch (e) {} };
+  const remoteStream = new MediaStream();
+  remoteStreamRef.current = remoteStream;
+  pc.ontrack = (ev) => { try { if (ev.streams && ev.streams[0]) { remoteStreamRef.current = ev.streams[0]; if (audioElRef.current) { try { audioElRef.current.srcObject = remoteStreamRef.current; audioElRef.current.play().catch(()=>{}); } catch {} } } } catch (e) {} };
       }
 
       localStream.getTracks().forEach(t => pc!.addTrack(t, localStream));
@@ -190,14 +242,24 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (prev) {
           const endedAt = Date.now();
           const wasInCall = prev.status === 'in-call';
+          const reason: 'declined' | 'ended' = prev.status === 'ringing' ? 'declined' : 'ended';
+          // notify remote party about end/decline
+          try {
+            if ((prev.targetId) && typeof window !== 'undefined') {
+              fetch('/api/calls/end', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: prev.targetId, from: (session as any)?.user?.id, reason }) }).catch(()=>{});
+            }
+          } catch (e) {}
           // dispatch a global event so pages (chat) can insert system messages (missed/ended)
           try {
             window.dispatchEvent(new CustomEvent('call-ended', { detail: { targetId: prev.targetId, targetName: prev.targetName, startedAt: prev.startedAt, endedAt, wasInCall } }));
           } catch (e) {}
+          // return updated call with end metadata so UI can show an ended panel briefly
+          return { ...prev, status: 'ended', endedAt, endedReason: reason };
         }
       } catch (e) {}
       return prev ? { ...prev, status: 'ended' } : prev;
     });
+
     // stop any acquired audio tracks
     try {
       if (audioStreamRef.current) {
@@ -215,12 +277,14 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (localStreamRef.current) { localStreamRef.current.getTracks().forEach(t => t.stop()); localStreamRef.current = null; }
       if (remoteStreamRef.current) { remoteStreamRef.current.getTracks().forEach(t => t.stop()); remoteStreamRef.current = null; }
     } catch (e) {}
+
+    // pick a visible duration for the ended panel: longer when declined so user sees 'Звонок отклонён'
     setTimeout(() => {
       setCall(null);
       setMuted(false);
       setMinimized(false);
-    }, 400);
-  }, []);
+    }, 2200);
+  }, [session]);
 
   const toggleMute = useCallback(() => {
     setMuted(m => {
@@ -292,7 +356,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           const remoteStream = new MediaStream();
           remoteStreamRef.current = remoteStream;
-          pc.ontrack = (ev) => { try { ev.streams && ev.streams[0] && (remoteStreamRef.current = ev.streams[0]); } catch (e) {} };
+          pc.ontrack = (ev) => { try { if (ev.streams && ev.streams[0]) { remoteStreamRef.current = ev.streams[0]; if (audioElRef.current) { try { audioElRef.current.srcObject = remoteStreamRef.current; audioElRef.current.play().catch(()=>{}); } catch {} } } } catch (e) {} };
 
           await pc.setRemoteDescription({ type: 'offer', sdp } as RTCSessionDescriptionInit);
         } catch (e) {
@@ -305,6 +369,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const sdp = data.sdp as string;
           if (!pcRef.current) return;
           await pcRef.current.setRemoteDescription({ type: 'answer', sdp } as RTCSessionDescriptionInit);
+          // mark call as in-call (caller side)
+          setCall(prev => prev ? { ...prev, status: 'in-call', startedAt: prev.startedAt || Date.now() } : prev);
         } catch (e) { console.error('onAnswer error', e); }
       };
 
@@ -320,23 +386,55 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       channel.bind('webrtc-offer', onOffer);
       channel.bind('webrtc-answer', onAnswer);
       channel.bind('webrtc-candidate', onCandidate);
+      // remote ended/declined
+      const onEnd = (data: any) => {
+        try {
+          const reason = data?.reason as string | undefined;
+          // set local call state to ended
+          setCall(prev => prev ? { ...prev, status: 'ended', endedAt: Date.now(), endedReason: reason === 'declined' ? 'declined' : 'ended' } : prev);
+          // dispatch global event so chat pages can show system message
+          try {
+            const wasInCall = reason === 'ended';
+            window.dispatchEvent(new CustomEvent('call-ended', { detail: { targetId: data.from, targetName: undefined, startedAt: undefined, endedAt: Date.now(), wasInCall } }));
+          } catch (e) {}
+          // cleanup local media/pc without notifying remote (we already received remote end)
+          try {
+            if (audioStreamRef.current) { audioStreamRef.current.getTracks().forEach(t=>t.stop()); audioStreamRef.current = null; }
+          } catch (e) {}
+          try {
+            if (pcRef.current) { try { pcRef.current.getSenders().forEach(s=>{ try { s.track && s.track.stop(); } catch{} }); } catch{}; pcRef.current.close(); pcRef.current = null; }
+          } catch (e) {}
+          try { if (localStreamRef.current) { localStreamRef.current.getTracks().forEach(t=>t.stop()); localStreamRef.current = null; } } catch (e) {}
+          try { if (remoteStreamRef.current) { remoteStreamRef.current.getTracks().forEach(t=>t.stop()); remoteStreamRef.current = null; } } catch (e) {}
+          // allow ended-panel to show briefly, then clear
+          try {
+            const delay = (reason === 'declined') ? 2200 : 1200;
+            setTimeout(() => { try { setCall(null); setMuted(false); setMinimized(false); } catch {} }, delay);
+          } catch (e) {}
+        } catch (e) {}
+      };
+      channel.bind('webrtc-end', onEnd);
 
       return () => {
         try { channel.unbind('webrtc-offer', onOffer); } catch (e) {}
         try { channel.unbind('webrtc-answer', onAnswer); } catch (e) {}
         try { channel.unbind('webrtc-candidate', onCandidate); } catch (e) {}
+        try { channel.unbind('webrtc-end', onEnd); } catch (e) {}
         try { pusherClient.unsubscribe(channelName); } catch (e) {}
       };
     } catch (e) {}
   }, [pusherClient, session]);
+
 
   const value = useMemo((): CallContextValue => ({ call, startCall, receiveIncomingCall, acceptCall, endCall, minimizeCall, restoreCall, toggleMute, muted, minimized }), [call, startCall, receiveIncomingCall, acceptCall, endCall, minimizeCall, restoreCall, toggleMute, muted, minimized]);
 
   return (
     <CallContext.Provider value={value}>
       {children}
+      {/* hidden audio element for remote playback */}
+      <audio ref={audioElRef} autoPlay style={{ display: 'none' }} />
       {/* Render call overlay and tray */}
-      {call && !minimized && call.status !== 'ended' && (
+      {call && !minimized && (
         <CallWindow call={call} onAccept={acceptCall} onEnd={endCall} onMinimize={minimizeCall} muted={muted} onToggleMute={toggleMute} />
       )}
       {call && minimized && call.status !== 'ended' && (
