@@ -136,6 +136,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [call, setCall] = useState<CallState | null>(null);
   const [minimized, setMinimized] = useState(false);
   const [muted, setMuted] = useState(false);
+  const STORAGE_KEY = 'linker.callState';
   const audioStreamRef = React.useRef<MediaStream | null>(null);
   const audioElRef = React.useRef<HTMLAudioElement | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -155,6 +156,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       startedAt: Date.now(),
     };
     setCall(c);
+  // persist initial call state
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ call: c, minimized: false, muted: false })); } catch (e) {}
     setMinimized(false);
 
     (async () => {
@@ -195,12 +198,18 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [session]);
 
   const receiveIncomingCall = useCallback((c: CallState) => {
-    setCall({ ...c, status: 'ringing' });
+    const next = { ...c, status: 'ringing' } as CallState;
+    setCall(next);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ call: next, minimized: false, muted })); } catch (e) {}
     setMinimized(false);
   }, []);
 
   const acceptCall = useCallback(async () => {
-    setCall(prev => prev ? { ...prev, status: 'in-call', startedAt: prev.startedAt || Date.now() } : prev);
+    setCall(prev => {
+      const next = prev ? ({ ...prev, status: 'in-call', startedAt: prev.startedAt || Date.now() } as CallState) : prev;
+      try { if (next) localStorage.setItem(STORAGE_KEY, JSON.stringify({ call: next, minimized: false, muted })); } catch (e) {}
+      return next as CallState | null;
+    });
     setMinimized(false);
     try {
       const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -254,7 +263,9 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
             window.dispatchEvent(new CustomEvent('call-ended', { detail: { targetId: prev.targetId, targetName: prev.targetName, startedAt: prev.startedAt, endedAt, wasInCall } }));
           } catch (e) {}
           // return updated call with end metadata so UI can show an ended panel briefly
-          return { ...prev, status: 'ended', endedAt, endedReason: reason };
+          const next = ({ ...prev, status: 'ended', endedAt, endedReason: reason } as CallState);
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ call: next, minimized: false, muted })); } catch (e) {}
+          return next;
         }
       } catch (e) {}
       return prev ? { ...prev, status: 'ended' } : prev;
@@ -283,6 +294,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCall(null);
       setMuted(false);
       setMinimized(false);
+      try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
     }, 2200);
   }, [session]);
 
@@ -294,16 +306,26 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           audioStreamRef.current.getAudioTracks().forEach(t => (t.enabled = !next ? true : false));
         }
       } catch (e) {}
+      try { // persist mute change
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          parsed.muted = next;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        }
+      } catch (e) {}
       return next;
     });
   }, []);
 
   const minimizeCall = useCallback(() => {
     setMinimized(true);
+    try { const stored = localStorage.getItem(STORAGE_KEY); if (stored) { const parsed = JSON.parse(stored); parsed.minimized = true; localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed)); } } catch (e) {}
   }, []);
 
   const restoreCall = useCallback(() => {
     setMinimized(false);
+    try { const stored = localStorage.getItem(STORAGE_KEY); if (stored) { const parsed = JSON.parse(stored); parsed.minimized = false; localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed)); } } catch (e) {}
   }, []);
 
   // detect mobile for tray styling
@@ -327,6 +349,41 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.addEventListener('incoming-call', handler as any);
     return () => window.removeEventListener('incoming-call', handler as any);
   }, [receiveIncomingCall]);
+
+  // rehydrate from localStorage on mount so tray persists across navigation/refresh
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.call && parsed.call.status !== 'ended') {
+          setCall(parsed.call as CallState);
+          setMinimized(Boolean(parsed.minimized));
+          setMuted(Boolean(parsed.muted));
+        } else {
+          // if ended, remove stale storage
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
+    } catch (e) {}
+    // listen storage changes from other tabs
+    const onStorage = (ev: StorageEvent) => {
+      try {
+        if (ev.key !== STORAGE_KEY) return;
+        if (!ev.newValue) { setCall(null); setMinimized(false); setMuted(false); return; }
+        const parsed = JSON.parse(ev.newValue);
+        if (parsed?.call && parsed.call.status !== 'ended') {
+          setCall(parsed.call as CallState);
+          setMinimized(Boolean(parsed.minimized));
+          setMuted(Boolean(parsed.muted));
+        } else {
+          setCall(null); setMinimized(false); setMuted(false);
+        }
+      } catch (e) {}
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   // Pusher-based signaling: subscribe to incoming webrtc events for this user
   useEffect(() => {
