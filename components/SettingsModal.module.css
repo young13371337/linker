@@ -1,0 +1,112 @@
+.overlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.modal {
+  width: 420px;
+  max-width: 92%;
+  background: #0e0f12;
+  border-radius: 12px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+  padding: 18px;
+  color: #fff;
+  box-sizing: border-box;
+}
+
+.title {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.label {
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #bbb;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.colorInput {
+  width: 56px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.meta {
+  flex: 1;
+}
+
+.meta .selected {
+  font-size: 13px;
+  color: #ddd;
+}
+
+.actions {
+  margin-top: 8px;
+}
+
+.btn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+}
+
+.btnPrimary {
+  background: var(--chat-accent, #229ed9);
+}
+
+.btnSecondary {
+  background: #222;
+  margin-left: 8px;
+}
+
+/* Mobile styles: make this a bottom sheet and stack actions */
+@media (max-width: 600px) {
+  .overlay {
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 12px 12px 0 0;
+    padding: 14px;
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.6);
+  }
+
+  .row {
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btnSecondary {
+    margin-left: 0;
+  }
+}

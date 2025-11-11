@@ -1081,7 +1081,7 @@ const ChatWithFriend: React.FC = () => {
                     {isTyping ? (
                       <span style={{ color: '#229ed9', fontSize: 12 }}>печатает...</span>
                     ) : (
-                      friend?.status === 'dnd' ? <span style={{ fontSize: 12, color: '#9aa0a6' }}>не беспокоить</span> : (friend?.status === 'online' ? <span style={{ fontSize: 12, color: '#229ed9' }}>в сети</span> : <span style={{ fontSize: 12, color: '#9aa0a6' }}>не в сети</span>)
+                      friend?.status === 'dnd' ? <span style={{ fontSize: 12, color: '#9aa0a6' }}>был(а) недавно</span> : (friend?.status === 'online' ? <span style={{ fontSize: 12, color: '#229ed9' }}>в сети</span> : <span style={{ fontSize: 12, color: '#9aa0a6' }}>не в сети</span>)
                     )}
                   </div>
                 </div>

@@ -1,3 +1,6 @@
+import { getUser } from "../lib/session";
+import { forbiddenPasswords } from "../lib/forbidden-passwords";
+import { FaUserCircle, FaCog, FaShieldAlt, FaPalette, FaLaptop, FaMobileAlt, FaDesktop, FaSignOutAlt } from "react-icons/fa";
 import React, { useState, useEffect, useRef } from "react";
 import UserStatus, { UserStatusType, statusLabels } from "../components/UserStatus";
 import { useSession, signOut } from "next-auth/react";
@@ -131,9 +134,7 @@ function ChangeLoginForm({ user, setUser, setFriends }: ChangeLoginFormProps) {
     </div>
   );
 }
-import { getUser } from "../lib/session";
-import { forbiddenPasswords } from "../lib/forbidden-passwords";
-import { FaUserCircle, FaCog, FaShieldAlt, FaPalette, FaLaptop, FaMobileAlt, FaDesktop, FaSignOutAlt, FaUserSecret } from "react-icons/fa";
+
 // Функция для определения типа устройства и возврата иконки и названия
 function getDeviceIconAndName(deviceName: string) {
   const ua = (deviceName || "").toLowerCase();
@@ -155,7 +156,7 @@ function getDeviceIconAndName(deviceName: string) {
 }
 
 function generate2FAToken() {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789&?_+-";
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789&?_+-:';";
   let token = "";
   for (let i = 0; i < 128; i++) token += chars[Math.floor(Math.random() * chars.length)];
   return token;
@@ -196,15 +197,7 @@ export default function ProfilePage() {
   const [setupLoading, setSetupLoading] = useState<boolean>(false);
   const [verifyLoading, setVerifyLoading] = useState<boolean>(false);
   const [disableLoading, setDisableLoading] = useState<boolean>(false);
-  const [isAnonymized, setIsAnonymized] = useState<boolean>(false);
-  const [anonymizeLoading, setAnonymizeLoading] = useState<boolean>(false);
-  // initialize anonymize from localStorage if present
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('anonymize');
-      if (stored !== null) setIsAnonymized(stored === 'true');
-    } catch (e) {}
-  }, []);
+  
   const [newPassword, setNewPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [passwordChanged, setPasswordChanged] = useState<boolean>(false);
@@ -764,7 +757,7 @@ export default function ProfilePage() {
       {/* Модальное окно настроек */}
       {showSettings && (
   <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "#000a", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: 6, animation: "fadeIn 0.3s" }}>
-          <div style={{ background: "#23242a", borderRadius: 18, padding: 28, minWidth: settingsTab === 'privacy' ? 420 : 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", transition: "box-shadow 0.3s, background 0.3s, min-width 200ms", maxHeight: "80vh", overflowY: "auto", scrollbarWidth: "none" }}>
+          <div style={{ background: "#23242a", borderRadius: 18, padding: 28, minWidth: 320, boxShadow: "0 2px 24px #0008", color: "#fff", position: "relative", transition: "box-shadow 0.3s, background 0.3s, min-width 200ms", maxHeight: "80vh", overflowY: "auto", scrollbarWidth: "none" }}>
   <button onClick={() => setShowSettings(false)} aria-label="Close settings" style={{ position: "absolute", top: 12, right: 12, zIndex: 120, background: "none", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", transition: "color 0.2s" }} onMouseOver={e => {e.currentTarget.style.color="#4fc3f7"}} onMouseOut={e => {e.currentTarget.style.color="#fff"}}>✕</button>
 
       {/* Compact header with avatar + vertical menu (matches provided mock)
@@ -1184,52 +1177,7 @@ export default function ProfilePage() {
                       )}
                     </div>
                   </div>
-                  {/* Анонимизация */}
-                  <div style={{ marginTop: 12, marginBottom: 6, padding: 16, maxWidth: 360, background: '#18191c', borderRadius: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                      <FaUserSecret style={{ fontSize: 18, color: '#bbb' }} />
-                      <div style={{ fontSize: 15, fontWeight: 700 }}>Анонимизация</div>
-                    </div>
-                    <div style={{ color: '#bfbfbf', fontSize: 13, marginBottom: 12 }}>Данная функция максимально уменьшает сбор данных и шифрует всё возможное (аватар, включённые настройки, поиск и заявки друзей). Ваши чаты уже зашифрованы.</div>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                      <button
-                        onClick={async () => {
-                          if (!user || anonymizeLoading) return;
-                          // turning on -> slower (1.5s), turning off -> faster (600ms)
-                          const turningOn = !isAnonymized;
-                          setAnonymizeLoading(true);
-                          const delay = turningOn ? 1500 : 600;
-                          setTimeout(async () => {
-                            try {
-                              const resp = await fetch('/api/profile', {
-                                method: 'POST',
-                                credentials: 'include',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ userId: user.id, anonymize: turningOn })
-                              });
-                              if (resp.ok) {
-                                setIsAnonymized(turningOn);
-                                try { setUser({ ...user, anonymized: turningOn } as any); } catch {}
-                              } else {
-                                const data = await resp.json().catch(() => ({}));
-                                alert(data.error || 'Ошибка при обновлении анонимизации');
-                              }
-                            } catch (e) {
-                              console.error(e);
-                              alert('Ошибка сети');
-                            } finally {
-                              setAnonymizeLoading(false);
-                            }
-                          }, delay);
-                        }}
-                        disabled={anonymizeLoading}
-                        style={{ padding: '10px 14px', borderRadius: 8, background: anonymizeLoading ? '#2b2d2f' : (isAnonymized ? '#3a3c3f' : '#1ed760'), color: isAnonymized ? '#fff' : '#022', border: 'none', cursor: anonymizeLoading ? 'default' : 'pointer', fontWeight: 700 }}
-                      >
-                        {anonymizeLoading ? (isAnonymized ? 'Отключаем...' : 'Включаем...') : (isAnonymized ? 'Включено' : 'Включить')}
-                      </button>
-                      <div style={{ color: '#999', fontSize: 13 }}>{isAnonymized ? 'Анонимный режим активен' : 'Анонимизация выключена'}</div>
-                    </div>
-                  </div>
+                  
                 </>
               )}
             {/* Вставка любимой песни удалена по запросу пользователя */}

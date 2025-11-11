@@ -502,7 +502,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
               <img src={call.targetAvatar || '/phonecall.svg'} alt="a" style={{ width: 36, height: 36, borderRadius: '50%' }} />
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>{call.targetName || 'Звонок'}</div>
-                <div style={{ color: '#9aa0a6', fontSize: 12 }}>{call.type === 'phone' ? 'Телефонный' : 'Видеозвонок'}</div>
+                <div style={{ color: '#9aa0a6', fontSize: 12 }}>{call.type === 'phone' ? 'Звоним...' : 'Звоним...'}</div>
               </div>
               <img src="/phonecall.svg" alt="phone" style={{ width: 20, height: 20, marginLeft: 8 }} />
             </button>
