@@ -97,6 +97,14 @@ body {
   background: #111;
   color: #fff;
 }
+/* Site-wide CSS variables used across components/pages */
+:root {
+  --bg: #0f1113;
+  --panel: #121417;
+  --muted: #9fbfe6;
+  --accent: #4fc3f7;
+  --danger: #ff6b6b;
+}
 html, body {
   padding: 0;
   margin: 0;

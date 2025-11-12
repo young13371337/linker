@@ -134,6 +134,7 @@ function CallWindow({ call, onAccept, onEnd, onMinimize, muted, onToggleMute }: 
 
 export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [call, setCall] = useState<CallState | null>(null);
+  const callRef = useRef<CallState | null>(null);
   const [minimized, setMinimized] = useState(false);
   const [muted, setMuted] = useState(false);
   const STORAGE_KEY = 'linker.callState';
@@ -153,9 +154,11 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       targetName: opts.targetName,
       targetAvatar: opts.targetAvatar,
       status: 'calling',
+      // keep startedAt for caller as a placeholder; when the call becomes active we'll reset it to the actual connect time
       startedAt: Date.now(),
     };
     setCall(c);
+    callRef.current = c;
   // persist initial call state
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ call: c, minimized: false, muted: false })); } catch (e) {}
     setMinimized(false);
@@ -200,13 +203,17 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const receiveIncomingCall = useCallback((c: CallState) => {
     const next = { ...c, status: 'ringing' } as CallState;
     setCall(next);
+    callRef.current = next;
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ call: next, minimized: false, muted })); } catch (e) {}
     setMinimized(false);
   }, []);
 
   const acceptCall = useCallback(async () => {
+    // mark call as active and set startedAt to the moment of acceptance so both sides show consistent timer
     setCall(prev => {
-      const next = prev ? ({ ...prev, status: 'in-call', startedAt: prev.startedAt || Date.now() } as CallState) : prev;
+      const now = Date.now();
+      const next = prev ? ({ ...prev, status: 'in-call', startedAt: now } as CallState) : prev;
+      callRef.current = next as CallState | null;
       try { if (next) localStorage.setItem(STORAGE_KEY, JSON.stringify({ call: next, minimized: false, muted })); } catch (e) {}
       return next as CallState | null;
     });
@@ -223,7 +230,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         pc.onicecandidate = (ev) => {
           if (ev.candidate) {
-            try { fetch('/api/calls/candidate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: call?.targetId, candidate: ev.candidate }) }); } catch (e) {}
+            try { fetch('/api/calls/candidate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: callRef.current?.targetId, candidate: ev.candidate }) }); } catch (e) {}
           }
         };
 
@@ -236,14 +243,14 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const answer = await pc!.createAnswer();
       await pc!.setLocalDescription(answer);
-      // send answer to caller
+      // send answer to caller (use callRef to ensure we have the correct target id in race conditions)
       try {
-        await fetch('/api/calls/answer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: call?.targetId, sdp: answer.sdp, from: (session?.user as any)?.id }) });
+        await fetch('/api/calls/answer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: callRef.current?.targetId, sdp: answer.sdp, from: (session?.user as any)?.id }) });
       } catch (e) {}
     } catch (e) {
       console.warn('acceptCall failed', e);
     }
-  }, [muted, call]);
+  }, [muted]);
 
   const endCall = useCallback(() => {
     setCall(prev => {
@@ -399,7 +406,11 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const sdp = data.sdp as string;
           const callerName = data.fromName as string;
           const callerAvatar = data.fromAvatar as string;
-          setCall({ id: String(Date.now()), type: 'phone', targetId: from, targetName: callerName, targetAvatar: callerAvatar, status: 'ringing', startedAt: Date.now() });
+          // determine if we are already calling this user (simultaneous call)
+          const alreadyCalling = !!(callRef.current && callRef.current.status === 'calling' && callRef.current.targetId === from);
+          const initialStatus: CallState['status'] = alreadyCalling ? 'ringing' : 'ringing';
+          setCall({ id: String(Date.now()), type: 'phone', targetId: from, targetName: callerName, targetAvatar: callerAvatar, status: initialStatus, startedAt: Date.now() });
+          callRef.current = { id: String(Date.now()), type: 'phone', targetId: from, targetName: callerName, targetAvatar: callerAvatar, status: initialStatus, startedAt: Date.now() };
 
           // prepare pc and set remote description so acceptCall can answer
           const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
@@ -416,6 +427,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           pc.ontrack = (ev) => { try { if (ev.streams && ev.streams[0]) { remoteStreamRef.current = ev.streams[0]; if (audioElRef.current) { try { audioElRef.current.srcObject = remoteStreamRef.current; audioElRef.current.play().catch(()=>{}); } catch {} } } } catch (e) {} };
 
           await pc.setRemoteDescription({ type: 'offer', sdp } as RTCSessionDescriptionInit);
+          // If both sides initiated calls to each other, auto-accept to get both sides into in-call state
+          if (alreadyCalling) {
+            try { await acceptCall(); } catch (e) { /* ignore */ }
+          }
         } catch (e) {
           console.error('onOffer handler error', e);
         }
@@ -426,8 +441,14 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const sdp = data.sdp as string;
           if (!pcRef.current) return;
           await pcRef.current.setRemoteDescription({ type: 'answer', sdp } as RTCSessionDescriptionInit);
-          // mark call as in-call (caller side)
-          setCall(prev => prev ? { ...prev, status: 'in-call', startedAt: prev.startedAt || Date.now() } : prev);
+          // mark call as in-call (caller side) and set startedAt to the connect time so both sides show consistent timer
+          const now = Date.now();
+          setCall(prev => {
+            const next = prev ? { ...prev, status: 'in-call', startedAt: now } as CallState : prev;
+            callRef.current = next as CallState | null;
+            try { if (next) localStorage.setItem(STORAGE_KEY, JSON.stringify({ call: next, minimized: minimized, muted })); } catch (e) {}
+            return next;
+          });
         } catch (e) { console.error('onAnswer error', e); }
       };
 
@@ -485,6 +506,31 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value = useMemo((): CallContextValue => ({ call, startCall, receiveIncomingCall, acceptCall, endCall, minimizeCall, restoreCall, toggleMute, muted, minimized }), [call, startCall, receiveIncomingCall, acceptCall, endCall, minimizeCall, restoreCall, toggleMute, muted, minimized]);
 
+  // keep ref in sync with state for immediate-read scenarios
+  useEffect(() => { callRef.current = call; }, [call]);
+
+  // elapsed timer for tray when minimized — show running time when in-call
+  const [trayElapsed, setTrayElapsed] = useState<string>('00:00');
+  useEffect(() => {
+    let t: any = null;
+    const update = () => {
+      const started = call?.startedAt || callRef.current?.startedAt;
+      if (!started || call?.status !== 'in-call') { setTrayElapsed('00:00'); return; }
+      const diff = Math.max(0, Date.now() - started);
+      const s = Math.floor(diff / 1000);
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      setTrayElapsed(`${mm}:${ss}`);
+    };
+    if (call && call.status === 'in-call') {
+      update();
+      t = setInterval(update, 1000);
+    } else {
+      setTrayElapsed('00:00');
+    }
+    return () => { if (t) clearInterval(t); };
+  }, [call?.status, call?.startedAt]);
+
   return (
     <CallContext.Provider value={value}>
       {children}
@@ -501,8 +547,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
             <button onClick={restoreCall} title="Вернуться к звонку" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 18px', borderRadius: 999, background: 'linear-gradient(90deg,#0f1113,#14151a)', color: '#fff', border: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer', boxShadow: '0 10px 30px rgba(0,0,0,0.55)' }}>
               <img src={call.targetAvatar || '/phonecall.svg'} alt="a" style={{ width: 36, height: 36, borderRadius: '50%' }} />
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>{call.targetName || 'Звонок'}</div>
-                <div style={{ color: '#9aa0a6', fontSize: 12 }}>{call.type === 'phone' ? 'Звоним...' : 'Звоним...'}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{call.targetName || 'Звонок'}</div>
+                  <div style={{ color: '#9aa0a6', fontSize: 12 }}>{call.status === 'in-call' ? trayElapsed : (call.type === 'phone' ? 'Звоним...' : 'Звоним...')}</div>
               </div>
               <img src="/phonecall.svg" alt="phone" style={{ width: 20, height: 20, marginLeft: 8 }} />
             </button>
@@ -519,7 +565,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 <div style={{ fontWeight: 700, fontSize: 15 }}>{call.targetName || 'Звонок'}</div>
-                <div style={{ color: '#9aa0a6', fontSize: 13 }}>{call.type === 'phone' ? 'Телефонный звонок' : 'Видеозвонок'}</div>
+                <div style={{ color: '#9aa0a6', fontSize: 13 }}>{call.status === 'in-call' ? trayElapsed : (call.type === 'phone' ? 'Телефонный звонок' : 'Видеозвонок')}</div>
               </div>
             </button>
           </div>

@@ -3,6 +3,7 @@ import { getUser } from "../lib/session";
 import Sidebar from "../components/Sidebar";
 import ToastNotification from "./chat/ToastNotification";
 import { FiSearch, FiUserPlus, FiCheck, FiX } from "react-icons/fi";
+import styles from '../styles/Friends.module.css';
 
 export default function FriendsPage() {
   // Отправить заявку в друзья
@@ -114,9 +115,11 @@ export default function FriendsPage() {
   }, []);
 
   return (
-    <div style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
-      <h2 style={{ textAlign: "center", fontSize: 36, fontWeight: 800, margin: "48px 0 24px 0", color: "#fff" }}>Меню друзей</h2>
-      <p style={{ textAlign: 'center', color: '#bfc9cf', marginTop: 0, marginBottom: 28 }}>Поиск и заявки, взаимная дружба создана для общения в чатах</p>
+    <div className={styles.friendsPage}>
+      <div className={styles.header}>
+        <h2 className={styles.title}>Меню друзей</h2>
+        <p className={styles.subtitle}>Поиск и заявки, взаимная дружба создана для общения в чатах</p>
+      </div>
       {toast && (
         <ToastNotification
           type={toast.type}
@@ -125,55 +128,55 @@ export default function FriendsPage() {
           onClose={() => setToast(null)}
         />
       )}
-      <div style={{ display: 'flex', gap: 36, justifyContent: 'center', alignItems: 'flex-start', width: '100%', marginTop: 8, padding: '0 20px', boxSizing: 'border-box' }}>
-        <div className="friends-grid" style={{ width: 720, maxWidth: '100%', display: 'flex', gap: 20 }}>
-          <div className="friend-panel" style={{ flex: 1, background: '#1e2124', borderRadius: 14, padding: 18, boxShadow: '0 8px 30px rgba(0,0,0,0.55)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+      <div className={styles.layout}>
+        <div className={styles.grid}>
+          <div className={`${styles.panel}`}>
+            <div className={styles.panelHeader}>
               <FiSearch style={{ fontSize: 22, color: '#4fc3f7' }} />
-              <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>Поиск друзей</div>
+              <div className={styles.panelTitle}>Поиск друзей</div>
             </div>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <div className={styles.searchRow}>
               <input
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Поиск по линку или имени"
-                style={{ flex: 1, padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)', background: 'rgba(10,12,18,0.4)', color: '#e6eef8', fontSize: 15, outline: 'none' }}
+                className={styles.searchInput}
               />
-              <button onClick={() => setSearch('')} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.04)', color: '#bfc9cf', padding: '10px 12px', borderRadius: 10, cursor: 'pointer' }}>Очистить</button>
+              <button onClick={() => setSearch('')} className={styles.clearBtn}>Очистить</button>
             </div>
 
-            <div style={{ marginTop: 14 }}>
-              {loading && <div style={{ color: '#9fbfe6' }}>Поиск...</div>}
+            <div>
+              {loading && <div className={styles.loading}>Поиск...</div>}
               {Array.isArray(searchResult) && searchResult.length === 0 && !loading && (
-                <div style={{ color: '#99a2b6', padding: 18 }}>Ничего не найдено</div>
+                <div className={styles.empty}></div>
               )}
               {Array.isArray(searchResult) && searchResult.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div className={styles.results}>
                   {searchResult.map(foundUser => (
-                    <div key={foundUser.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: 12, borderRadius: 10, background: 'rgba(20,22,26,0.6)' }}>
-                      <div style={{ position: 'relative' }}>
-                        <img src={foundUser.avatar || '/window.svg'} alt="avatar" style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', boxShadow: '0 4px 14px rgba(2,6,23,0.6)' }} />
+                    <div key={foundUser.id} className={styles.resultItem}>
+                      <div className={styles.avatarWrap}>
+                        <img src={foundUser.avatar || '/window.svg'} alt="avatar" className={styles.avatar} />
                         {foundUser.status === 'dnd' ? (
                           <img src="/moon-dnd.svg" alt="dnd" style={{ position: 'absolute', left: 36, top: 36, width: 16, height: 16 }} />
                         ) : (
-                          <span style={{ position: 'absolute', left: 40, top: 40, width: 10, height: 10, borderRadius: '50%', background: foundUser.status === 'online' ? '#1ed760' : '#888', border: '2px solid #0f1113' }} />
+                          <span className={styles.statusDot} style={{ background: foundUser.status === 'online' ? '#1ed760' : '#888' }} />
                         )}
                       </div>
-                      <div style={{ flex: 1 }}>
+                      <div className={styles.userInfo}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <div style={{ color: '#e6eef8', fontWeight: 700 }}>{foundUser.link ? `@${foundUser.link}` : foundUser.login}</div>
+                          <div className={styles.username}>{foundUser.link ? `@${foundUser.link}` : foundUser.login}</div>
                           <img src={`/role-icons/${foundUser.role || 'user'}.svg`} alt={foundUser.role || 'user'} style={{ width: 16, height: 16 }} />
                         </div>
-                        <div style={{ color: '#9fbfe6', fontSize: 13 }}>{foundUser.description || ''}</div>
+                        <div className={styles.userMeta}>{foundUser.description || ''}</div>
                       </div>
-                      <div style={{ display: 'flex', gap: 8 }}>
+                      <div className={styles.actions}>
                         {foundUser.isFriend ? (
                           <div style={{ padding: '8px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', color: '#bfc9cf' }}>Уже друг</div>
                         ) : (foundUser.id === user?.id) ? (
                           <div style={{ color: '#4fc3f7', fontWeight: 700 }}>Это вы</div>
                         ) : (
-                          <button onClick={() => sendRequest(foundUser.id)} style={{ background: '#4fc3f7', color: '#06121a', border: 'none', padding: '10px 14px', borderRadius: 10, cursor: 'pointer', fontWeight: 800 }}>Добавить</button>
+                          <button onClick={() => sendRequest(foundUser.id)} className={styles.btnPrimary}>Добавить</button>
                         )}
                       </div>
                     </div>
@@ -183,15 +186,15 @@ export default function FriendsPage() {
             </div>
           </div>
 
-          <div className="friend-panel" style={{ width: 320, background: '#1e2124', borderRadius: 14, padding: 18, boxShadow: '0 8px 30px rgba(0,0,0,0.55)' }}>
+          <div className={`${styles.panel} ${styles.secondaryPanel}`}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
               <FiUserPlus style={{ fontSize: 20, color: '#4fc3f7' }} />
-              <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>Входящие заявки</div>
+              <div className={styles.panelTitle}>Входящие заявки</div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className={styles.requestsList}>
               {Array.isArray(requests) && requests.length > 0 ? requests.map(r => (
                 r && typeof r.login === 'string' ? (
-                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 10, borderRadius: 10, background: 'rgba(20,22,26,0.55)' }}>
+                  <div key={r.id} className={styles.requestItem}>
                     <div style={{ position: 'relative' }}>
                       <img src={r.avatar || '/window.svg'} alt="avatar" style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover', boxShadow: '0 6px 18px rgba(2,6,23,0.6)' }} />
                       {r.status === 'dnd' ? (
@@ -207,13 +210,13 @@ export default function FriendsPage() {
                       </div>
                       <div style={{ color: '#9fbfe6', fontSize: 13 }}>{r.description || ''}</div>
                     </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button title="Принять" onClick={() => handleAccept(r.id)} style={{ background: '#4fc3f7', color: '#06121a', padding: '8px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 700 }}>Принять</button>
-                      <button title="Отклонить" onClick={() => handleDecline(r.id)} style={{ background: 'transparent', color: '#ff6b6b', padding: '8px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer', fontWeight: 700 }}>Отклонить</button>
+                    <div className={styles.requestActions}>
+                      <button title="Принять" onClick={() => handleAccept(r.id)} className={styles.acceptBtn}>Принять</button>
+                      <button title="Отклонить" onClick={() => handleDecline(r.id)} className={styles.declineBtn}>Отклонить</button>
                     </div>
                   </div>
                 ) : null
-              )) : <div style={{ color: '#99a2b6' }}>Нет входящих заявок</div>}
+              )) : <div className={styles.empty}>Нет входящих заявок</div>}
             </div>
           </div>
         </div>
