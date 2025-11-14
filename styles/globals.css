@@ -97,6 +97,33 @@ body {
   background: #111;
   color: #fff;
 }
+/* Global smooth transitions for UI and page elements.
+   Be conservative: respect user's reduced motion preferences. */
+:root {
+  --global-transition: 180ms;
+  --global-ease: cubic-bezier(.2,.9,.2,1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Apply reasonable transitions to common properties to make interactions feel smooth.
+   This avoids adding heavy animations while improving perceived responsiveness. */
+* , *::before, *::after {
+  transition: background-color var(--global-transition) var(--global-ease),
+              color var(--global-transition) var(--global-ease),
+              border-color var(--global-transition) var(--global-ease),
+              box-shadow calc(var(--global-transition) * 1.2) var(--global-ease),
+              transform calc(var(--global-transition) * 0.8) var(--global-ease),
+              opacity var(--global-transition) var(--global-ease);
+}
+
 /* Site-wide CSS variables used across components/pages */
 :root {
   --bg: #0f1113;

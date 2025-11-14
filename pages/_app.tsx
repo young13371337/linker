@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { SessionProvider, useSession, signOut } from "next-auth/react";
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
+import { AnimatePresence, motion } from 'framer-motion';
 import { SWRConfig, mutate } from "swr";
 import CallProvider from '../components/CallProvider';
 import { swrConfig, profileKey, chatsKey, messagesKey } from "../lib/hooks";
@@ -370,8 +371,19 @@ function MainApp({ Component, pageProps }: AppProps) {
         {/* reCAPTCHA script moved to registration page to avoid loading globally */}
       </Head>
       {showSidebar && <Sidebar />}
-      {/* Apply app pages; the surrounding div toggles the Poppins font except on the index route ('/'). */}
-      <Component {...pageProps} />
+      {/* Apply app pages with route transitions; the surrounding div toggles fonts. */}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={router.asPath}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.22, ease: [0.2, 0.9, 0.2, 1] }}
+          style={{ willChange: 'opacity, transform' }}
+        >
+          <Component {...pageProps} />
+        </motion.div>
+      </AnimatePresence>
       {bottomToast && (
         <ToastNotification
           type={bottomToast.type}

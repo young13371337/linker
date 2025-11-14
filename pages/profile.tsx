@@ -2,6 +2,7 @@ import { getUser } from "../lib/session";
 import { forbiddenPasswords } from "../lib/forbidden-passwords";
 import { FaUserCircle, FaCog, FaShieldAlt, FaPalette, FaLaptop, FaMobileAlt, FaDesktop, FaSignOutAlt } from "react-icons/fa";
 import React, { useState, useEffect, useRef } from "react";
+import { motion } from 'framer-motion';
 import UserStatus, { UserStatusType, statusLabels } from "../components/UserStatus";
 import { useSession, signOut } from "next-auth/react";
 // 2FA 6-digit input component
@@ -209,6 +210,18 @@ export default function ProfilePage() {
   const [sessions, setSessions] = useState<any[]>([]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const currentSessionId = session && session.user ? (session.user as any).sessionId : null;
+  const [prefersReduced, setPrefersReduced] = useState<boolean>(true);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      try {
+        setPrefersReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      } catch (e) {
+        setPrefersReduced(true);
+      }
+    } else {
+      setPrefersReduced(true);
+    }
+  }, []);
 
   // Загружаем профиль пользователя после успешного входа
   useEffect(() => {
@@ -399,7 +412,11 @@ export default function ProfilePage() {
   }
 
   return (
-    <div style={{
+    <motion.div
+      initial={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+      animate={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 1, y: 0, transition: { duration: 0.34, ease: [0.2, 0.9, 0.2, 1] } }}
+      exit={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: -6, transition: { duration: 0.07, ease: 'linear' } }}
+      style={{
       maxWidth: 600,
       margin: "40px auto",
       padding: 32,
@@ -1185,6 +1202,6 @@ export default function ProfilePage() {
         </div>
       )}
       </div>
-      </div>
+    </motion.div>
     );
 }

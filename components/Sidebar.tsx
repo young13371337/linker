@@ -21,6 +21,14 @@ export default function Sidebar() {
     setMounted(true);
   }, []);
 
+  // Debug logs to help diagnose layout/visibility issues
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line no-console
+      console.debug('[Sidebar] state', { user, mounted, isMobile, open, pendingCount });
+    } catch (e) {}
+  }, [user, mounted, isMobile, open, pendingCount]);
+
   // helper: fetch latest profile from server and merge into local state/storage
   const fetchAndMergeProfile = async (localUser: any) => {
     if (!localUser || !localUser.id) return null;
