@@ -223,6 +223,29 @@ export default function ProfilePage() {
     }
   }, []);
 
+  // Portal root for client-only rendering of modals (avoid document access during SSR)
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      setPortalRoot(document.body);
+    }
+  }, []);
+
+  // Lock body scroll while settings modal is open
+  useEffect(() => {
+    if (!portalRoot) return;
+    const body = portalRoot;
+    const prev = body.style.overflow;
+    if (showSettings) {
+      body.style.overflow = 'hidden';
+    } else {
+      body.style.overflow = prev || '';
+    }
+    return () => {
+      try { body.style.overflow = prev || ''; } catch (e) {}
+    };
+  }, [showSettings, portalRoot]);
+
   // Загружаем профиль пользователя после успешного входа
   useEffect(() => {
     if (status === "loading") return;
