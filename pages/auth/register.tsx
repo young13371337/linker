@@ -1,4 +1,4 @@
-import ToastNotification from "../chat/ToastNotification";
+import ToastNotification from "../../components/ToastNotification";
 import Lottie from "lottie-react";
 import registerAnimation from "../../public/aui/register.json";
 

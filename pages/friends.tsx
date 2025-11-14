@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { getUser } from "../lib/session";
 import Sidebar from "../components/Sidebar";
-import ToastNotification from "./chat/ToastNotification";
+import ToastNotification from "../components/ToastNotification";
 import { FiSearch, FiUserPlus, FiCheck, FiX } from "react-icons/fi";
 import styles from '../styles/Friends.module.css';
 

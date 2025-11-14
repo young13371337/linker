@@ -64,7 +64,7 @@ function CodeInput({ value, onChange, length = 6, disabled = false }: CodeInputP
     </div>
   );
 }
-import ToastNotification from "./chat/ToastNotification";
+import ToastNotification from "../components/ToastNotification";
 import LottiePlayer from "../lib/LottiePlayer";
 // Форма смены логина
 type UserType = { id: string; login: string; link?: string | null; verified?: boolean; status?: 'online' | 'offline' | 'dnd' } | null;
@@ -222,29 +222,6 @@ export default function ProfilePage() {
       setPrefersReduced(true);
     }
   }, []);
-
-  // Portal root for client-only rendering of modals (avoid document access during SSR)
-  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
-  useEffect(() => {
-    if (typeof document !== 'undefined') {
-      setPortalRoot(document.body);
-    }
-  }, []);
-
-  // Lock body scroll while settings modal is open
-  useEffect(() => {
-    if (!portalRoot) return;
-    const body = portalRoot;
-    const prev = body.style.overflow;
-    if (showSettings) {
-      body.style.overflow = 'hidden';
-    } else {
-      body.style.overflow = prev || '';
-    }
-    return () => {
-      try { body.style.overflow = prev || ''; } catch (e) {}
-    };
-  }, [showSettings, portalRoot]);
 
   // Загружаем профиль пользователя после успешного входа
   useEffect(() => {

@@ -7,7 +7,7 @@ import { signOut } from "next-auth/react";
 import { FaComments, FaUser, FaSignOutAlt, FaRegNewspaper, FaVideo } from "react-icons/fa";
 import styles from "../styles/Sidebar.module.css"; // создадим CSS для hover и анимаций
 import Pusher from 'pusher-js';
-import ToastNotification from '../pages/chat/ToastNotification';
+import ToastNotification from './ToastNotification';
 
 export default function Sidebar() {
   const router = useRouter();
@@ -20,14 +20,6 @@ export default function Sidebar() {
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  // Debug logs to help diagnose layout/visibility issues
-  useEffect(() => {
-    try {
-      // eslint-disable-next-line no-console
-      console.debug('[Sidebar] state', { user, mounted, isMobile, open, pendingCount });
-    } catch (e) {}
-  }, [user, mounted, isMobile, open, pendingCount]);
 
   // helper: fetch latest profile from server and merge into local state/storage
   const fetchAndMergeProfile = async (localUser: any) => {

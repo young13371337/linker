@@ -4,7 +4,7 @@ import { useRouter } from "next/router";
 import dynamic from 'next/dynamic';
 // Lottie should only render on the client to avoid SSR/client markup mismatches
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
-import ToastNotification from "../chat/ToastNotification";
+import ToastNotification from "../../components/ToastNotification";
 import loginAnimation from "../../public/aui/login.json";
 import { signIn } from "next-auth/react";
 

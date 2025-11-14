@@ -11,7 +11,7 @@ import CallProvider from '../components/CallProvider';
 import { swrConfig, profileKey, chatsKey, messagesKey } from "../lib/hooks";
 import { Toaster, toast } from 'react-hot-toast';
 import { MessageToast } from '../components/MessageToast';
-import ToastNotification from './chat/ToastNotification';
+import ToastNotification from '../components/ToastNotification';
 import { getPusherClient } from '../lib/pusher';
 import { getUser as getLocalUser } from '../lib/session';
 
