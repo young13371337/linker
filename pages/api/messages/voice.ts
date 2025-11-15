@@ -5,8 +5,7 @@ import prisma from '../../../lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { pusher } from '../../../lib/pusher';
-// @ts-ignore
-import formidable from 'formidable';
+// Compatible parsing with multiple `formidable` versions
 import fs from 'fs';
 import path from 'path';
 
@@ -28,15 +27,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const uploadDir = path.join(process.cwd(), 'public', 'voice');
   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-  const form = new formidable.IncomingForm({
-    uploadDir,
-    keepExtensions: true
-  });
 
-  form.parse(req, async (err: any, fields: any, files: any) => {
-    if (err) {
-      return res.status(500).json({ error: 'Form parse error' });
-    }
+  // Use dynamic parseForm to handle various formidable shapes
+  function parseForm(req: NextApiRequest) {
+    return new Promise<{ fields: any; files: any }>((resolve, reject) => {
+      try {
+        const formidableLib = require('formidable');
+        let createForm: any = null;
+        if (typeof formidableLib === 'function') createForm = formidableLib;
+        else if (formidableLib && typeof formidableLib.default === 'function') createForm = formidableLib.default;
+        else if (formidableLib && typeof formidableLib.IncomingForm === 'function') createForm = (opts: any) => new formidableLib.IncomingForm(opts);
+        if (!createForm) return reject(new Error('Formidable module has unexpected shape'));
+        const form = createForm({ uploadDir, keepExtensions: true, allowEmptyFiles: false });
+        if (typeof form.parse === 'function') form.parse(req, (err2: any, fields: any, files: any) => err2 ? reject(err2) : resolve({ fields, files }));
+        else if (typeof (form as any).then === 'function') (form as any).then((parsed: any) => resolve(parsed)).catch(reject);
+        else reject(new Error('Formidable parse method not available'));
+      } catch (err) { reject(err); }
+    });
+  }
+
+  const { fields, files } = await parseForm(req);
     const { chatId } = fields;
     const audio = files.audio;
     if (!chatId || !audio) {
@@ -56,5 +66,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
     await pusher.trigger(`chat-${chatId}`, 'new-voice', { ...message, audioUrl });
     return res.status(200).json({ message });
-  });
 }

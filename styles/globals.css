@@ -144,6 +144,13 @@ html, body {
   -webkit-overflow-scrolling: touch;
 }
 
+/* When a modal is open, prevent page-level scrolling and touch gestures. */
+body.modal-open, html.modal-open {
+  overflow: hidden !important;
+  touch-action: none !important;
+  overscroll-behavior: none !important;
+}
+
 /* ===== Stack Sans Text font and auth input styles ===== */
 
 /* Add a root helper class that switches the site to Stack Sans Text.

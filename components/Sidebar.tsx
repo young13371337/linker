@@ -4,7 +4,7 @@ import Link from "next/link";
 import { getUser, clearUser, saveUser } from "../lib/session";
 import { useRouter } from "next/router";
 import { signOut } from "next-auth/react";
-import { FaComments, FaUser, FaSignOutAlt, FaRegNewspaper, FaVideo } from "react-icons/fa";
+import { FaComments, FaUser, FaSignOutAlt, FaRegNewspaper, FaVideo, FaFeatherAlt } from "react-icons/fa";
 import styles from "../styles/Sidebar.module.css"; // создадим CSS для hover и анимаций
 import Pusher from 'pusher-js';
 import ToastNotification from './ToastNotification';
@@ -56,6 +56,8 @@ export default function Sidebar() {
   // --- Загрузка количества pending friend requests ---
   useEffect(() => {
     let mounted = true;
+    let lastVisibilityCheckTime = 0;
+    const VISIBILITY_CHECK_DEBOUNCE = 5000; // не чаще чем раз в 5 секунд
 
     // helper to fetch pending count (extracted so we can call it from pusher handler)
     const fetchPending = async () => {
@@ -71,6 +73,13 @@ export default function Sidebar() {
     fetchPending();
 
     const handleVisibility = async () => {
+      const now = Date.now();
+      // Пропускаем если был запрос менее чем 5 секунд назад
+      if (now - lastVisibilityCheckTime < VISIBILITY_CHECK_DEBOUNCE) {
+        return;
+      }
+      lastVisibilityCheckTime = now;
+
       const u = getUser();
       if (!u) {
         setUser(null);
@@ -365,7 +374,9 @@ export default function Sidebar() {
             open={open}
             isMobile={isMobile}
           />
-          {/* Separate buttons for Posts and Studio */}
+          {/* Posts */}
+          <SidebarLink href="/posts" icon={<FaFeatherAlt style={{ transform: 'translateY(1px)' }} />} text="Посты" open={open} isMobile={isMobile} />
+          {/* Profile */}
           <SidebarLink href="/profile" icon={<FaUser />} text="Профиль" open={open} isMobile={isMobile} />
         </nav>
 

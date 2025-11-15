@@ -48,6 +48,8 @@ model User {
   // relation fields for Call model
   callsMade      Call[]       @relation("CallCaller")
   callsReceived  Call[]       @relation("CallCallee")
+  posts          Post[]
+  likes          Like[]
 }
 
 model Friend {
@@ -100,4 +102,52 @@ model Call {
   createdAt DateTime @default(now())
   caller    User     @relation("CallCaller", fields: [callerId], references: [id], onDelete: Cascade)
   callee    User     @relation("CallCallee", fields: [calleeId], references: [id], onDelete: Cascade)
+}
+
+// Media stored in DB (Bytes) for now. We keep provider/key to migrate to S3 later.
+model Media {
+  id        String   @id @default(uuid())
+  ownerId   String? 
+  data      Bytes?   // binary image data (optimized, e.g. webp)
+  mime      String?
+  size      Int?
+  width     Int?
+  height    Int?
+  provider  String   @default("db")
+  key       String?  // external key if provider != 'db'
+  createdAt DateTime @default(now())
+  posts     Post[]
+}
+
+model Post {
+  id        String   @id @default(uuid())
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  title     String?  // post title
+  description String? // short description
+  content   String?  // text content (full)
+  mediaId   String?
+  media     Media?   @relation(fields: [mediaId], references: [id], onDelete: SetNull)
+  // Optional inline image storage for simplified DB-only mode
+  imageData Bytes?
+  imageMime String?
+  imageSize Int?
+  imageWidth Int?
+  imageHeight Int?
+  // backwards-compatible alias for photo storage; also used by new features
+  photo Bytes?
+  likes     Like[]
+  createdAt DateTime @default(now())
+}
+
+model Like {
+  id      String @id @default(uuid())
+  postId  String
+  userId  String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
 }
