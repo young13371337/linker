@@ -35,9 +35,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const out = posts.map((p: any) => {
-      const { likes, imageData, ...rest } = p;
+      const { likes, imageData, media, ...rest } = p;
+      // remove binary fields from media if present
+      let safeMedia = undefined as any;
+      if (media) {
+        const { data: _data, ...restMedia } = media;
+        safeMedia = restMedia;
+      }
       return {
         ...rest,
+        media: safeMedia,
         // don't send raw image data in list
         imageSize: p.imageSize,
         imageMime: p.imageMime,

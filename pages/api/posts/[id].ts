@@ -27,7 +27,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const post = await (prisma as any).post.findUnique({ where: { id }, include: { media: true, author: true } });
       if (!post) return res.status(404).json({ error: 'Not found' });
-      return res.status(200).json({ post });
+      // remove raw binary fields from the returned post
+      const { imageData, media, ...rest } = post as any;
+      let safeMedia = undefined as any;
+      if (media) {
+        const { data: _data, ...restMedia } = media;
+        safeMedia = restMedia;
+      }
+      return res.status(200).json({ post: { ...rest, media: safeMedia } });
     } catch (e) {
       console.error('/api/posts/[id] GET error', e);
       return res.status(500).json({ error: 'Internal error', detail: String((e as any)?.message || e) });

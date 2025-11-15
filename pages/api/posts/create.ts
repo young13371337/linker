@@ -157,8 +157,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // Avoid sending raw inline image bytes back in the response
+    // Avoid sending raw inline image bytes back in the response (and binary media)
     if (post && (post as any).imageData) delete (post as any).imageData;
+    if (post && post.media && (post.media as any).data) delete (post.media as any).data;
     console.log('/api/posts/create created post', { id: post.id, authorId: post.authorId, mediaId: post.mediaId, title: post.title, description: post.description, hasInlineImage: !!post.imageSize });
     return res.status(200).json({ post });
   } catch (e) {
