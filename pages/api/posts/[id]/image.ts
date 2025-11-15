@@ -6,9 +6,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!id || Array.isArray(id)) return res.status(400).end();
   try {
     const post = await (prisma as any).post.findUnique({ where: { id } });
-    const post = await (prisma as any).post.findUnique({ where: { id } });
     console.log('/api/posts/[id]/image: lookup post', { id });
-    res.setHeader('Content-Type', post.imageMime || 'application/octet-stream');
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    if (!post.imageData) {
+      return res.status(404).json({ error: 'Image not found for this post' });
+    }
     console.log('/api/posts/[id]/image: found post with image', { id, size: (post.imageData as Buffer).length, mime: post.imageMime });
     res.setHeader('Content-Type', post.imageMime || 'application/octet-stream');
     return res.status(200).send(post.imageData as Buffer);
