@@ -68,6 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       try { sharpLib = require('sharp'); } catch (e) { sharpLib = null; }
       let optimized: Buffer | null = null;
       let meta2: any = {};
+      let optimizedMime = (file.mimetype || file.type) || 'application/octet-stream';
       if (sharpLib) {
         const image = sharpLib(filepath);
         const metadata = await image.metadata();
@@ -77,6 +78,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .toFormat('webp', { quality: 80 })
           .toBuffer();
         meta2 = await sharpLib(optimized).metadata();
+        optimizedMime = 'image/webp';
       } else {
         // sharp not installed in this environment; read raw file
         optimized = fs.readFileSync(filepath);
@@ -87,17 +89,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // If FORCE_DB_MEDIA is set, skip any S3 behavior and store bytes in DB
       if (forceDb) {
         console.log('[MEDIA:upload] FORCE_DB_MEDIA=true — storing media in DB only');
-        const mediaDb = await (prisma as any).media.create({
+        let mediaDb: any = null;
+        try {
+          mediaDb = await (prisma as any).media.create({
           data: {
             ownerId: fields.ownerId ? String(fields.ownerId) : undefined,
             data: optimized as Buffer,
-            mime: (file.mimetype || file.type) || 'image/webp',
+            mime: optimizedMime,
             size: (optimized as Buffer).length,
             width: meta2.width ?? undefined,
             height: meta2.height ?? undefined,
             provider: 'db',
           },
-        });
+          });
+        } catch (err) {
+          console.warn('[MEDIA:upload] prisma.media.create failed; falling back to raw SQL insert', String((err as any)?.message || err));
+          try {
+            // Determine which columns exist on the Media table
+            const cols: any[] = await (prisma as any).$queryRaw`SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Media'`;
+            const existingCols = new Set(cols.map(c => String(c.column_name)));
+            const insertCols: string[] = ['id'];
+            const insertVals: any[] = [(randomUUID())];
+            // ownerId
+            if (existingCols.has('ownerId')) { insertCols.push('"ownerId"'); insertVals.push(fields.ownerId ? String(fields.ownerId) : null); }
+            if (existingCols.has('data')) { insertCols.push('data'); insertVals.push(optimized as Buffer); }
+            if (existingCols.has('mime')) { insertCols.push('mime'); insertVals.push((file.mimetype || file.type) || 'image/webp'); }
+            if (existingCols.has('size')) { insertCols.push('size'); insertVals.push((optimized as Buffer).length); }
+            if (existingCols.has('width')) { insertCols.push('width'); insertVals.push(meta2.width ?? null); }
+            if (existingCols.has('height')) { insertCols.push('height'); insertVals.push(meta2.height ?? null); }
+            if (existingCols.has('provider')) { insertCols.push('provider'); insertVals.push('db'); }
+            if (existingCols.has('key')) { insertCols.push('key'); insertVals.push(null); }
+            const insertSql = `INSERT INTO "Media" (${insertCols.join(',')}) VALUES (${insertCols.map((_, i) => i === 0 ? '$' + (i + 1) : '$' + (i + 1)).join(',')}) RETURNING id, mime, size, provider`;
+            const row: any = await (prisma as any).$queryRawUnsafe(insertSql, ...insertVals);
+            if (row && row.length) {
+              mediaDb = { id: row[0].id, mime: row[0].mime, size: row[0].size, provider: row[0].provider };
+            }
+          } catch (sqlErr) {
+            console.error('[MEDIA:upload] raw SQL media insert fallback failed', sqlErr);
+            throw err; // rethrow original
+          }
+        }
         try { fs.unlinkSync(filepath); } catch (e) {}
         console.log('[MEDIA:upload] Created DB media (force)', { id: mediaDb.id, size: mediaDb.size });
         return res.status(200).json({ mediaId: mediaDb.id, mime: mediaDb.mime, size: mediaDb.size, provider: 'db' });
@@ -127,10 +158,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
       
-        const key = `media/${randomUUID()}.webp`;
+      const ext = optimizedMime === 'image/webp' ? 'webp' : (optimizedMime && optimizedMime.includes('png') ? 'png' : 'bin');
+      const key = `media/${randomUUID()}.${ext}`;
         try {
           console.log('[MEDIA:upload] Putting object', { Bucket: bucket, Key: key, size: (optimized as Buffer).length });
-          await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: optimized as Buffer, ContentType: (file.mimetype || file.type) || 'image/webp', ContentLength: (optimized as Buffer).length }));
+          await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: optimized as Buffer, ContentType: optimizedMime, ContentLength: (optimized as Buffer).length }));
           console.log('[MEDIA:upload] PutObject successful', { key });
 
           const media = await (prisma as any).media.create({
@@ -138,7 +170,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               ownerId: fields.ownerId ? String(fields.ownerId) : undefined,
               provider: 's3',
               key,
-              mime: (file.mimetype || file.type) || 'image/webp',
+              mime: optimizedMime,
               size: (optimized as Buffer).length,
               width: meta2.width ?? undefined,
               height: meta2.height ?? undefined,
@@ -165,7 +197,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         data: {
           ownerId: fields.ownerId ? String(fields.ownerId) : undefined,
           data: optimized as Buffer,
-          mime: (file.mimetype || file.type) || 'image/webp',
+          mime: optimizedMime,
           size: (optimized as Buffer).length,
           width: meta2.width ?? undefined,
           height: meta2.height ?? undefined,

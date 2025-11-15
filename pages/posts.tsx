@@ -79,11 +79,22 @@ export default function PostsPage() {
   useEffect(() => { fetchPosts(); }, []);
 
   async function fetchPosts(){
-    const r = await fetch('/api/posts');
+    const r = await fetch('/api/posts', { credentials: 'include' });
     if (r.ok) {
       const j = await r.json().catch(()=>({posts:[]}));
       console.log('[CLIENT:/posts] fetched posts response=', j);
       setPosts(j.posts || []);
+      if ((!j.posts || j.posts.length === 0)) {
+        try {
+          // fallback to the simple SQL-based endpoint to handle production schema mismatches
+          const rf = await fetch('/api/posts/simple');
+          if (rf.ok) {
+            const jf = await rf.json().catch(()=>({posts:[]}));
+            console.log('[CLIENT:/posts] simple posts fallback response=', jf);
+            setPosts(jf.posts || []);
+          }
+        } catch (e) {}
+      }
     }
   }
 
@@ -98,7 +109,7 @@ export default function PostsPage() {
         const uploadFd = new FormData();
         uploadFd.append('file', file, file.name);
         uploadFd.append('ownerId', '');
-        const uploadRes = await fetch('/api/media/upload', { method: 'POST', body: uploadFd });
+        const uploadRes = await fetch('/api/media/upload', { method: 'POST', body: uploadFd, credentials: 'include' });
         const uploadJson = await uploadRes.json().catch(() => null);
         if (!uploadRes.ok) {
           setToast({ type: 'error', message: (uploadJson && uploadJson.error) || 'Failed to upload media' });
@@ -106,7 +117,7 @@ export default function PostsPage() {
           return;
         }
         const mediaId = uploadJson?.mediaId;
-        const createRes = await fetch('/api/posts/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, description, mediaId }) });
+        const createRes = await fetch('/api/posts/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, description, mediaId }), credentials: 'include' });
         const createJson = await createRes.json().catch(() => null);
         console.log('[CLIENT:/posts] create response', { status: createRes.status, json: createJson });
         if (!createRes.ok) {
@@ -122,7 +133,7 @@ export default function PostsPage() {
         return;
       }
 
-      const createRes = await fetch('/api/posts/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, description, mediaId }) });
+      const createRes = await fetch('/api/posts/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, description, mediaId }), credentials: 'include' });
       if (!createRes.ok) {
         const er = await createRes.json().catch(()=>({error:'failed'}));
         setToast({ type: 'error', message: er.error || 'Failed to create post' });
@@ -214,13 +225,29 @@ export default function PostsPage() {
                         <button className="dotMenuItem" onClick={async()=>{
                           if (!confirm('Удалить пост?')) return;
                           try {
-                            const r = await fetch(`/api/posts/${p.id}`, { method: 'DELETE' });
+                            const r = await fetch(`/api/posts/${p.id}`, { method: 'DELETE', credentials: 'include' });
                             const bodyText = await r.text().catch(() => null);
                             let j = null; try { j = bodyText ? JSON.parse(bodyText) : null; } catch(e){ j=null; }
-                            if (!r.ok) { throw new Error(j?.error || j?.detail || bodyText || 'Ошибка удаления'); }
+                            if (!r.ok) {
+                              const errMsg = j?.error || j?.detail || bodyText || 'Ошибка удаления';
+                              setMenuOpenId(null);
+                              setToast({ type: 'error', message: errMsg });
+                              return;
+                            }
                             setMenuOpenId(null);
-                            await fetchPosts();
-                            setToast({ type: 'success', message: 'Пост удален' });
+                                // optimistic removal
+                                const prev = posts.map(x => ({ ...x }));
+                                setPosts(ps => ps.filter(x => x.id !== p.id));
+                                try {
+                                  const json = j || null;
+                                  if (!json) {
+                                    await fetchPosts();
+                                  }
+                                  setToast({ type: 'success', message: 'Пост удален' });
+                                } catch (e) {
+                                  setPosts(prev);
+                                  throw e;
+                                }
                           } catch (e: any) {
                             console.error('delete post error', e);
                             setToast({ type: 'error', message: e?.message || 'Ошибка удаления' });
@@ -236,11 +263,47 @@ export default function PostsPage() {
                 {p.description ? <div className="postDescription">{p.description}</div> : <div className="postDescription" style={{ color:'#9fb0bf' }}>Без описания</div>}
               {(p.imageMime || p.imageSize) ? (
                 <div className="mediaWrap">
-                  <img src={`/api/posts/${p.id}/image`} className="postImage" onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/lost-image.png'; }} alt={p.title || 'image'} />
+                  <img
+                    src={`/api/posts/${p.id}/image`}
+                    className="postImage"
+                    width={p.imageWidth || undefined}
+                    height={p.imageHeight || undefined}
+                    style={{ aspectRatio: p.imageWidth && p.imageHeight ? `${p.imageWidth}/${p.imageHeight}` : undefined }}
+                    onError={async (e) => {
+                      const el = e.currentTarget as HTMLImageElement;
+                      const url = el.src;
+                      try {
+                        const head = await fetch(url, { method: 'HEAD', credentials: 'include' });
+                        console.warn('[CLIENT:/posts] Image HEAD failed or error', { url, status: head.status, headers: Object.fromEntries(head.headers.entries()) });
+                      } catch (err) {
+                        console.warn('[CLIENT:/posts] Image onError HEAD fetch failed', { url, err });
+                      }
+                      el.src = '/lost-image.png';
+                    }}
+                    alt={p.title || 'image'}
+                  />
                 </div>
               ) : (p.media && p.media.id && (
                 <div className="mediaWrap">
-                  <img src={`/api/media/${p.media.id}`} className="postImage" onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/lost-image.png'; }} alt={p.title || 'image'} />
+                  <img
+                    src={`/api/media/${p.media.id}`}
+                    className="postImage"
+                    width={p.media?.width || undefined}
+                    height={p.media?.height || undefined}
+                    style={{ aspectRatio: p.media?.width && p.media?.height ? `${p.media.width}/${p.media.height}` : undefined }}
+                    onError={async (e) => {
+                      const el = e.currentTarget as HTMLImageElement;
+                      const url = el.src;
+                      try {
+                        const head = await fetch(url, { method: 'HEAD', credentials: 'include' });
+                        console.warn('[CLIENT:/posts] Media image HEAD failed or error', { url, status: head.status, headers: Object.fromEntries(head.headers.entries()) });
+                      } catch (err) {
+                        console.warn('[CLIENT:/posts] Media image onError HEAD fetch failed', { url, err });
+                      }
+                      el.src = '/lost-image.png';
+                    }}
+                    alt={p.title || 'image'}
+                  />
                 </div>
               ))}
 
@@ -248,20 +311,49 @@ export default function PostsPage() {
                 <div className="controlsRow">
                 <div>
                   <button aria-pressed={p.likedByCurrentUser} className={`likeBtn ${p.likedByCurrentUser ? 'liked' : ''}`} onClick={async()=>{
+                    // Optimistic update: toggle state immediately
+                    const previous = posts.map(x => ({ ...x }));
+                    setPosts(ps => ps.map(x => x.id === p.id ? { ...x, likedByCurrentUser: !x.likedByCurrentUser, likesCount: (x.likesCount || 0) + (x.likedByCurrentUser ? -1 : 1) } : x));
                     try {
                       if (p.likedByCurrentUser) {
-                        const r = await fetch(`/api/posts/${p.id}/like`, { method: 'DELETE' });
-                        if (!r.ok) throw new Error('Не удалось убрать лайк');
+                        const r = await fetch(`/api/posts/${p.id}/like`, { method: 'DELETE', credentials: 'include' });
+                        if (!r.ok) {
+                          const er = await r.json().catch(() => null);
+                          const errMsg = er?.error || `Ошибка: ${r.status}`;
+                          if (r.status === 401) setToast({ type: 'error', message: 'Пожалуйста, войдите в систему' });
+                          else setToast({ type: 'error', message: errMsg });
+                          // revert optimistic update and stop
+                          setPosts(previous);
+                          return;
+                        }
+                        // update post with returned counts if provided
+                        const json = await r.json().catch(() => null);
+                        if (json) {
+                          setPosts(ps => ps.map(x => x.id === p.id ? { ...x, likesCount: json.likesCount ?? x.likesCount, likedByCurrentUser: json.likedByCurrentUser ?? false } : x));
+                        }
                       } else {
-                        const r = await fetch(`/api/posts/${p.id}/like`, { method: 'POST' });
-                        if (!r.ok) throw new Error('Не удалось поставить лайк');
+                        const r = await fetch(`/api/posts/${p.id}/like`, { method: 'POST', credentials: 'include' });
+                        if (!r.ok) {
+                          const er = await r.json().catch(() => null);
+                          const errMsg = er?.error || `Ошибка: ${r.status}`;
+                          if (r.status === 401) setToast({ type: 'error', message: 'Пожалуйста, войдите в систему' });
+                          else setToast({ type: 'error', message: errMsg });
+                          // revert optimistic update and stop
+                          setPosts(previous);
+                          return;
+                        }
+                        const json = await r.json().catch(() => null);
+                        if (json) {
+                          setPosts(ps => ps.map(x => x.id === p.id ? { ...x, likesCount: json.likesCount ?? x.likesCount, likedByCurrentUser: json.likedByCurrentUser ?? true } : x));
+                        }
                       }
-                      await fetchPosts();
                     } catch (e: any) {
                       console.error('like toggle error', e);
                       setToast({ type: 'error', message: e?.message || 'Ошибка' });
+                      // revert optimistic update on error
+                      setPosts(previous);
                     }
-                    }}>
+                  }}>
                     <span className="heart">{p.likedByCurrentUser ? '♥' : '♡'}</span>
                     <span className="likeCount">{p.likesCount || 0}</span>
                   </button>

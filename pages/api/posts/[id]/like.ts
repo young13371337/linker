@@ -17,12 +17,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // like
     try {
       const like = await (prisma as any).like.create({ data: { postId, userId } });
-      return res.status(200).json({ success: true, likeId: like.id });
+      // return updated counts and state to avoid extra queries on the client
+      const likesCount = await (prisma as any).like.count({ where: { postId } });
+      return res.status(200).json({ success: true, likeId: like.id, likesCount, likedByCurrentUser: true });
     } catch (e: any) {
-      // unique constraint -> already liked
+      // unique constraint -> already liked - return idempotent success with current counts
       const msg = e?.message || String(e);
-      console.error('/api/posts/[id]/like POST error', msg);
-      return res.status(409).json({ error: 'Already liked', detail: msg });
+      console.warn('/api/posts/[id]/like POST error (already liked?)', msg);
+      try {
+        const likesCount = await (prisma as any).like.count({ where: { postId } });
+        return res.status(200).json({ success: true, likeId: null, likesCount, likedByCurrentUser: true, note: 'Already liked' });
+      } catch (e2) {
+        return res.status(200).json({ success: true, likeId: null, likesCount: 0, likedByCurrentUser: true, note: 'Already liked' });
+      }
     }
   }
 
@@ -31,9 +38,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const existing = await (prisma as any).like.findUnique({ where: { postId_userId: { postId, userId } } });
       if (!existing) return res.status(404).json({ error: 'Not liked' });
       await (prisma as any).like.delete({ where: { id: existing.id } });
-      return res.status(200).json({ success: true });
+      const likesCount = await (prisma as any).like.count({ where: { postId } });
+      return res.status(200).json({ success: true, likesCount, likedByCurrentUser: false });
     } catch (e) {
       console.error('/api/posts/[id]/like DELETE error', e);
+      // Some DB errors can happen; return 200 as safe idempotent result if it seems to be already removed
       return res.status(500).json({ error: 'Internal error', detail: String((e as any)?.message || e) });
     }
   }
