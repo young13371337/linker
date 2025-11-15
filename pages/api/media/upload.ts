@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 // `formidable` API has several shapes depending on version. Use a compatibility helper below.
 import fs from 'fs';
-import sharp from 'sharp';
+// Import sharp lazily inside handler where used to avoid module import errors on platforms
+// where sharp may not be available. We'll `require` it at runtime and fall back.
 import prisma from '../../../lib/prisma';
 import { PutObjectCommand, HeadBucketCommand } from '@aws-sdk/client-s3';
 import { createS3Client, getS3Bucket, getS3Endpoint } from '../../../lib/s3';
@@ -59,18 +60,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-      const forceDb = (process.env.FORCE_DB_MEDIA || 'false').toLowerCase() === 'true';
-      // Resize and convert to webp for storage efficiency
+      let forceDb = (process.env.FORCE_DB_MEDIA || 'false').toLowerCase() === 'true';
+      // Resize and convert to webp for storage efficiency; if `sharp` isn't available,
+      // fall back to storing the raw uploaded bytes.
       const maxWidth = 1600;
-      const image = sharp(filepath);
-      const metadata = await image.metadata();
-      const width = Math.min(metadata.width || maxWidth, maxWidth);
-      const optimized = await image
-        .resize({ width, withoutEnlargement: true })
-        .toFormat('webp', { quality: 80 })
-        .toBuffer();
-
-      const meta2 = await sharp(optimized).metadata();
+      let sharpLib: any | null = null;
+      try { sharpLib = require('sharp'); } catch (e) { sharpLib = null; }
+      let optimized: Buffer | null = null;
+      let meta2: any = {};
+      if (sharpLib) {
+        const image = sharpLib(filepath);
+        const metadata = await image.metadata();
+        const width = Math.min(metadata.width || maxWidth, maxWidth);
+        optimized = await image
+          .resize({ width, withoutEnlargement: true })
+          .toFormat('webp', { quality: 80 })
+          .toBuffer();
+        meta2 = await sharpLib(optimized).metadata();
+      } else {
+        // sharp not installed in this environment; read raw file
+        optimized = fs.readFileSync(filepath);
+        // Try to retain any known mime type if possible; we will not have width/height
+        meta2 = {};
+      }
 
       // If FORCE_DB_MEDIA is set, skip any S3 behavior and store bytes in DB
       if (forceDb) {
@@ -78,9 +90,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const mediaDb = await (prisma as any).media.create({
           data: {
             ownerId: fields.ownerId ? String(fields.ownerId) : undefined,
-            data: optimized,
-            mime: 'image/webp',
-            size: optimized.length,
+            data: optimized as Buffer,
+            mime: (file.mimetype || file.type) || 'image/webp',
+            size: (optimized as Buffer).length,
             width: meta2.width ?? undefined,
             height: meta2.height ?? undefined,
             provider: 'db',
@@ -95,6 +107,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const s3 = createS3Client();
       const bucket = getS3Bucket();
       const endpoint = getS3Endpoint();
+      // If S3 client or bucket is missing, force DB storage
+      if (!s3 || !bucket) forceDb = true;
       console.log('[MEDIA:upload] S3 client configured=', !!s3, 'endpoint=', endpoint, 'bucket=', bucket, 'forceDb=', forceDb);
       if (!forceDb && s3 && bucket) {
         // quick check if bucket exists and is accessible
@@ -115,8 +129,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
         const key = `media/${randomUUID()}.webp`;
         try {
-          console.log('[MEDIA:upload] Putting object', { Bucket: bucket, Key: key, size: optimized.length });
-          await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: optimized, ContentType: 'image/webp', ContentLength: optimized.length }));
+          console.log('[MEDIA:upload] Putting object', { Bucket: bucket, Key: key, size: (optimized as Buffer).length });
+          await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: optimized as Buffer, ContentType: (file.mimetype || file.type) || 'image/webp', ContentLength: (optimized as Buffer).length }));
           console.log('[MEDIA:upload] PutObject successful', { key });
 
           const media = await (prisma as any).media.create({
@@ -124,8 +138,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               ownerId: fields.ownerId ? String(fields.ownerId) : undefined,
               provider: 's3',
               key,
-              mime: 'image/webp',
-              size: optimized.length,
+              mime: (file.mimetype || file.type) || 'image/webp',
+              size: (optimized as Buffer).length,
               width: meta2.width ?? undefined,
               height: meta2.height ?? undefined,
             },
@@ -150,9 +164,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const media = await (prisma as any).media.create({
         data: {
           ownerId: fields.ownerId ? String(fields.ownerId) : undefined,
-          data: optimized,
-          mime: 'image/webp',
-          size: optimized.length,
+          data: optimized as Buffer,
+          mime: (file.mimetype || file.type) || 'image/webp',
+          size: (optimized as Buffer).length,
           width: meta2.width ?? undefined,
           height: meta2.height ?? undefined,
           provider: 'db',

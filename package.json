@@ -35,6 +35,8 @@
     "swr": "^2.3.6",
     "uuid": "^9.0.1",
     "ws": "^8.18.3"
+    ,
+    "sharp": "^0.34.3"
   },
   "devDependencies": {
     "@prisma/client": "^6.19.0",

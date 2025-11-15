@@ -76,22 +76,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // This avoids failing the entire post creation when an upload unexpectedly
     // didn't persist a media record.
     let mediaConnect = undefined;
-    let postImageCreate: any = undefined;
+    let postImageCreate: any = undefined; // kept for backward compatibility fallback
     if (fileAny) {
       const filepath = (fileAny?.filepath || fileAny?.path) as string;
       if (filepath) {
         try {
-          const sharp = require('sharp');
-          const optimized = await sharp(filepath).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp', { quality: 80 }).toBuffer();
-          const meta2 = await sharp(optimized).metadata();
-          postImageCreate = {
-            imageData: optimized,
-            photo: optimized,
-            imageMime: 'image/webp',
-            imageSize: optimized.length,
-            imageWidth: meta2.width ?? undefined,
-            imageHeight: meta2.height ?? undefined,
-          };
+          // prefer creating a Media DB record and attach to the post instead of inline fields
+          let sharpLib: any = null;
+          try { sharpLib = require('sharp'); } catch (e) { sharpLib = null; }
+          let optimized: Buffer | null = null;
+          let meta2: any = {};
+          if (sharpLib) {
+            optimized = await sharpLib(filepath).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp', { quality: 80 }).toBuffer();
+            meta2 = await sharpLib(optimized).metadata();
+          } else {
+            // sharp not available in this environment — fall back to raw bytes
+            optimized = fs.readFileSync(filepath);
+            meta2 = {};
+          }
+          try {
+            const media = await (prisma as any).media.create({
+              data: {
+                ownerId: session.user.id,
+                data: optimized as Buffer,
+                mime: (fileAny && (fileAny.mimetype || fileAny.type)) || 'image/webp',
+                size: (optimized as Buffer).length,
+                width: meta2.width ?? undefined,
+                height: meta2.height ?? undefined,
+                provider: 'db',
+              },
+            });
+            mediaConnect = { connect: { id: media.id } };
+          } catch (err) {
+            console.warn('/api/posts/create: failed to create media record for inline upload', String((err as any)?.message || err));
+            // keep postImageCreate fallback for older schema migrations
+            postImageCreate = {
+              imageData: optimized as Buffer,
+              photo: optimized as Buffer,
+              imageMime: (fileAny && (fileAny.mimetype || fileAny.type)) || 'image/webp',
+              imageSize: (optimized as Buffer).length,
+              imageWidth: meta2.width ?? undefined,
+              imageHeight: meta2.height ?? undefined,
+            };
+          }
           try { fs.unlinkSync(filepath); } catch (e) {}
         } catch (err) {
           console.warn('/api/posts/create: failed to process inline image', err);
@@ -111,7 +138,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     let post: any;
     try {
-      console.log('/api/posts/create: creating post with data', { title, description, mediaId, hasInlineImage: !!postImageCreate });
+      console.log('/api/posts/create: creating post with data', { title, description, mediaId, hasInlineImage: !!postImageCreate, mediaConnect: !!mediaConnect });
       post = await (prisma as any).post.create({
         data: {
           authorId: session.user.id,
@@ -119,7 +146,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           description: typeof description === 'string' ? description : undefined,
           // content field removed — only 'description' is stored for short text
           media: mediaConnect,
-          ...postImageCreate,
         },
         include: { media: true, author: true },
       });
