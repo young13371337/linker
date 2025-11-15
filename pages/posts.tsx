@@ -94,11 +94,19 @@ export default function PostsPage() {
       if (file) {
         console.log('[CLIENT:/posts] Creating post with inline file', { title, description, fileName: file.name, fileSize: file.size });
         // Attach file directly to posts/create (server will accept multipart and store bytes in Post)
-        const fd = new FormData();
-        fd.append('file', file, file.name);
-        fd.append('title', title);
-        fd.append('description', description);
-        const createRes = await fetch('/api/posts/create', { method: 'POST', body: fd });
+        // Upload the file via /api/media/upload first (more robust, avoids inline storage)
+        const uploadFd = new FormData();
+        uploadFd.append('file', file, file.name);
+        uploadFd.append('ownerId', '');
+        const uploadRes = await fetch('/api/media/upload', { method: 'POST', body: uploadFd });
+        const uploadJson = await uploadRes.json().catch(() => null);
+        if (!uploadRes.ok) {
+          setToast({ type: 'error', message: (uploadJson && uploadJson.error) || 'Failed to upload media' });
+          setCreating(false);
+          return;
+        }
+        const mediaId = uploadJson?.mediaId;
+        const createRes = await fetch('/api/posts/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, description, mediaId }) });
         const createJson = await createRes.json().catch(() => null);
         console.log('[CLIENT:/posts] create response', { status: createRes.status, json: createJson });
         if (!createRes.ok) {

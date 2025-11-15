@@ -139,14 +139,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let post: any;
     try {
       console.log('/api/posts/create: creating post with data', { title, description, mediaId, hasInlineImage: !!postImageCreate, mediaConnect: !!mediaConnect });
+      const createData: any = { authorId: session.user.id };
+      if (typeof title === 'string' && title.length) createData.title = title;
+      if (typeof description === 'string' && description.length) createData.description = description;
+      // include media connection only when present
+      if (mediaConnect) createData.media = mediaConnect;
+      // do NOT include inline image fields into Post create; prefer `media` relation.
+      // The fallback path below will create a Media record and connect it if needed.
+
       post = await (prisma as any).post.create({
-        data: {
-          authorId: session.user.id,
-          title: typeof title === 'string' ? title : undefined,
-          description: typeof description === 'string' ? description : undefined,
-          // content field removed — only 'description' is stored for short text
-          media: mediaConnect,
-        },
+        data: createData,
         include: { media: true, author: true },
       });
     } catch (err: any) {
