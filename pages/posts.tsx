@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import ToastNotification from '../components/ToastNotification';
 
 export default function PostsPage() {
-  const [previewImg, setPreviewImg] = useState<{ src: string; mime?: string } | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -281,7 +280,6 @@ export default function PostsPage() {
                       }
                       el.src = '/lost-image.png';
                     }}
-                    onClick={() => setPreviewImg({ src: `/api/posts/${p.id}/image`, mime: p.imageMime || undefined })}
                     alt={p.title || 'image'}
                   />
                 </div>
@@ -304,7 +302,6 @@ export default function PostsPage() {
                       }
                       el.src = '/lost-image.png';
                     }}
-                    onClick={() => setPreviewImg({ src: `/api/media/${p.media.id}`, mime: p.media?.mime })}
                     alt={p.title || 'image'}
                   />
                 </div>
@@ -417,10 +414,8 @@ export default function PostsPage() {
         .authorName{ font-weight:700; font-size:14px }
         .authorMeta{ color:#8b99a6; font-size:12px }
         .postDescription{ color:#d9e0e6; margin-top:12px; font-size:15px; line-height:1.45 }
-        .mediaWrap{ margin-top:12px; border-radius:12px; overflow:hidden; display:flex; align-items:center; justify-content:center }
-        /* Prevent huge images — cap displayed size and center them */
-        .postImage{ max-width:100%; width:auto; height:auto; max-height:480px; display:block; margin:0 auto; object-fit:contain; cursor:pointer }
-        @media (max-width:760px) { .postImage{ max-height:320px } }
+        .mediaWrap{ margin-top:12px; border-radius:12px; overflow:hidden }
+        .postImage{ width:100%; height:auto; display:block }
         .controlsRow{ display:flex; align-items:center; gap:12px; margin-top:10px; justify-content:space-between }
         .likeBtn{ display:inline-flex; align-items:center; gap:10px; border-radius:999px; padding:8px 12px; cursor:pointer; border:1px solid rgba(255,255,255,0.02); background:transparent; color:#9fb0bf; font-weight:700 }
         .likeBtn .heart{ font-size:14px }
