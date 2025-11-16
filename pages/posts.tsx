@@ -38,34 +38,21 @@ export default function PostsPage() {
     }
   }, [openCreate]);
 
-  // Prevent page scroll while modal open using robust method (fixed positioning + restore scroll)
+  // Prevent page scroll while modal open using overflow hidden (no position fixed) to avoid layout shifts
   useEffect(() => {
-    let originalOverflow = document.body.style.overflow || '';
-    let originalPaddingRight = document.body.style.paddingRight || '';
-    let originalPosition = document.body.style.position || '';
-    let originalTop = document.body.style.top || '';
-    let scrollY = 0;
+    const originalOverflow = document.body.style.overflow || '';
+    const originalPaddingRight = document.body.style.paddingRight || '';
+    const originalHtmlOverflow = document.documentElement.style.overflow || '';
     if (openCreate) {
-      scrollY = window.scrollY || window.pageYOffset || 0;
-      const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.left = '0';
-      document.body.style.right = '0';
-      document.body.style.overflow = 'hidden';
+      const scrollBarWidth = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
       if (scrollBarWidth > 0) document.body.style.paddingRight = `${scrollBarWidth}px`;
+      document.body.style.overflow = 'hidden';
       try { document.documentElement.style.overflow = 'hidden'; document.documentElement.style.touchAction = 'none'; } catch (e) {}
     }
     return () => {
-      // Restore original document styles and jump back to previous scroll position
-      document.body.style.position = originalPosition;
-      document.body.style.top = originalTop;
-      document.body.style.left = '';
-      document.body.style.right = '';
       document.body.style.overflow = originalOverflow;
-      try { document.documentElement.style.overflow = ''; document.documentElement.style.touchAction = ''; } catch (e) {}
       document.body.style.paddingRight = originalPaddingRight;
-      try { if (typeof window !== 'undefined') window.scrollTo(0, scrollY); } catch (e) {}
+      try { document.documentElement.style.overflow = originalHtmlOverflow; document.documentElement.style.touchAction = ''; } catch (e) {}
     };
   }, [openCreate]);
 
@@ -200,6 +187,11 @@ export default function PostsPage() {
                 </div>
                 {file && <div className="fileName">Выбран: {file.name}</div>}
               </form>
+              {creating && (
+                <div className="modalOverlay">
+                  <div className="modalSpinner">⟳</div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -268,7 +260,7 @@ export default function PostsPage() {
                     className="postImage"
                     width={p.imageWidth || undefined}
                     height={p.imageHeight || undefined}
-                    style={{ aspectRatio: p.imageWidth && p.imageHeight ? `${p.imageWidth}/${p.imageHeight}` : undefined }}
+                    style={{ aspectRatio: p.imageWidth && p.imageHeight ? `${p.imageWidth}/${p.imageHeight}` : undefined, maxWidth: (p.imageHeight && p.imageWidth && p.imageHeight > p.imageWidth) ? 520 : undefined }}
                     onError={async (e) => {
                       const el = e.currentTarget as HTMLImageElement;
                       const url = el.src;
@@ -290,7 +282,7 @@ export default function PostsPage() {
                     className="postImage"
                     width={p.media?.width || undefined}
                     height={p.media?.height || undefined}
-                    style={{ aspectRatio: p.media?.width && p.media?.height ? `${p.media.width}/${p.media.height}` : undefined }}
+                    style={{ aspectRatio: p.media?.width && p.media?.height ? `${p.media.width}/${p.media.height}` : undefined, maxWidth: (p.media?.height && p.media?.width && p.media.height > p.media.width) ? 520 : undefined }}
                     onError={async (e) => {
                       const el = e.currentTarget as HTMLImageElement;
                       const url = el.src;
@@ -369,8 +361,9 @@ export default function PostsPage() {
       
       <style jsx>{`
         .createWrap{ width:100%; display:flex; justify-content:center; margin-top:8px }
-        .modalBackdrop{ position:fixed; inset:0; background: rgba(3,6,7,0.6); display:flex; align-items:center; justify-content:center; z-index: 1200 }
-        .modalDialog{ width: 520px; max-width: calc(100% - 40px); background:#0f1216; border-radius:12px; padding:18px; border: none; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.7); max-height: calc(100vh - 80px); align-self:center; margin:auto }
+        .modalBackdrop{ position:fixed; inset:0; background: rgba(3,6,7,0.6); display:grid; place-items:center; z-index: 1200 }
+        /* Center modal dialog using grid centering and keep it within viewport. Position relative to avoid fixed transforms that may be affected by browser quirks. */
+        .modalDialog{ position: relative; width: 520px; max-width: calc(100% - 40px); background:#0f1216; border-radius:12px; padding:18px; border: none; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.7); max-height: calc(100vh - 80px); margin: 0; z-index:1250; }
         .modalHeader{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px }
         .closeBtn{ background:transparent; border: none; color:#9fb0bf; font-size:18px; cursor:pointer }
         .postForm{
@@ -384,7 +377,9 @@ export default function PostsPage() {
         .fileBtn:focus{ outline:none; box-shadow: 0 0 0 4px rgba(79,195,247,0.08) }
         .publishBtn:hover{ transform: translateY(-3px); box-shadow: 0 14px 36px rgba(34,160,220,0.25) }
         .publishBtn:focus{ outline:none; box-shadow: 0 0 0 6px rgba(79,195,247,0.08) }
-        .modalDialog .postForm{ overflow-y: auto; }
+        .modalDialog .postForm{ overflow-y: auto; max-height: calc(100vh - 160px); }
+        .modalOverlay{ position: absolute; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(3,6,7,0.6); border-radius:12px; z-index: 1280 }
+        .modalSpinner{ width:48px; height:48px; border-radius:24px; background: linear-gradient(90deg,#23a8e3,#1fb6ff); color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow: 0 8px 30px rgba(0,0,0,0.45) }
         .input{ width:100%; padding:12px 14px; border-radius:10px; border:1px solid #222; background:#0b0d0e; color:#fff; margin-top:10px; outline:none }
         .input.title{ font-size:18px; font-weight:700 }
         .input.desc{ font-size:14px; color:#ddd }
@@ -401,7 +396,7 @@ export default function PostsPage() {
         .spinner{ animation: spin 1s linear infinite }
         .fileName{ margin-top:8px; color:#bfc7cf; font-size:13px }
         @media (max-width:760px){ .postForm{ padding:14px } }
-        @media (max-width:560px){ .modalDialog{ width: calc(100% - 32px); margin: 0 16px; } }
+        @media (max-width:560px){ .modalDialog{ width: calc(100% - 32px); padding: 14px; } }
         /* Post cards - Minimal rounded design */
         .postCard{ background:#0b0f12; padding:16px; border-radius:14px; margin-bottom:14px; position:relative; box-shadow: 0 6px 24px rgba(3,6,7,0.5); border: 1px solid rgba(255,255,255,0.02); transition: transform 140ms ease, box-shadow 140ms ease }
         .postCard:hover{ transform: translateY(-6px); box-shadow: 0 18px 48px rgba(0,0,0,0.6) }
@@ -414,8 +409,13 @@ export default function PostsPage() {
         .authorName{ font-weight:700; font-size:14px }
         .authorMeta{ color:#8b99a6; font-size:12px }
         .postDescription{ color:#d9e0e6; margin-top:12px; font-size:15px; line-height:1.45 }
-        .mediaWrap{ margin-top:12px; border-radius:12px; overflow:hidden }
-        .postImage{ width:100%; height:auto; display:block }
+        .mediaWrap{ margin-top:12px; border-radius:12px; overflow:hidden; display:flex; align-items:center; justify-content:center; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)); padding:8px; max-width: 920px; margin-left:auto; margin-right:auto }
+        .postImage{ width:100%; height:420px; display:block; object-fit:cover; object-position:center; border-radius:12px; transition: transform .28s ease, filter .28s ease; }
+        .postImage:hover{ transform: scale(1.02); filter: brightness(0.96); }
+
+        /* Make large images smaller on mobile/tablet for better vertical space use */
+        @media (max-width: 980px) { .postImage{ height:360px } }
+        @media (max-width: 760px) { .postImage{ height:220px; } }
         .controlsRow{ display:flex; align-items:center; gap:12px; margin-top:10px; justify-content:space-between }
         .likeBtn{ display:inline-flex; align-items:center; gap:10px; border-radius:999px; padding:8px 12px; cursor:pointer; border:1px solid rgba(255,255,255,0.02); background:transparent; color:#9fb0bf; font-weight:700 }
         .likeBtn .heart{ font-size:14px }
