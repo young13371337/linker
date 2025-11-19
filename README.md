@@ -1,4 +1,4 @@
-this a <h2>linker social</h2>, <h2>fast</h2> and <h2>secure</h2> messenger
+this a <h2>linker social</h2> <h2>fast</h2> and <h2>secure</h2> messenger
 
 links
 [linker-social.ru](linker-social.ru)
