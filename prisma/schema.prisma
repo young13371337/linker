@@ -137,6 +137,7 @@ model Post {
   // backwards-compatible alias for photo storage; also used by new features
   photo Bytes?
   likes     Like[]
+  views     String   @default("0")
   createdAt DateTime @default(now())
 }
 

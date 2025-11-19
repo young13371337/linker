@@ -12,36 +12,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     let posts: any[] = [];
     try {
-      posts = await (prisma as any).post.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-      // Some Prisma client versions don't support `_count` in include; use explicit relation include
-        select: {
-          id: true,
-          authorId: true,
-          title: true,
-          description: true,
-          createdAt: true,
-          imageSize: true,
-          imageMime: true,
-          imageWidth: true,
-          imageHeight: true,
-          media: { select: { id: true, mime: true, size: true, width: true, height: true, provider: true, key: true } },
-          author: { select: { id: true, login: true, avatar: true, link: true } },
-          likes: { select: { id: true } },
-        },
-      });
+      // Check whether `views` column exists before selecting it. This helps avoid P2010 errors
+      const colRows: any[] = await (prisma as any).$queryRaw`SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Post'`;
+      const existingCols = new Set(colRows.map((c:any)=>String(c.column_name).toLowerCase()));
+      const snake = (s: string) => s.replace(/([A-Z])/g, '_$1').toLowerCase();
+      const hasCol = (name: string) => existingCols.has(name.toLowerCase()) || existingCols.has(snake(name));
+      const includeViews = hasCol('views');
+      const selectObj: any = {
+        id: true,
+        authorId: true,
+        title: true,
+        description: true,
+        createdAt: true,
+        media: { select: { id: true, mime: true, size: true, width: true, height: true, provider: true, key: true } },
+        author: { select: { id: true, login: true, avatar: true, link: true } },
+        likes: { select: { id: true } },
+      };
+      // Add optional image fields if available in the DB schema
+      if (hasCol('imageSize')) selectObj.imageSize = true;
+      if (hasCol('imageMime')) selectObj.imageMime = true;
+      if (hasCol('imageWidth')) selectObj.imageWidth = true;
+      if (hasCol('imageHeight')) selectObj.imageHeight = true;
+      if (includeViews) selectObj.views = true;
+      posts = await (prisma as any).post.findMany({ orderBy: { createdAt: 'desc' }, take: 50, select: selectObj });
     } catch (fetchErr) {
       console.error('[API:/api/posts] DB error fetching posts, returning empty list as fallback', fetchErr);
-      // fallback to empty posts to avoid 500 for clients if DB schema mismatch / migration not applied
       posts = [];
     }
-
-    // Debug logging to help diagnose why posts may not appear in the UI.
-    try {
-      console.log('[API:/api/posts] fetched posts count=', Array.isArray(posts) ? posts.length : 'unknown');
-      if (Array.isArray(posts) && posts.length > 0) console.log('[API:/api/posts] first post sample=', { id: posts[0].id, authorId: posts[0].authorId });
-    } catch (e) { /* ignore logging errors */ }
 
     // If we have a current user, fetch which posts they've liked in one query
     let likedSet = new Set<string>();
@@ -71,6 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         imageWidth: p.imageWidth,
         imageHeight: p.imageHeight,
         likesCount: Array.isArray(likes) ? likes.length : 0,
+        views: String(p.views || '0'),
         likedByCurrentUser: !!(currentUserId && likedSet.has(p.id)),
         isOwner: !!(currentUserId && rest.author && rest.author.id === currentUserId),
       };

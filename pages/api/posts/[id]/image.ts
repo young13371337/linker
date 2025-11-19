@@ -63,6 +63,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // fallback — inline image
     try {
+      const colRows: any[] = await (prisma as any).$queryRaw`SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='Post'`;
+      const existingCols = new Set(colRows.map((c:any)=>String(c.column_name).toLowerCase()));
+      const snake = (s: string) => s.replace(/([A-Z])/g, '_$1').toLowerCase();
+      const hasCol = (name: string) => existingCols.has(name.toLowerCase()) || existingCols.has(snake(name));
+      const includeInlineImage = hasCol('imageData') || hasCol('imageMime');
+      if (!includeInlineImage) {
+        // If there's no inline image column, skip the fallback
+        return res.status(404).json({ error: 'Image not found for this post' });
+      }
       const postRows: any[] = await (prisma as any).$queryRaw`
         SELECT p."imageData" as i_data, p."imageMime" as i_mime FROM "Post" p WHERE p.id = ${id} LIMIT 1
       `;

@@ -10,10 +10,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const session = (await getServerSession(req, res, authOptions as any)) as any;
   if (!session || !session.user) return res.status(401).json({ error: 'Unauthorized' });
 
-  const userId = session.user.id;
+  const userId = (session.user as any)?.id as string | undefined;
+  if (!userId) {
+    console.warn('/api/posts/[id]/like called but session.user.id missing (session):', session);
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   const postId = String(id);
+  console.debug('/api/posts/[id]/like handler', { method: req.method, postId, userId, hasCookie: !!req.headers.cookie });
 
   if (req.method === 'POST') {
+    console.debug('/api/posts/[id]/like POST start', { postId, userId });
     // like
     try {
       const like = await (prisma as any).like.create({ data: { postId, userId } });
@@ -34,6 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'DELETE') {
+    console.debug('/api/posts/[id]/like DELETE start', { postId, userId });
     try {
       const existing = await (prisma as any).like.findUnique({ where: { postId_userId: { postId, userId } } });
       if (!existing) return res.status(404).json({ error: 'Not liked' });

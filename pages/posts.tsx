@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSession } from 'next-auth/react';
 // Sidebar is rendered globally from _app.tsx - don't render it again in the page
 // import Sidebar from '../components/Sidebar';
 import ToastNotification from '../components/ToastNotification';
+import getLocalUser from '../lib/session';
 
 export default function PostsPage() {
+  const { data: session, status } = useSession();
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -14,6 +17,9 @@ export default function PostsPage() {
   const [openCreate, setOpenCreate] = useState(false);
     const titleRef = useRef<HTMLInputElement | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const observed = useRef<Set<string>>(new Set());
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  // No local fallback; likes are stored in DB and UI reflects server state
 
   // Close modal on Escape key press
   useEffect(() => {
@@ -63,22 +69,118 @@ export default function PostsPage() {
     return () => document.body.classList.remove('modal-open');
   }, [openCreate]);
 
-  useEffect(() => { fetchPosts(); }, []);
+  useEffect(() => { fetchPosts(); }, [session?.user?.id, status]);
 
-  async function fetchPosts(){
-    const r = await fetch('/api/posts', { credentials: 'include' });
-    if (r.ok) {
-      const j = await r.json().catch(()=>({posts:[]}));
-      console.log('[CLIENT:/posts] fetched posts response=', j);
-      setPosts(j.posts || []);
-      if ((!j.posts || j.posts.length === 0)) {
+  // Setup IntersectionObserver to track post views; increment once per session for each post
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!('IntersectionObserver' in window)) return; // fallback: don't track
+    if (observerRef.current) return; // already inited
+    observerRef.current = new IntersectionObserver((entries) => {
+      entries.forEach(async (entry) => {
+        if (!entry.isIntersecting) return;
+        const el = entry.target as HTMLElement;
+        const postId = el.dataset.postId;
+        if (!postId) return;
+        // Avoid duplicate counts: consult local session storage fallback
+        if (observed.current.has(postId)) return;
+        try {
+          const stored = sessionStorage.getItem('viewedPosts');
+          if (stored) {
+            const arr = JSON.parse(stored) as string[];
+            if (Array.isArray(arr) && arr.includes(postId)) {
+              observed.current.add(postId);
+              return;
+            }
+          }
+        } catch (e) {}
+        observed.current.add(postId);
+        try {
+          const r = await fetch(`/api/posts/${postId}/view`, { method: 'POST', credentials: 'include' });
+          if (!r.ok) return; // ignore failures
+          const j = await r.json().catch(() => null);
+          if (j && j.views !== undefined) {
+            setPosts(ps => ps.map(x => x.id === postId ? { ...x, views: String(j.views) } : x));
+            try {
+              const prev = sessionStorage.getItem('viewedPosts');
+              const arr = prev ? JSON.parse(prev) as string[] : [];
+              if (!arr.includes(postId)) {
+                arr.push(postId);
+                sessionStorage.setItem('viewedPosts', JSON.stringify(arr));
+              }
+            } catch (e) {}
+          }
+        } catch (e) { console.warn('view report failed', e); }
+      });
+    }, { threshold: 0.25 });
+  }, []);
+
+  // Disconnect observer on unmount
+  useEffect(() => {
+    return () => {
+      try {
+        observerRef.current?.disconnect();
+        observerRef.current = null;
+      } catch (e) {}
+    };
+  }, []);
+
+  // Observe/unobserve DOM nodes representing posts when the post list updates
+  useEffect(() => {
+    const obs = observerRef.current;
+    if (!obs) return undefined;
+    const nodes = Array.from(document.querySelectorAll('.postCard[data-post-id]')) as HTMLElement[];
+    nodes.forEach(n => { try { obs.observe(n); } catch (e) {} });
+    return () => nodes.forEach(n => { try { obs.unobserve(n); } catch (e) {} });
+  }, [posts]);
+
+    async function fetchPosts(){
+      const r = await fetch('/api/posts', { credentials: 'include' });
+      if (r.ok) {
+        const j = await r.json().catch(()=>({posts:[]}));
+        // console.log('[CLIENT:/posts] fetched posts response=', j);
+        // Normalize posts and ensure client-side isOwner based on session (fallback)
+        // Explicit: likes come from DB; do not use local storage fallback
+        const localUserId = (typeof window !== 'undefined') ? (getLocalUser() as any)?.id : null;
+        const currentUserId = session?.user?.id || localUserId || null;
+        const normalized = (j.posts || []).map((pp: any) => {
+          const authorId = (pp.author && pp.author.id) || pp.authorId || null;
+          return {
+            ...pp,
+            authorId,
+            author: pp.author || (authorId ? { id: authorId } : undefined),
+            likesCount: Number(pp.likesCount || 0),
+            pinned: Boolean(pp.pinned),
+            isOwner: Boolean(pp.isOwner || (currentUserId && authorId && currentUserId === authorId)),
+            likedByCurrentUser: Boolean(pp.likedByCurrentUser),
+            views: String(pp.views || '0'),
+          };
+        });
+        setPosts(normalized);
+        // DEBUG: log owner and liked state counts
+        try { /* console.log('[CLIENT:/posts] owners:', normalized.filter((x:any)=>x.isOwner).map((x:any)=>x.id), 'likes:', normalized.filter((x:any)=>x.likedByCurrentUser).map((x:any)=>x.id)); */ } catch (e) {}
+    if ((!j.posts || j.posts.length === 0)) {
         try {
           // fallback to the simple SQL-based endpoint to handle production schema mismatches
           const rf = await fetch('/api/posts/simple');
-          if (rf.ok) {
+            if (rf.ok) {
             const jf = await rf.json().catch(()=>({posts:[]}));
             console.log('[CLIENT:/posts] simple posts fallback response=', jf);
-            setPosts(jf.posts || []);
+            const normalizedFallback = (jf.posts || []).map((pp: any) => {
+              const authorId = (pp.author && pp.author.id) || pp.authorId || null;
+              return {
+                ...pp,
+                authorId,
+                author: pp.author || (authorId ? { id: authorId } : undefined),
+                likedByCurrentUser: Boolean(pp.likedByCurrentUser),
+                likesCount: Number(pp.likesCount || 0),
+                pinned: Boolean(pp.pinned),
+                isOwner: Boolean(pp.isOwner || (currentUserId && authorId && currentUserId === authorId)),
+                views: String(pp.views || '0'),
+              };
+            });
+            setPosts(normalizedFallback || []);
+            try { /* console.log('[CLIENT:/posts] fallback owners:', normalizedFallback.filter((x:any)=>x.isOwner).map((x:any)=>x.id), 'likes:', normalizedFallback.filter((x:any)=>x.likedByCurrentUser).map((x:any)=>x.id)); */ } catch (e) {}
           }
         } catch (e) {}
       }
@@ -137,11 +239,13 @@ export default function PostsPage() {
     } finally { setCreating(false); }
   }
 
+  // NOTE: cleanup logic intentionally removed — duplicate timestamp was removed from markup
+
   return (
     <div style={{ display: 'flex' }}>
       {/* Sidebar is rendered by _app.tsx, so we don't render it here to avoid duplication */}
       <div style={{ padding: 24, width: '100%', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <h2 style={{ color: '#fff' }}>Посты</h2>
+        <h2 style={{ color: '#fff' }}>Лента постов</h2>
 
         {/* Floating create button top-right */}
         <button
@@ -198,23 +302,25 @@ export default function PostsPage() {
 
         <div style={{ marginTop: 28, width: '100%', display: 'flex', justifyContent: 'center' }}>
           <div style={{ width: '100%', maxWidth: 920 }}>
-            {posts.map(p=> (
-              <div key={p.id} className="postCard" role="article">
+            {posts.map(p=> {
+              const isOwnerUi = !!(p.isOwner || (session?.user?.id && p.authorId && session.user.id === p.authorId));
+              return (
+              <div key={p.id} data-post-id={p.id} className="postCard" role="article">
 
                 <div className="postHeader">
-                <div className="authorWrap" onClick={()=> window.location.href = `/profile/${p.author?.id}`}>
-                  {p.author?.avatar ? <img src={p.author.avatar} className="postAvatar" /> : <div className="postAvatarFallback">{p.author?.login?.[0] || 'U'}</div>}
+                  <div className="authorWrap" onClick={()=> window.location.href = `/profile/${p.authorId || p.author?.id}`}>
+                    {p.author?.avatar ? <img src={p.author.avatar} className="postAvatar" /> : <div className="postAvatarFallback">{(p.author && p.author.login) ? p.author.login[0] : (p.authorId ? 'U' : 'U')}</div>}
                   <div className="authorCol">
-                    <div className="authorName">{p.author?.link ? `@${p.author.link}` : (p.author?.login || 'User')}</div>
-                    <div className="authorMeta">{new Date(p.createdAt).toLocaleString()}</div>
+                    <div className="authorName">{p.author?.link ? `@${p.author.link}` : (p.author?.login || 'User')}{isOwnerUi && <span style={{ marginLeft: 8, fontSize: 12, color: '#ffd27a', fontWeight: 700 }}>Ваш пост</span>}</div>
+                    <div className="authorMeta">{formatDate(p.createdAt)}</div>
                   </div>
                 </div>
-                {p.isOwner && (
+                {isOwnerUi && (
                   <div className="ownerMenuWrap">
-                    <button className="dotBtn" onClick={()=> setMenuOpenId(menuOpenId === p.id ? null : p.id)} aria-label="Меню поста">⋯</button>
+                    <button type="button" className="dotBtn" onClick={()=> setMenuOpenId(menuOpenId === p.id ? null : p.id)} aria-label="Меню поста">⋯</button>
                     {menuOpenId === p.id && (
                       <div className="dotMenu">
-                        <button className="dotMenuItem" onClick={async()=>{
+                        <button type="button" className="dotMenuItem" onClick={async()=>{
                           if (!confirm('Удалить пост?')) return;
                           try {
                             const r = await fetch(`/api/posts/${p.id}`, { method: 'DELETE', credentials: 'include' });
@@ -232,10 +338,12 @@ export default function PostsPage() {
                                 setPosts(ps => ps.filter(x => x.id !== p.id));
                                 try {
                                   const json = j || null;
-                                  if (!json) {
-                                    await fetchPosts();
+                                  if (json) {
+                                    setPosts(ps => ps.map(x => x.id === p.id ? { ...x, likesCount: json.likesCount ?? x.likesCount, likedByCurrentUser: Boolean(json.likedByCurrentUser) } : x));
+                                    try { /* local storage removed */ } catch (e) {}
+                                    // re-sync a single post or list to ensure DB state is authoritative
+                                    // Sync request processed - server returned updated counts. No page refresh needed.
                                   }
-                                  setToast({ type: 'success', message: 'Пост удален' });
                                 } catch (e) {
                                   setPosts(prev);
                                   throw e;
@@ -302,17 +410,29 @@ export default function PostsPage() {
               {/* Controls row below content: like button and timestamp */}
                 <div className="controlsRow">
                 <div>
-                  <button aria-pressed={p.likedByCurrentUser} className={`likeBtn ${p.likedByCurrentUser ? 'liked' : ''}`} onClick={async()=>{
-                    // Optimistic update: toggle state immediately
-                    const previous = posts.map(x => ({ ...x }));
-                    setPosts(ps => ps.map(x => x.id === p.id ? { ...x, likedByCurrentUser: !x.likedByCurrentUser, likesCount: (x.likesCount || 0) + (x.likedByCurrentUser ? -1 : 1) } : x));
+                  <button type="button" aria-pressed={p.likedByCurrentUser} className={`likeBtn ${p.likedByCurrentUser ? 'liked' : ''}`} onClick={async()=>{
+                    // If the session isn't authenticated, avoid optimistic update and prompt login
+                    if (status === 'unauthenticated') { setToast({ type: 'error', message: 'Пожалуйста, войдите в систему' }); return; }
+                    // Get the most up-to-date post state before toggling
+                    const prevPosts = posts;
+                    const currentPost = prevPosts.find(x => x.id === p.id) || p;
+                    const currentlyLiked = !!currentPost.likedByCurrentUser;
+                    const previous = prevPosts.map(x => ({ ...x }));
+                    // Optimistic update: toggle state immediately based on current value
+                    setPosts(ps => ps.map(x => x.id === p.id ? { ...x, likedByCurrentUser: !currentlyLiked, likesCount: (x.likesCount || 0) + (currentlyLiked ? -1 : 1) } : x));
+                    // Update localStorage fallback immediately so UI persists on reload even when server
+                    // doesn't return likedByCurrentUser. We'll revert on error.
                     try {
-                      if (p.likedByCurrentUser) {
+                      console.debug('[CLIENT:/posts] like click', { postId: p.id, sessionId: session?.user?.id, status, cookie: (typeof document !== 'undefined') ? document.cookie : null });
+                      // localStorage fallback removed; likes handled by DB
+                    } catch (e) {}
+                    try {
+                      if (currentlyLiked) {
                         const r = await fetch(`/api/posts/${p.id}/like`, { method: 'DELETE', credentials: 'include' });
                         if (!r.ok) {
                           const er = await r.json().catch(() => null);
                           const errMsg = er?.error || `Ошибка: ${r.status}`;
-                          if (r.status === 401) setToast({ type: 'error', message: 'Пожалуйста, войдите в систему' });
+                          if (r.status === 401) { setToast({ type: 'error', message: 'Пожалуйста, войдите в систему' }); try { window.location.href = '/auth/login'; } catch(e){} }
                           else setToast({ type: 'error', message: errMsg });
                           // revert optimistic update and stop
                           setPosts(previous);
@@ -321,14 +441,16 @@ export default function PostsPage() {
                         // update post with returned counts if provided
                         const json = await r.json().catch(() => null);
                         if (json) {
-                          setPosts(ps => ps.map(x => x.id === p.id ? { ...x, likesCount: json.likesCount ?? x.likesCount, likedByCurrentUser: json.likedByCurrentUser ?? false } : x));
+                          setPosts(ps => ps.map(x => x.id === p.id ? { ...x, likesCount: json.likesCount ?? x.likesCount, likedByCurrentUser: Boolean(json.likedByCurrentUser) } : x));
+                          // persist to local fallback for UI persistence (remove)
+                          try { /* local storage removed */ } catch (e) {}
                         }
                       } else {
                         const r = await fetch(`/api/posts/${p.id}/like`, { method: 'POST', credentials: 'include' });
                         if (!r.ok) {
                           const er = await r.json().catch(() => null);
                           const errMsg = er?.error || `Ошибка: ${r.status}`;
-                          if (r.status === 401) setToast({ type: 'error', message: 'Пожалуйста, войдите в систему' });
+                          if (r.status === 401) { setToast({ type: 'error', message: 'Пожалуйста, войдите в систему' }); try { window.location.href = '/auth/login'; } catch(e){} }
                           else setToast({ type: 'error', message: errMsg });
                           // revert optimistic update and stop
                           setPosts(previous);
@@ -336,7 +458,9 @@ export default function PostsPage() {
                         }
                         const json = await r.json().catch(() => null);
                         if (json) {
-                          setPosts(ps => ps.map(x => x.id === p.id ? { ...x, likesCount: json.likesCount ?? x.likesCount, likedByCurrentUser: json.likedByCurrentUser ?? true } : x));
+                          setPosts(ps => ps.map(x => x.id === p.id ? { ...x, likesCount: json.likesCount ?? x.likesCount, likedByCurrentUser: Boolean(json.likedByCurrentUser) } : x));
+                          try { /* local storage removed */ } catch (e) {}
+                          // Do not re-fetch all posts; update UI from server response only.
                         }
                       }
                     } catch (e: any) {
@@ -351,11 +475,21 @@ export default function PostsPage() {
                   </button>
                 </div>
 
-                <div className="timestamp">{new Date(p.createdAt).toLocaleString()}</div>
+                {/* views: display on the right of the control row - stored as string in DB */}
+                <div className="viewsWrap" title={formatViewsLabel(p.views)} aria-hidden="false" role="text">
+                  <svg className="viewsIcon" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" focusable="false">
+                    <path fill="currentColor" d="M12 5C7 5 2.73 8.11 1 12c1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10z" />
+                    <path fill="currentColor" d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" />
+                  </svg>
+                  <span className="viewsCount">
+                    {formatViewsNumeric(p.views)} <span className="viewsSuffix">просмотров</span>
+                  </span>
+                </div>
               </div>
 
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       
@@ -402,7 +536,7 @@ export default function PostsPage() {
         .postCard:hover{ transform: translateY(-6px); box-shadow: 0 18px 48px rgba(0,0,0,0.6) }
         body.modal-open .postCard:hover{ transform:none; box-shadow: 0 6px 24px rgba(0,0,0,0.1) }
         .postHeader{ color:#fff; display:flex; align-items:center; gap:12px; justify-content:space-between }
-        .authorWrap{ display:flex; align-items:center; gap:12px; cursor:pointer }
+        .authorWrap{ display:flex; align-items:center; gap:12px; cursor:pointer; flex: 1; }
         .postAvatar{ width:40px; height:40px; border-radius:10px; object-fit:cover; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02) }
         .postAvatarFallback{ width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:#222; color:#fff; font-weight:700 }
         .authorCol{ display:flex; flex-direction:column }
@@ -427,7 +561,14 @@ export default function PostsPage() {
         .likeBtn.liked .heart{ color:#fff }
         .likeCount{ font-weight:700 }
         .timestamp{ color:#8b99a6; font-size:12px; margin-left:12px }
-        .ownerMenuWrap{ position:relative }
+        .viewsWrap{ display:flex; align-items:center; gap:8px; color:#8b99a6; font-size:12px; }
+          .viewsWrap{ display:flex; align-items:center; gap:8px; color:#6f777b; font-size:12px; opacity:0.86 }
+          .viewsWrap .viewsIcon{ width:12px; height:12px; color:#6f777b; opacity:0.9 }
+          .viewsWrap .viewsCount{ font-weight:500; color:#8b99a6; font-size:11px }
+          .viewsWrap .viewsSuffix{ font-weight:400; color:#8b99a6; font-size:11px; margin-left:4px }
+        .ownerMenuWrap{ position:relative; display:flex; align-items:center; margin-left:8px }
+        .dotBtn{ z-index:20 }
+        .dotMenu{ z-index:999 }
         .dotBtn{ background:transparent; color:#8b99a6; border:0; padding:6px 8px; border-radius:8px; font-weight:700 }
         .dotMenu{ position:absolute; right:0; top:36px; background:#0d1112; border: 1px solid rgba(255,255,255,0.01); border-radius:8px; padding:8px; box-shadow: 0 10px 30px rgba(0,0,0,0.6) }
         .dotMenuItem{ background:transparent; border:none; color:#f66; padding:6px 8px; cursor:pointer; font-weight:700 }
@@ -443,4 +584,53 @@ export default function PostsPage() {
       )}
     </div>
   );
+}
+
+function formatDate(d: any) {
+  if (!d) return '';
+  const date = new Date(d);
+  if (isNaN(date.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const day = pad(date.getDate());
+  const month = pad(date.getMonth() + 1);
+  const year = date.getFullYear();
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  return `${day}.${month}.${year} в ${hours}:${minutes}`;
+}
+
+// Convert raw views value (string) into compact label for inline display, e.g. "1.2M" or "1.2K" for thousands
+function formatViewsNumeric(v: any) {
+  try {
+    const s = String(v ?? '0').trim();
+    // If it already contains letters or non-digit characters, return as-is
+    if (/[^0-9.\-]/.test(s)) return s;
+    const n = Number.parseFloat(s || '0');
+    if (!Number.isFinite(n)) return s;
+    const abs = Math.abs(n);
+    if (abs >= 1000000) {
+      const vStr = (n / 1000000).toFixed(abs >= 10000000 ? 0 : 1).replace(/\.0$/, '');
+      return `${vStr}M`;
+    }
+    if (abs >= 1000) {
+      const vStr = (n / 1000).toFixed(abs >= 100000 ? 0 : 1).replace(/\.0$/, '');
+      return `${vStr}K`;
+    }
+    return String(n);
+  } catch (e) {
+    return String(v ?? '0');
+  }
+}
+
+// Full label for title/aria description, e.g. "1 234 просмотров"
+function formatViewsLabel(v: any) {
+  try {
+    const s = String(v ?? '0').trim();
+    if (/[^0-9.\-]/.test(s)) return `${s} просмотров`;
+    const n = Number.parseInt(s || '0', 10);
+    if (!Number.isFinite(n)) return `${s} просмотров`;
+    return `${n.toLocaleString('ru-RU')} просмотров`;
+  } catch (e) {
+    return `${String(v ?? '0')} просмотров`;
+  }
 }

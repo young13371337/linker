@@ -61,6 +61,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
             // delete the media row via SQL to avoid Prisma schema mismatches
             try {
+                // Check for `views` column and include it if present to avoid SQL errors on older DBs
+                const colRows2: any[] = await (prisma as any).$queryRaw`SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Post'`;
+                const existingCols2 = new Set(colRows2.map((c:any)=>String(c.column_name).toLowerCase()));
+                const snake2 = (s: string) => s.replace(/([A-Z])/g, '_$1').toLowerCase();
+                const hasCol2 = (name: string) => existingCols2.has(name.toLowerCase()) || existingCols2.has(snake2(name));
+                const includeViews2 = hasCol2('views');
               await (prisma as any).$executeRaw`DELETE FROM "Media" WHERE id = ${mediaId}`;
             } catch (medDelErr) {
               console.warn('/api/posts/[id] DELETE: failed to delete media row', medDelErr);
@@ -72,24 +78,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       return res.status(200).json({ success: true, deletedId: id });
     } catch (e) {
-      console.error('/api/posts/[id] DELETE error', e);
       return res.status(500).json({ error: 'Internal error', detail: String((e as any)?.message || e) });
     }
   }
   if (req.method === 'GET') {
     try {
-      // Use raw SQL to avoid referencing missing columns in the DB (like imageData)
-      const rows: any[] = await (prisma as any).$queryRaw`
-        SELECT p.id, p."authorId", p.title, p.description, p."createdAt", p."mediaId",
-               u.login as u_login, u.avatar as u_avatar, u.link as u_link,
-               m.id as m_id, m.mime as m_mime, m.size as m_size, m.width as m_width, m.height as m_height, m.provider as m_provider, m.key as m_key,
-               (SELECT COUNT(1) FROM "Like" l WHERE l."postId" = p.id) as likesCount
-        FROM "Post" p
-        LEFT JOIN "User" u ON u.id = p."authorId"
-        LEFT JOIN "Media" m ON m.id = p."mediaId"
-        WHERE p.id = ${id}
-        LIMIT 1
-      `;
+            // Use raw SQL to avoid referencing missing columns in the DB (like imageData)
+            const colRows2: any[] = await (prisma as any).$queryRaw`SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Post'`;
+            const existingCols2 = new Set(colRows2.map((c:any)=>c.column_name));
+            const includeViews2 = existingCols2.has('views');
+            const viewsFragment = includeViews2 ? 'p.views as views,' : '';
+            const sql = `
+         SELECT p.id, p."authorId", p.title, p.description, p."createdAt", p."mediaId",
+           ${viewsFragment}
+           u.login as u_login, u.avatar as u_avatar, u.link as u_link,
+           m.id as m_id, m.mime as m_mime, m.size as m_size, m.width as m_width, m.height as m_height, m.provider as m_provider, m.key as m_key,
+           (SELECT COUNT(1) FROM "Like" l WHERE l."postId" = p.id) as likesCount
+         FROM "Post" p
+         LEFT JOIN "User" u ON u.id = p."authorId"
+         LEFT JOIN "Media" m ON m.id = p."mediaId"
+         WHERE p.id = ${id}
+         LIMIT 1
+            `;
+            const rows: any[] = await (prisma as any).$queryRawUnsafe(sql);
       if (!rows || rows.length === 0) return res.status(404).json({ error: 'Not found' });
       const r = rows[0];
       let likedByCurrentUser = false;
@@ -109,6 +120,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         media: r.m_id ? { id: r.m_id, mime: r.m_mime, size: r.m_size, width: r.m_width, height: r.m_height, provider: r.m_provider, key: r.m_key } : null,
         author: { id: r.authorId, login: r.u_login, avatar: r.u_avatar, link: r.u_link },
         likesCount: Number(r.likescount || 0),
+        views: includeViews2 ? String(r.views || '0') : '0',
         likedByCurrentUser,
         createdAt: r.createdAt,
       };
