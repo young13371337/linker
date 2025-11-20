@@ -84,6 +84,8 @@ const Landing: React.FC = () => {
                 lineHeight: 1.08,
                 letterSpacing: 1,
                 textAlign: 'center',
+                WebkitTextStroke: '0.85px rgba(255,255,255,0.06)',
+                textShadow: '0 1px 0 rgba(0,0,0,0.45), 0 2px 0 rgba(0,0,0,0.28)',
               }}
             >
               Linker Social Зашифровано. Быстро.
@@ -135,6 +137,8 @@ const Landing: React.FC = () => {
                   marginBottom: 18,
                   lineHeight: 1.08,
                   letterSpacing: 1,
+                  WebkitTextStroke: '1px rgba(255,255,255,0.06)',
+                  textShadow: '0 2px 0 rgba(0,0,0,0.55), 0 4px 0 rgba(0,0,0,0.32)',
                 }}
               >
                 Linker Social Зашифровано. Быстро.

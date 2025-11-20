@@ -14,6 +14,8 @@ export default function PostsPage() {
   const [creating, setCreating] = useState(false);
   const [toast, setToast] = useState<{ type: 'success'|'error'; message: string } | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
+  const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
+  const [outgoingRequestIds, setOutgoingRequestIds] = useState<Set<string>>(new Set());
   const [openCreate, setOpenCreate] = useState(false);
     const titleRef = useRef<HTMLInputElement | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
@@ -70,6 +72,40 @@ export default function PostsPage() {
   }, [openCreate]);
 
   useEffect(() => { fetchPosts(); }, [session?.user?.id, status]);
+
+  // Load current user's friends and outgoing friend requests to reflect friend button state
+  useEffect(() => {
+    const currentUserId = session?.user?.id || ((typeof window !== 'undefined') ? (getLocalUser() as any)?.id : null);
+    if (!currentUserId) {
+      setFriendIds(new Set());
+      setOutgoingRequestIds(new Set());
+      return;
+    }
+
+    let active = true;
+    (async () => {
+      try {
+        const profileUrl = `/api/profile?userId=${encodeURIComponent(String(currentUserId))}`;
+        const pr = await fetch(profileUrl, { credentials: 'include' });
+        if (!active) return;
+        if (pr.ok) {
+          const j = await pr.json().catch(()=>null);
+          const friendsArr = j?.user?.friends || [];
+          setFriendIds(new Set((friendsArr || []).map((f:any)=>f.id)));
+        }
+      } catch (e) { console.warn('Failed to fetch profile for friend state', e); }
+      try {
+        const out = await fetch('/api/friends/outgoing', { credentials: 'include' });
+        if (!active) return;
+        if (out.ok) {
+          const j = await out.json().catch(()=>null);
+          const toIds = j?.toIds || [];
+          setOutgoingRequestIds(new Set(Array.isArray(toIds) ? toIds : []));
+        }
+      } catch (e) { console.warn('Failed to fetch outgoing friend requests', e); }
+    })();
+    return () => { active = false; };
+  }, [status]);
 
   // Setup IntersectionObserver to track post views; increment once per session for each post
   useEffect(() => {
@@ -304,6 +340,8 @@ export default function PostsPage() {
           <div style={{ width: '100%', maxWidth: 920 }}>
             {posts.map(p=> {
               const isOwnerUi = !!(p.isOwner || (session?.user?.id && p.authorId && session.user.id === p.authorId));
+              const isFriend = Boolean(p.authorId && friendIds && friendIds.has(p.authorId));
+              const requestSent = Boolean(p.authorId && outgoingRequestIds && outgoingRequestIds.has(p.authorId));
               return (
               <div key={p.id} data-post-id={p.id} className="postCard" role="article">
 
@@ -311,7 +349,50 @@ export default function PostsPage() {
                   <div className="authorWrap" onClick={()=> window.location.href = `/profile/${p.authorId || p.author?.id}`}>
                     {p.author?.avatar ? <img src={p.author.avatar} className="postAvatar" /> : <div className="postAvatarFallback">{(p.author && p.author.login) ? p.author.login[0] : (p.authorId ? 'U' : 'U')}</div>}
                   <div className="authorCol">
-                    <div className="authorName">{p.author?.link ? `@${p.author.link}` : (p.author?.login || 'User')}{isOwnerUi && <span style={{ marginLeft: 8, fontSize: 12, color: '#ffd27a', fontWeight: 700 }}>Ваш пост</span>}</div>
+                    <div className="authorName">{p.author?.link ? `@${p.author.link}` : (p.author?.login || 'User')}
+                      {isOwnerUi ? (
+                        <span style={{ marginLeft: 8, fontSize: 12, color: '#ffd27a', fontWeight: 700 }}>Ваш пост</span>
+                      ) : (
+                        <div style={{ display: 'inline-block', marginLeft: 8 }}>
+                          {/** Friend button: small but slightly wide */}
+                          {isFriend ? (
+                            <span className="friendLabel" onClick={(e)=>{ e.stopPropagation(); }} aria-label="Ваш друг" title="Ваш друг">Ваш друг</span>
+                          ) : requestSent ? (
+                            <button type="button" className="friendBtn pending" aria-label="Заявка отправлена" title="Заявка отправлена" onClick={(e)=>{ e.stopPropagation(); }}>
+                              <svg className="userPlusIcon" viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden focusable="false">
+                                <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                                <path d="M21 21c0-2.5-2.1-4.5-5-4.5H8c-2.9 0-5 2-5 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                                <path d="M19 8v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                                <path d="M21 10h-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                              Заявка отправлена
+                            </button>
+                          ) : (
+                            <button type="button" className="friendBtn" aria-label="Добавить в друзья" title="Добавить в друзья" onClick={async(e)=>{ e.stopPropagation();
+                              if (!p.authorId) return;
+                              if (status === 'unauthenticated') { setToast({ type: 'error', message: 'Пожалуйста, войдите в систему' }); return; }
+                              try {
+                                // Optimistic UI: add to outgoing set
+                                setOutgoingRequestIds(s => new Set(s).add(p.authorId));
+                                const r = await fetch('/api/friends/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ friendId: p.authorId }), credentials: 'include' });
+                                const json = await r.json().catch(()=>null);
+                                if (!r.ok) {
+                                  // revert optimistic update
+                                  setOutgoingRequestIds(s => { const nxt = new Set(s); nxt.delete(p.authorId); return nxt; });
+                                  setToast({ type: 'error', message: (json && (json.error || json.detail)) || `Ошибка: ${r.status}` });
+                                  return;
+                                }
+                                setToast({ type: 'success', message: 'Заявка отправлена' });
+                              } catch (e:any) {
+                                console.error('send friend request error', e);
+                                setToast({ type: 'error', message: e?.message || 'Ошибка' });
+                                setOutgoingRequestIds(s => { const nxt = new Set(s); nxt.delete(p.authorId); return nxt; });
+                              }
+                            }}>+ В друзья</button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     <div className="authorMeta">{formatDate(p.createdAt)}</div>
                   </div>
                 </div>
@@ -572,6 +653,13 @@ export default function PostsPage() {
         .dotBtn{ background:transparent; color:#8b99a6; border:0; padding:6px 8px; border-radius:8px; font-weight:700 }
         .dotMenu{ position:absolute; right:0; top:36px; background:#0d1112; border: 1px solid rgba(255,255,255,0.01); border-radius:8px; padding:8px; box-shadow: 0 10px 30px rgba(0,0,0,0.6) }
         .dotMenuItem{ background:transparent; border:none; color:#f66; padding:6px 8px; cursor:pointer; font-weight:700 }
+        /* Friend button style: small and slightly wide (reduced height) */
+        .friendBtn{ display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 8px; cursor:pointer; border:1px solid rgba(255,255,255,0.04); background:transparent; color:#9fb0bf; font-weight:700; font-size:12px; height:24px; line-height:20px }
+        .friendBtn:hover{ transform: translateY(-2px); }
+        .friendBtn.friend{ background: linear-gradient(90deg,#4ddc87,#1fb67f); color:#ffffff; border:none }
+        .friendBtn.pending{ background: rgba(255,255,255,0.03); color:#cfe9f7; border: 1px solid rgba(255,255,255,0.03); height:24px }
+        .userPlusIcon{ width:12px; height:12px; display:inline-block; margin-right:6px; color: #cfe9f7 }
+        .friendLabel{ display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 8px; font-size:12px; height:24px; background: rgba(255,255,255,0.03); color:#cfe9f7; border: 1px solid rgba(255,255,255,0.03) }
         /* Floating create button positioned near the header center-right */
         .floatingCreate{ position: fixed; top: 40px; left: calc(50% + 350px); z-index: 1100; width: 44px; height: 44px; border-radius: 22px; background: #777; color: #fff; border: none; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px rgba(0,0,0,0.4); cursor: pointer }
         @media (max-width: 980px){ .floatingCreate{ left: calc(50% + 220px); top: 40px } }
