@@ -1,4 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
+
+// Small portal for rendering modal content into document.body
+function ModalPortal({ children }: { children: React.ReactNode }) {
+  const elRef = React.useRef<HTMLDivElement | null>(null);
+  const [mounted, setMounted] = React.useState(false);
+  useEffect(() => {
+    const el = document.createElement('div');
+    elRef.current = el;
+    document.body.appendChild(el);
+    setMounted(true);
+    return () => {
+      try { if (elRef.current) document.body.removeChild(elRef.current); } catch (e) {}
+    };
+  }, []);
+  if (!mounted || !elRef.current) return null;
+  return ReactDOM.createPortal(children, elRef.current);
+}
 import { useSession } from 'next-auth/react';
 // Sidebar is rendered globally from _app.tsx - don't render it again in the page
 // import Sidebar from '../components/Sidebar';
@@ -12,6 +30,7 @@ export default function PostsPage() {
   const [description, setDescription] = useState('');
   // full content removed: only description is used
   const [creating, setCreating] = useState(false);
+  const [publishAnim, setPublishAnim] = useState<'idle'|'success'|'none'>('idle');
   const [toast, setToast] = useState<{ type: 'success'|'error'; message: string } | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
@@ -21,6 +40,8 @@ export default function PostsPage() {
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const observed = useRef<Set<string>>(new Set());
   const observerRef = useRef<IntersectionObserver | null>(null);
+
+  
   // No local fallback; likes are stored in DB and UI reflects server state
 
   // Close modal on Escape key press
@@ -252,9 +273,15 @@ export default function PostsPage() {
           return;
         }
         setToast({ type: 'success', message: 'Пост опубликован' });
-        setFile(null);
-        setTitle(''); setDescription(''); setOpenCreate(false);
-        await fetchPosts();
+        setPublishAnim('success');
+        // keep modal briefly open to show animation, then close
+        setTimeout(async () => {
+          setOpenCreate(false);
+          setPublishAnim('idle');
+          setFile(null);
+          setTitle(''); setDescription('');
+          await fetchPosts();
+        }, 700);
         return;
       }
 
@@ -266,9 +293,14 @@ export default function PostsPage() {
         return;
       }
       setToast({ type: 'success', message: 'Пост опубликован' });
-      setFile(null);
-      setTitle(''); setDescription(''); setOpenCreate(false);
-      await fetchPosts();
+      setPublishAnim('success');
+      setTimeout(async () => {
+        setOpenCreate(false);
+        setPublishAnim('idle');
+        setFile(null);
+        setTitle(''); setDescription('');
+        await fetchPosts();
+      }, 700);
     } catch (e: any) {
       console.error('create post error', e);
       setToast({ type: 'error', message: e?.message || 'Ошибка' });
@@ -293,8 +325,9 @@ export default function PostsPage() {
         </button>
 
         {openCreate && (
-          <div className="modalBackdrop" onClick={() => setOpenCreate(false)}>
-            <div className="modalDialog" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
+          <ModalPortal>
+            <div className="modalBackdrop" onClick={() => setOpenCreate(false)}>
+              <div className="modalDialog" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
               <div className="modalHeader">
                 <div style={{ fontWeight: 700, color: '#fff', fontSize: 18 }}>Создать пост</div>
                 <button className="closeBtn" onClick={() => setOpenCreate(false)} aria-label="Закрыть">✕</button>
@@ -311,11 +344,15 @@ export default function PostsPage() {
                     </svg>
                     <input className="fileInputHidden" type="file" accept="image/*" onChange={e=>setFile(e.target.files ? e.target.files[0] : null)} />
                   </label>
-                  <button type="submit" className="publishBtn" disabled={creating} aria-label="Поделиться">
+                  <button type="submit" className={`publishBtn ${publishAnim === 'success' ? 'success' : ''}`} disabled={creating} aria-label="Поделиться">
                     {creating ? (
-                      <svg className="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                      <svg className="btnSpinner" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
                         <circle cx="12" cy="12" r="9" stroke="#cfe9f7" strokeOpacity="0.18" strokeWidth="2" />
                         <path d="M4 12a8 8 0 0 0 16 0" stroke="#cfe9f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" transform="rotate(45 12 12)"/>
+                      </svg>
+                    ) : publishAnim === 'success' ? (
+                      <svg className="successCheck" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden focusable="false">
+                        <path d="M20 6L9 17l-5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     ) : (
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden focusable="false">
@@ -328,12 +365,19 @@ export default function PostsPage() {
                 {file && <div className="fileName">Выбран: {file.name}</div>}
               </form>
               {creating && (
-                <div className="modalOverlay">
-                  <div className="modalSpinner">⟳</div>
+                <div className="modalOverlay" role="status" aria-live="polite">
+                  <div className="publishingRow">
+                    <svg className="publishingSpinner" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" strokeOpacity="0.12" fill="none" />
+                      <path d="M4 12a8 8 0 0 0 16 0" stroke="#cfe9f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" transform="rotate(45 12 12)"/>
+                    </svg>
+                    <div className="publishingText">Пост публикуется...</div>
+                  </div>
                 </div>
               )}
             </div>
           </div>
+          </ModalPortal>
         )}
 
         <div style={{ marginTop: 28, width: '100%', display: 'flex', justifyContent: 'center' }}>
@@ -577,7 +621,7 @@ export default function PostsPage() {
       <style jsx>{`
         .createWrap{ width:100%; display:flex; justify-content:center; margin-top:8px }
         .modalBackdrop{ position:fixed; inset:0; background: rgba(3,6,7,0.6); display:grid; place-items:center; z-index: 1200 }
-        /* Center modal dialog using grid centering and keep it within viewport. Position relative to avoid fixed transforms that may be affected by browser quirks. */
+        /* Center modal dialog using grid centering and keep it within viewport. Use relative positioning on the dialog and rely on the fixed backdrop grid to center it. */
         .modalDialog{ position: relative; width: 520px; max-width: calc(100% - 40px); background:#0f1216; border-radius:12px; padding:18px; border: none; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.7); max-height: calc(100vh - 80px); margin: 0; z-index:1250; }
         .modalHeader{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px }
         .closeBtn{ background:transparent; border: none; color:#9fb0bf; font-size:18px; cursor:pointer }
@@ -594,7 +638,11 @@ export default function PostsPage() {
         .publishBtn:focus{ outline:none; box-shadow: 0 0 0 6px rgba(79,195,247,0.08) }
         .modalDialog .postForm{ overflow-y: auto; max-height: calc(100vh - 160px); }
         .modalOverlay{ position: absolute; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(3,6,7,0.6); border-radius:12px; z-index: 1280 }
-        .modalSpinner{ width:48px; height:48px; border-radius:24px; background: linear-gradient(90deg,#23a8e3,#1fb6ff); color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow: 0 8px 30px rgba(0,0,0,0.45) }
+        .publishingRow{ display:inline-flex; gap:10px; align-items:center; justify-content:center; background: transparent; padding:10px 18px; border-radius:12px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
+        .publishingSpinner{ color:#cfe9f7; width:22px; height:22px; animation: spin 1s linear infinite }
+        .publishingText{ color:#fff; font-weight:700; font-size:14px }
+        /* publishBtnText/publishBtnLabel removed: label is shown in overlay only */
+        .btnSpinner{ width:14px; height:14px; animation: spin 1s linear infinite }
         .input{ width:100%; padding:12px 14px; border-radius:10px; border:1px solid #222; background:#0b0d0e; color:#fff; margin-top:10px; outline:none }
         .input.title{ font-size:18px; font-weight:700 }
         .input.desc{ font-size:14px; color:#ddd }
@@ -609,6 +657,11 @@ export default function PostsPage() {
         .publishBtn svg{ transform: translateY(0); }
         @keyframes spin { to { transform: rotate(360deg) } }
         .spinner{ animation: spin 1s linear infinite }
+        /* Publish success animation: pulse and checkmark */
+        .publishBtn.success{ background: linear-gradient(90deg,#23a86b,#1fb67f); box-shadow: 0 10px 26px rgba(34,220,120,0.12); animation: publishSuccess 800ms cubic-bezier(.2,.9,.2,1); }
+        .publishBtn.success .successCheck{ transform-origin:center; animation: successCheckBounce 680ms cubic-bezier(.2,.9,.2,1); }
+        @keyframes publishSuccess { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+        @keyframes successCheckBounce { 0%{ transform: scale(.5) rotate(-10deg); opacity:0 } 40%{ transform: scale(1.12) rotate(8deg); opacity:1 } 100%{ transform: scale(1) rotate(0deg); opacity:1 } }
         .fileName{ margin-top:8px; color:#bfc7cf; font-size:13px }
         @media (max-width:760px){ .postForm{ padding:14px } }
         @media (max-width:560px){ .modalDialog{ width: calc(100% - 32px); padding: 14px; } }
@@ -663,7 +716,8 @@ export default function PostsPage() {
         /* Floating create button positioned near the header center-right */
         .floatingCreate{ position: fixed; top: 40px; left: calc(50% + 350px); z-index: 1100; width: 44px; height: 44px; border-radius: 22px; background: #777; color: #fff; border: none; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px rgba(0,0,0,0.4); cursor: pointer }
         @media (max-width: 980px){ .floatingCreate{ left: calc(50% + 220px); top: 40px } }
-        @media (max-width: 760px){ .floatingCreate{ left: auto; right: 28px; bottom: 22px; top: auto } }
+        /* Mobile: move floating create button to top-right (gray) instead of bottom-right */
+        @media (max-width: 760px){ .floatingCreate{ left: auto; right: 16px; bottom: auto; top: 80px; width:40px; height:40px; font-size:22px } }
       `}</style>
       </div>
 
