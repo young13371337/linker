@@ -11,12 +11,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const currentUserId = session?.user?.id || null;
 
     let posts: any[] = [];
+    // default hasCol function - we may assign real checker inside DB query; keep defined so it can be used below
+    let hasCol: (name: string) => boolean = (_name: string) => false;
     try {
       // Check whether `views` column exists before selecting it. This helps avoid P2010 errors
       const colRows: any[] = await (prisma as any).$queryRaw`SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Post'`;
       const existingCols = new Set(colRows.map((c:any)=>String(c.column_name).toLowerCase()));
       const snake = (s: string) => s.replace(/([A-Z])/g, '_$1').toLowerCase();
-      const hasCol = (name: string) => existingCols.has(name.toLowerCase()) || existingCols.has(snake(name));
+      hasCol = (name: string) => existingCols.has(name.toLowerCase()) || existingCols.has(snake(name));
       const includeViews = hasCol('views');
       const selectObj: any = {
         id: true,
