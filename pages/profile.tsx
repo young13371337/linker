@@ -1,6 +1,6 @@
 import { getUser } from "../lib/session";
 import { forbiddenPasswords } from "../lib/forbidden-passwords";
-import { FaUserCircle, FaCog, FaShieldAlt, FaPalette, FaLaptop, FaMobileAlt, FaDesktop, FaSignOutAlt } from "react-icons/fa";
+import { FaUserCircle, FaCog, FaShieldAlt, FaPalette, FaLaptop, FaMobileAlt, FaDesktop, FaSignOutAlt, FaQrcode } from "react-icons/fa";
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from 'framer-motion';
 import UserStatus, { UserStatusType, statusLabels } from "../components/UserStatus";
@@ -443,52 +443,93 @@ export default function ProfilePage() {
         />
       )}
       <div style={{ position: 'relative', zIndex: 1 }}>
+        {/* Settings button — top-right of the profile panel, borderless */}
+        {session && session.user && user && session.user.id === user.id && (
+          <button
+            onClick={() => { setSettingsTab(null); setShowSettings(true); }}
+            title="Настройки"
+            aria-label="Open settings"
+            style={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              zIndex: 60,
+              background: 'transparent',
+              border: 'none',
+              color: '#fff',
+              padding: 6,
+              cursor: 'pointer',
+              fontSize: 20,
+              lineHeight: 1,
+              outline: 'none'
+            }}
+            onMouseOver={e => (e.currentTarget.style.color = '#229ed9')}
+            onMouseOut={e => (e.currentTarget.style.color = '#fff')}
+          >
+            <FaCog />
+          </button>
+        )}
+        {session && session.user && user && session.user.id === user.id && (
+          <button
+            title="Сканировать QR"
+            aria-label="Сканировать QR"
+            onClick={() => { setToastMsg('Функция в разработке...'); setToastType('success'); setShowToast(true); }}
+            style={{
+              position: 'absolute',
+              top: 12,
+              left: 12,
+              zIndex: 60,
+              background: 'transparent',
+              border: 'none',
+              color: '#fff',
+              padding: 6,
+              cursor: 'pointer',
+              fontSize: 20,
+              lineHeight: 1,
+              outline: 'none'
+            }}
+            onMouseOver={e => (e.currentTarget.style.color = '#229ed9')}
+            onMouseOut={e => (e.currentTarget.style.color = '#fff')}
+          >
+            <FaQrcode />
+          </button>
+        )}
   {/* ...остальной JSX... */}
-      <div style={{ display: "flex", alignItems: "center", gap: 18, paddingBottom: 18, borderBottom: "1px solid #333" }}>
-        <div style={{ position: "relative" }}>
+      <div style={{ display: "flex", flexDirection: 'column', alignItems: 'center', gap: 12, paddingBottom: 18, borderBottom: "1px solid #333" }}>
+        <div style={{ position: "relative", width: 96, height: 96 }}>
           <img
-            src={avatar || "data:image/jpeg;base64,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"}
+            src={avatar || "https://www.svgrepo.com/show/452030/avatar-default.svg"}
             alt="avatar"
-            style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", background: "#444" }}
+            style={{ width: '100%', height: '100%', borderRadius: "50%", objectFit: "cover", background: "#444" }}
           />
-          {/* Статус dnd/online/offline */}
+          {/* Статус dnd/online/offline (overlay bottom-right) */}
           {user?.status === 'dnd' ? (
-            <img src="/moon-dnd.svg" alt="dnd" style={{ position: "absolute", left: 48, top: 44, width: 18, height: 18 }} />
+            <img src="/moon-dnd.svg" alt="dnd" style={{ position: "absolute", right: 8, bottom: 8, width: 20, height: 20, zIndex: 3 }} />
           ) : (
-            <span style={{ position: "absolute", left: 50, top: 46, width: 14, height: 14, borderRadius: "50%", background: user?.status === 'online' ? "#1ed760" : "#bbb", border: "2px solid #23242a" }} />
+            <span style={{ position: "absolute", right: 8, bottom: 8, width: 14, height: 14, borderRadius: "50%", background: user?.status === 'online' ? "#1ed760" : "#bbb", border: "2px solid #23242a", zIndex: 3 }} />
           )}
         </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: 1, display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {user?.link ? `@${user.link}` : (user?.login || "user")}
+              {user?.link ? `@${user.link}` : (user?.login || "Профиль")}
               {userRole === "admin" && (
                 <span style={{ position: 'relative', display: 'inline-block' }}
                   onMouseEnter={e => {
                     const tip = document.createElement('div');
                     tip.innerText = 'Linker Developer';
-                    tip.style.position = 'absolute';
-                    tip.style.top = '32px';
-                    tip.style.left = '0';
-                    tip.style.background = '#23242a';
-                    tip.style.color = '#fff';
-                    tip.style.padding = '7px 16px';
-                    tip.style.borderRadius = '10px';
-                    tip.style.fontSize = '15px';
-                    tip.style.boxShadow = '0 2px 16px #229ED944';
-                    tip.style.zIndex = '1000';
-                    tip.style.whiteSpace = 'nowrap';
+                    Object.assign(tip.style, { position: 'absolute', top: '32px', left: '0', background: '#23242a', color: '#fff', padding: '7px 16px', borderRadius: '10px', fontSize: '15px', boxShadow: '0 2px 16px #229ED944', zIndex: 1000, whiteSpace: 'nowrap' });
                     tip.className = 'admin-tooltip';
                     if (e.currentTarget) e.currentTarget.appendChild(tip);
                   }}
                   onMouseLeave={e => {
                     if (e.currentTarget) {
                       const tips = e.currentTarget.querySelectorAll('.admin-tooltip');
-                      tips.forEach(tip => tip.remove());
+                      tips.forEach((tip: any) => tip.remove());
                     }
                   }}
                 >
-                  <img src="/role-icons/admin.svg" alt="admin" style={{width:24, height:24, marginLeft:2, verticalAlign:'middle', cursor:'pointer'}} />
+                  <img src="/role-icons/admin.svg" alt="admin" style={{width:20, height:20, marginLeft:2, verticalAlign:'middle', cursor:'pointer'}} />
                 </span>
               )}
               {userRole === "moderator" && (
@@ -496,28 +537,18 @@ export default function ProfilePage() {
                   onMouseEnter={e => {
                     const tip = document.createElement('div');
                     tip.innerText = 'Модератор Linker';
-                    tip.style.position = 'absolute';
-                    tip.style.top = '32px';
-                    tip.style.left = '0';
-                    tip.style.background = '#23242a';
-                    tip.style.color = '#fff';
-                    tip.style.padding = '7px 16px';
-                    tip.style.borderRadius = '10px';
-                    tip.style.fontSize = '15px';
-                    tip.style.boxShadow = '0 2px 16px #229ED944';
-                    tip.style.zIndex = '1000';
-                    tip.style.whiteSpace = 'nowrap';
+                    Object.assign(tip.style, { position: 'absolute', top: '32px', left: '0', background: '#23242a', color: '#fff', padding: '7px 16px', borderRadius: '10px', fontSize: '15px', boxShadow: '0 2px 16px #229ED944', zIndex: 1000, whiteSpace: 'nowrap' });
                     tip.className = 'moderator-tooltip';
                     if (e.currentTarget) e.currentTarget.appendChild(tip);
                   }}
                   onMouseLeave={e => {
                     if (e.currentTarget) {
                       const tips = e.currentTarget.querySelectorAll('.moderator-tooltip');
-                      tips.forEach(tip => tip.remove());
+                      tips.forEach((tip: any) => tip.remove());
                     }
                   }}
                 >
-                  <img src="/role-icons/moderator.svg" alt="moderator" style={{width:24, height:24, marginLeft:2, verticalAlign:'middle', cursor:'pointer'}} />
+                  <img src="/role-icons/moderator.svg" alt="moderator" style={{width:20, height:20, marginLeft:2, verticalAlign:'middle', cursor:'pointer'}} />
                 </span>
               )}
               {userRole === "verif" && (
@@ -525,28 +556,18 @@ export default function ProfilePage() {
                   onMouseEnter={e => {
                     const tip = document.createElement('div');
                     tip.innerText = 'Оффициальный аккаунт';
-                    tip.style.position = 'absolute';
-                    tip.style.top = '32px';
-                    tip.style.left = '0';
-                    tip.style.background = '#23242a';
-                    tip.style.color = '#fff';
-                    tip.style.padding = '7px 16px';
-                    tip.style.borderRadius = '10px';
-                    tip.style.fontSize = '15px';
-                    tip.style.boxShadow = '0 2px 16px #229ED944';
-                    tip.style.zIndex = '1000';
-                    tip.style.whiteSpace = 'nowrap';
+                    Object.assign(tip.style, { position: 'absolute', top: '32px', left: '0', background: '#23242a', color: '#fff', padding: '7px 16px', borderRadius: '10px', fontSize: '15px', boxShadow: '0 2px 16px #229ED944', zIndex: 1000, whiteSpace: 'nowrap' });
                     tip.className = 'verif-tooltip';
                     if (e.currentTarget) e.currentTarget.appendChild(tip);
                   }}
                   onMouseLeave={e => {
                     if (e.currentTarget) {
                       const tips = e.currentTarget.querySelectorAll('.verif-tooltip');
-                      tips.forEach(tip => tip.remove());
+                      tips.forEach((tip: any) => tip.remove());
                     }
                   }}
                 >
-                  <img src="/role-icons/verif.svg" alt="verif" style={{width:24, height:24, marginLeft:2, verticalAlign:'middle', cursor:'pointer'}} />
+                  <img src="/role-icons/verif.svg" alt="verif" style={{width:20, height:20, marginLeft:2, verticalAlign:'middle', cursor:'pointer'}} />
                 </span>
               )}
               {userRole === "pepe" && (
@@ -554,47 +575,32 @@ export default function ProfilePage() {
                   onMouseEnter={e => {
                     const tip = document.createElement('div');
                     tip.innerText = 'Linker Developer';
-                    tip.style.position = 'absolute';
-                    tip.style.top = '40px';
-                    tip.style.left = '0';
-                    tip.style.background = '#23242a';
-                    tip.style.color = '#fff';
-                    tip.style.padding = '7px 16px';
-                    tip.style.borderRadius = '10px';
-                    tip.style.fontSize = '15px';
-                    tip.style.boxShadow = '0 2px 16px #229ED944';
-                    tip.style.zIndex = '1000';
-                    tip.style.whiteSpace = 'nowrap';
+                    Object.assign(tip.style, { position: 'absolute', top: '40px', left: '0', background: '#23242a', color: '#fff', padding: '7px 16px', borderRadius: '10px', fontSize: '15px', boxShadow: '0 2px 16px #229ED944', zIndex: 1000, whiteSpace: 'nowrap' });
                     tip.className = 'pepe-tooltip';
                     if (e.currentTarget) e.currentTarget.appendChild(tip);
                   }}
                   onMouseLeave={e => {
                     if (e.currentTarget) {
                       const tips = e.currentTarget.querySelectorAll('.pepe-tooltip');
-                      tips.forEach(tip => tip.remove());
+                      tips.forEach((tip: any) => tip.remove());
                     }
                   }}
                 >
-                  <div style={{width:24, height:24, marginLeft:0, verticalAlign:'middle', cursor:'pointer'}}>
-                    {/* TGS-анимация через LottiePlayer */}
+                  <div style={{width:20, height:20, marginLeft:0, verticalAlign:'middle', cursor:'pointer'}}>
                     {String(userRole) === "krip" && (
-                      <LottiePlayer src="/role-icons/krip.json" width={28} height={28} loop={true} />
+                      <LottiePlayer src="/role-icons/krip.json" width={22} height={22} loop={true} />
                     )}
                     {String(userRole) === "pepe" && (
-                      <LottiePlayer src="/role-icons/pepe.json" width={28} height={28} loop={true} />
+                      <LottiePlayer src="/role-icons/pepe.json" width={22} height={22} loop={true} />
                     )}
                   </div>
                 </span>
               )}
-              {/* 'ban' role removed: no longer displayed */}
             </span>
           </div>
-          <div style={{ fontSize: 15, color: "#bbb", marginTop: 2 }}>{desc || "Нет описания"}</div>
-          {/* ...удалено: любимый трек... */}
+          <div style={{ fontSize: 14, color: "#bbb", marginTop: 4, textAlign: 'center' }}>{desc || "Нет описания"}</div>
         </div>
-  <button onClick={() => { setSettingsTab(null); setShowSettings(true); }} style={{ background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,0.04)", borderRadius: 12, padding: "8px 18px", fontSize: 15, cursor: "pointer", fontWeight: 500, display: "flex", alignItems: "center", gap: 8, transition: "background 0.18s, box-shadow 0.18s" }} onMouseOver={e => {e.currentTarget.style.background="rgba(255,255,255,0.02)";e.currentTarget.style.boxShadow="0 2px 12px rgba(79,195,247,0.12)"}} onMouseOut={e => {e.currentTarget.style.background="transparent";e.currentTarget.style.boxShadow="none"}}>
-          <FaCog /> 
-        </button>
+        {/* Old inline settings button removed — use top-right icon button */}
       </div>
 
     {/* Список друзей и новости */}

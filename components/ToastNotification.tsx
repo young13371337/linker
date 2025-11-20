@@ -29,36 +29,37 @@ const ToastNotification: React.FC<ToastProps> = ({ type, message, duration = 400
     };
   }, [duration, onClose]);
 
-  return (
-    <div
-      style={{
-        position: 'fixed', right: 32, bottom: 32, zIndex: 200,
-        minWidth: 260, maxWidth: 420, padding: '14px 18px',
-        borderRadius: 12, background: '#0f1214', color: '#fff', fontWeight: 700, fontSize: 18,
-        boxShadow: '0 6px 26px rgba(0,0,0,0.6)', transition: 'opacity .2s, transform .2s', opacity: visible ? 1 : 0,
-        display: 'flex', alignItems: 'center', gap: 12, transform: visible ? 'translateY(0)' : 'translateY(6px)'
-      }}
-    >
-      <div style={{display:'flex', alignItems:'center'}}>
-        <div style={{width:14,height:14,borderRadius:14,border:'2.5px solid rgba(255,255,255,0.06)', borderLeftColor: type === 'error' ? '#ff5252' : '#4caf50', boxSizing:'border-box', animation:'tn-spin 1s linear infinite'}} />
-      </div>
-      <style>{`@keyframes tn-spin { to { transform: rotate(360deg); } }`}</style>
-      <div style={{flex:1, lineHeight:1}}>{message}</div>
+    return (
+      <>
+      <div style={{ position: 'fixed', right: 24, bottom: 28, zIndex: 200, display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+      <div
+        style={{
+          minWidth: 300, maxWidth: 560, padding: '14px 18px',
+            borderRadius: 10, background: 'rgba(18,20,24,0.92)', color: '#e6eef6', fontWeight: 700, fontSize: 14,
+            boxShadow: '0 8px 30px rgba(0,0,0,0.32)', transition: 'opacity .22s ease, transform .18s ease', opacity: visible ? 1 : 0,
+            display: 'flex', alignItems: 'center', gap: 12, transform: visible ? 'translateY(0)' : 'translateY(8px)', border: '1px solid rgba(255,255,255,0.03)', backdropFilter: 'blur(6px)'
+        }}
+        className="toast"
+        role="status"
+        aria-live="polite"
+      >
+        {/* no icon: keep spacing optional via an empty divider to align text consistently */}
+        <div style={{ flex: 1, lineHeight: 1.2, color: '#e7f6ff', fontWeight: 600, fontSize: 15 }}>{message}</div>
       {actions && actions.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, marginTop: 8, width: '100%', justifyContent: actions.length === 1 ? 'flex-end' : 'space-between' }}>
+        <div style={{ display: 'flex', gap: 8, marginLeft: 12, justifyContent: actions.length === 1 ? 'flex-end' : 'flex-start' }}>
           {actions.map((a, idx) => {
             const isTwo = actions.length === 2;
             const base: React.CSSProperties = {
               padding: '6px 10px',
               borderRadius: 8,
-              border: '1px solid rgba(255,255,255,0.04)',
               cursor: 'pointer',
-              background: 'rgba(28,30,32,0.65)',
-              color: '#e6e6e6',
+              background: 'transparent',
+              color: '#9fb4bd',
               fontWeight: 700,
               fontSize: 13,
               lineHeight: '1',
               textAlign: 'center' as const,
+              border: 'none'
             };
             const style: React.CSSProperties = isTwo ? { ...base, flex: '0 0 48%' } : { ...base, minWidth: 92 };
             return (
@@ -81,7 +82,23 @@ const ToastNotification: React.FC<ToastProps> = ({ type, message, duration = 400
           })}
         </div>
       )}
-    </div>
+      </div>
+      {/* progress bar below the toast and connected to it */}
+      <div style={{ width: '100%', maxWidth: 560, marginTop: 6 }}>
+        <div style={{ height: 5, borderRadius: 8, overflow: 'hidden', width: '100%', background: 'rgba(255,255,255,0.03)' }}>
+          <div className="progressInner" style={{ height: '100%', width: '100%', background: type === 'success' ? '#23a86b' : '#ff5252', transformOrigin: 'left', animation: `toastProgress ${duration}ms linear forwards` }} />
+        </div>
+      </div>
+      </div>
+      <style jsx>{`
+        @keyframes toastProgress {
+          0% { transform: scaleX(1); }
+          100% { transform: scaleX(0); }
+        }
+        .toast:hover .progressInner { animation-play-state: paused !important; }
+        .toast { transform-origin: bottom right; }
+        `}</style>
+        </>
   );
 };
 

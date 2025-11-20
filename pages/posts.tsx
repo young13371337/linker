@@ -206,7 +206,7 @@ export default function PostsPage() {
             ...pp,
             authorId,
             author: pp.author || (authorId ? { id: authorId } : undefined),
-            likesCount: Number(pp.likesCount || 0),
+            likesCount: String(pp.likesCount ?? '0'),
             pinned: Boolean(pp.pinned),
             isOwner: Boolean(pp.isOwner || (currentUserId && authorId && currentUserId === authorId)),
             likedByCurrentUser: Boolean(pp.likedByCurrentUser),
@@ -230,7 +230,7 @@ export default function PostsPage() {
                 authorId,
                 author: pp.author || (authorId ? { id: authorId } : undefined),
                 likedByCurrentUser: Boolean(pp.likedByCurrentUser),
-                likesCount: Number(pp.likesCount || 0),
+                likesCount: String(pp.likesCount ?? '0'),
                 pinned: Boolean(pp.pinned),
                 isOwner: Boolean(pp.isOwner || (currentUserId && authorId && currentUserId === authorId)),
                 views: String(pp.views || '0'),
@@ -464,7 +464,7 @@ export default function PostsPage() {
                                 try {
                                   const json = j || null;
                                   if (json) {
-                                    setPosts(ps => ps.map(x => x.id === p.id ? { ...x, likesCount: json.likesCount ?? x.likesCount, likedByCurrentUser: Boolean(json.likedByCurrentUser) } : x));
+                                    setPosts(ps => ps.map(x => x.id === p.id ? { ...x, likesCount: json?.likesCount !== undefined ? String(json.likesCount) : x.likesCount, likedByCurrentUser: Boolean(json.likedByCurrentUser) } : x));
                                     try { /* local storage removed */ } catch (e) {}
                                     // re-sync a single post or list to ensure DB state is authoritative
                                     // Sync request processed - server returned updated counts. No page refresh needed.
@@ -544,7 +544,12 @@ export default function PostsPage() {
                     const currentlyLiked = !!currentPost.likedByCurrentUser;
                     const previous = prevPosts.map(x => ({ ...x }));
                     // Optimistic update: toggle state immediately based on current value
-                    setPosts(ps => ps.map(x => x.id === p.id ? { ...x, likedByCurrentUser: !currentlyLiked, likesCount: (x.likesCount || 0) + (currentlyLiked ? -1 : 1) } : x));
+                    setPosts(ps => ps.map(x => {
+                      if (x.id !== p.id) return x;
+                      const prevCnt = Number(x.likesCount || '0');
+                      const nextCnt = Math.max(0, prevCnt + (currentlyLiked ? -1 : 1));
+                      return { ...x, likedByCurrentUser: !currentlyLiked, likesCount: String(nextCnt) };
+                    }));
                     // Update localStorage fallback immediately so UI persists on reload even when server
                     // doesn't return likedByCurrentUser. We'll revert on error.
                     try {
@@ -566,7 +571,7 @@ export default function PostsPage() {
                         // update post with returned counts if provided
                         const json = await r.json().catch(() => null);
                         if (json) {
-                          setPosts(ps => ps.map(x => x.id === p.id ? { ...x, likesCount: json.likesCount ?? x.likesCount, likedByCurrentUser: Boolean(json.likedByCurrentUser) } : x));
+                          setPosts(ps => ps.map(x => x.id === p.id ? { ...x, likesCount: json?.likesCount !== undefined ? String(json.likesCount) : x.likesCount, likedByCurrentUser: Boolean(json.likedByCurrentUser) } : x));
                           // persist to local fallback for UI persistence (remove)
                           try { /* local storage removed */ } catch (e) {}
                         }
@@ -583,7 +588,7 @@ export default function PostsPage() {
                         }
                         const json = await r.json().catch(() => null);
                         if (json) {
-                          setPosts(ps => ps.map(x => x.id === p.id ? { ...x, likesCount: json.likesCount ?? x.likesCount, likedByCurrentUser: Boolean(json.likedByCurrentUser) } : x));
+                          setPosts(ps => ps.map(x => x.id === p.id ? { ...x, likesCount: json?.likesCount !== undefined ? String(json.likesCount) : x.likesCount, likedByCurrentUser: Boolean(json.likedByCurrentUser) } : x));
                           try { /* local storage removed */ } catch (e) {}
                           // Do not re-fetch all posts; update UI from server response only.
                         }

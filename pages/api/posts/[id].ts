@@ -88,12 +88,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const existingCols2 = new Set(colRows2.map((c:any)=>c.column_name));
             const includeViews2 = existingCols2.has('views');
             const viewsFragment = includeViews2 ? 'p.views as views,' : '';
+            const includeLikesCountCol = existingCols2.has('likescount') || existingCols2.has('likes_count') || existingCols2.has('likesCount');
+            const likesCountFragment = includeLikesCountCol ? 'p."likesCount" as likesCount,' : '(SELECT COUNT(1) FROM "Like" l WHERE l."postId" = p.id) as likesCount,';
             const sql = `
          SELECT p.id, p."authorId", p.title, p.description, p."createdAt", p."mediaId",
            ${viewsFragment}
            u.login as u_login, u.avatar as u_avatar, u.link as u_link,
            m.id as m_id, m.mime as m_mime, m.size as m_size, m.width as m_width, m.height as m_height, m.provider as m_provider, m.key as m_key,
-           (SELECT COUNT(1) FROM "Like" l WHERE l."postId" = p.id) as likesCount
+           ${likesCountFragment}
          FROM "Post" p
          LEFT JOIN "User" u ON u.id = p."authorId"
          LEFT JOIN "Media" m ON m.id = p."mediaId"
@@ -119,7 +121,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         description: r.description,
         media: r.m_id ? { id: r.m_id, mime: r.m_mime, size: r.m_size, width: r.m_width, height: r.m_height, provider: r.m_provider, key: r.m_key } : null,
         author: { id: r.authorId, login: r.u_login, avatar: r.u_avatar, link: r.u_link },
-        likesCount: Number(r.likescount || 0),
+        likesCount: String(r.likescount ?? r.likesCount ?? '0'),
         views: includeViews2 ? String(r.views || '0') : '0',
         likedByCurrentUser,
         createdAt: r.createdAt,

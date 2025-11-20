@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { FaCog, FaQrcode } from 'react-icons/fa';
+import ToastNotification from '../../components/ToastNotification';
 
 // Small copy button component used on other users' profile page
 function CopyButton({ idToCopy }: { idToCopy: string }) {
@@ -31,6 +33,9 @@ export default function UserProfile() {
   const [isFriend, setIsFriend] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
   const [currentUser, setCurrentUser] = useState<{id:string,login:string}|null>(null);
+  const [showToastLocal, setShowToastLocal] = useState(false);
+  const [toastMsgLocal, setToastMsgLocal] = useState('');
+  const [toastTypeLocal, setToastTypeLocal] = useState<'success'|'error'>('success');
 
   useEffect(() => {
     if (!id) return;
@@ -83,11 +88,50 @@ export default function UserProfile() {
         boxShadow: "0 2px 24px #0006",
         color: "#fff",
         fontFamily: "Segoe UI, Verdana, Arial, sans-serif",
+        position: 'relative',
         background: user.backgroundUrl
           ? `linear-gradient(rgba(30,32,42,0.65),rgba(30,32,42,0.82)), url(${user.backgroundUrl}) center/cover no-repeat`
           : "#23242a"
       }}
     >
+      {/* Settings button absolutely top-right for the current user (no border) */}
+      {currentUser && currentUser.id === user.id && (
+        <button
+          onClick={() => router.push('/profile')}
+          title="Настройки"
+          style={{
+            position: 'absolute',
+            top: 18,
+            right: 18,
+            zIndex: 10,
+            background: 'transparent',
+            border: 'none',
+            color: '#fff',
+            padding: 0,
+            cursor: 'pointer',
+            fontSize: 22,
+            lineHeight: 1,
+            boxShadow: 'none',
+            outline: 'none',
+            transition: 'color .18s'
+          }}
+          aria-label="Open settings"
+          onMouseOver={e => { e.currentTarget.style.color = '#229ed9'; }}
+          onMouseOut={e => { e.currentTarget.style.color = '#fff'; }}
+        >
+          <FaCog />
+        </button>
+      )}
+      {currentUser && currentUser.id === user.id && (
+        <button
+          onClick={() => { setToastMsgLocal('Функция в разработке...'); setToastTypeLocal('success'); setShowToastLocal(true); }}
+          title="Сканировать QR"
+          aria-label="Сканировать QR"
+          style={{ position: 'absolute', top: 18, left: 18, zIndex: 10, background: 'transparent', border: 'none', color: '#fff', padding: 6, cursor: 'pointer', fontSize: 18, lineHeight: 1 }}
+        >
+          <FaQrcode />
+        </button>
+      )}
   <div style={{ display: "flex", alignItems: "center", gap: 18, paddingBottom: 18, borderBottom: "1px solid #333" }}>
         <div style={{ position: "relative" }}>
           {user.avatar ? (
@@ -102,7 +146,20 @@ export default function UserProfile() {
             <span style={{ position: "absolute", left: 50, top: 46, width: 14, height: 14, borderRadius: "50%", background: user.status === 'online' ? "#1ed760" : "#bbb", border: "2px solid #fff" }} />
           )}
         </div>
-  <div style={{ flex: 1 }}>
+  <div style={{ display: "flex", flexDirection: 'column', alignItems: 'center', gap: 12, paddingBottom: 18, borderBottom: "1px solid #333" }}>
+        <div style={{ position: "relative", width: 96, height: 96 }}>
+          {user.avatar ? (
+            <img src={user.avatar} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: "50%", objectFit: "cover", background: "#444" }} />
+          ) : (
+            <div style={{ width: '100%', height: '100%', borderRadius: "50%", background: "#444", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 38, color: "#bbb" }}>{(user.link ? user.link[0] : user.login[0]).toUpperCase()}</div>
+          )}
+          {/* Статус dnd/online/offline (overlay bottom-right) */}
+          {user.status === 'dnd' ? (
+            <img src="/moon-dnd.svg" alt="dnd" style={{ position: "absolute", right: 8, bottom: 8, width: 20, height: 20, zIndex: 3 }} />
+          ) : (
+            <span style={{ position: "absolute", right: 8, bottom: 8, width: 14, height: 14, borderRadius: "50%", background: user.status === 'online' ? "#1ed760" : "#bbb", border: "2px solid #fff", zIndex: 3 }} />
+          )}
+        </div>
           <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: 1, display: "flex", flexDirection: "column", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, position: 'relative' }}>
               <span style={{ fontFamily: 'Segoe UI, Roboto, sans-serif' }}>{user.link ? `@${user.link}` : user.login}</span>
@@ -242,7 +299,7 @@ export default function UserProfile() {
               )
             )}
             </div>
-            <div style={{ fontSize: 15, color: "#bbb", marginTop: 2 }}>{user.description}</div>
+            <div style={{ fontSize: 14, color: "#bbb", marginTop: 4, textAlign: 'center' }}>{user.description || "Нет описания"}</div>
             {isFriend && (
               <div style={{ fontSize: 14, color: '#6e6e6eff', fontWeight: 500, marginTop: 4 }}>Ваш друг</div>
             )}
@@ -258,6 +315,7 @@ export default function UserProfile() {
           </div>
         </div>
       )}
+      {showToastLocal && <ToastNotification type={toastTypeLocal === 'success' ? 'success' : 'error'} message={toastMsgLocal} duration={3000} onClose={()=>setShowToastLocal(false)} />}
     </div>
   );
 }

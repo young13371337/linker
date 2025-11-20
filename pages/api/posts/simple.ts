@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       SELECT p.id, p."authorId", p.title, p.description, p."createdAt", p."mediaId",
              ${viewsFragment}
              u.login, u.avatar, u.link,
-             (SELECT COUNT(1) FROM "Like" l WHERE l."postId" = p.id) as "likesCount"
+                    (SELECT COUNT(1) FROM "Like" l WHERE l."postId" = p.id) as "likesCount"
       FROM "Post" p
       LEFT JOIN "User" u ON u.id = p."authorId"
       ORDER BY p."createdAt" DESC
@@ -50,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       likedByCurrentUser: !!(currentUserId && likedSet.has(r.id)),
       isOwner: !!(currentUserId && r.authorId === currentUserId),
       createdAt: r.createdAt,
-      likesCount: Number(r.likesCount || 0),
+      likesCount: String(r.likesCount ?? '0'),
       views: includeViews ? String(r.views || '0') : '0',
     }));
     return res.status(200).json({ posts: out });

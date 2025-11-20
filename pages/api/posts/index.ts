@@ -27,9 +27,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         media: { select: { id: true, mime: true, size: true, width: true, height: true, provider: true, key: true } },
         author: { select: { id: true, login: true, avatar: true, link: true } },
         likes: { select: { id: true } },
+        // if likesCount column exists, include it
       };
       // Add optional image fields if available in the DB schema
       if (hasCol('imageSize')) selectObj.imageSize = true;
+      if (hasCol('likesCount')) selectObj.likesCount = true;
       if (hasCol('imageMime')) selectObj.imageMime = true;
       if (hasCol('imageWidth')) selectObj.imageWidth = true;
       if (hasCol('imageHeight')) selectObj.imageHeight = true;
@@ -67,7 +69,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         imageMime: p.imageMime,
         imageWidth: p.imageWidth,
         imageHeight: p.imageHeight,
-        likesCount: Array.isArray(likes) ? likes.length : 0,
+        likesCount: hasCol('likesCount') ? String(p.likesCount || '0') : String(Array.isArray(likes) ? likes.length : 0),
         views: String(p.views || '0'),
         likedByCurrentUser: !!(currentUserId && likedSet.has(p.id)),
         isOwner: !!(currentUserId && rest.author && rest.author.id === currentUserId),
